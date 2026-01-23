@@ -2,6 +2,7 @@ import os
 from supabase import create_client
 import datetime
 import smtplib
+import time
 from email.mime.text import MIMEText
 
 # 环境配置
@@ -19,12 +20,14 @@ def check_vaults():
         user_id = row.get('id')
         last_checkin = row.get('last_checkin_at')
         status = row.get('status', 'active')
+        
+        # 排除已处理或无记录的用户
         if not last_checkin or status != 'active': continue
 
         # --- 获取用户设置 ---
-        deadline = int(row.get('timeout_minutes', 10))   # 死亡判定时间 (如10)
-        max_warns = int(row.get('max_warnings', 2))      # 唤醒次数 (如2)
-        interval = int(row.get('warning_interval', 1))   # 唤醒间隔 (如1)
+        deadline = int(row.get('timeout_minutes', 10))   
+        max_warns = int(row.get('max_warnings', 2))      
+        interval = int(row.get('warning_interval', 1))   
         current_warns = row.get('current_warnings', 0)
         
         warn_email = row.get('warning_email')
@@ -35,40 +38,41 @@ def check_vaults():
         now = datetime.datetime.now(datetime.timezone.utc)
         diff = (now - last_time).total_seconds() / 60
         
-        print(f"用户 {user_id} | 已失联：{diff:.1f}分 | 死亡终点：{deadline}分")
+        print(f"--- 巡逻日志: 用户 {user_id} ---")
+        print(f"已失联：{diff:.1f} 分钟 | 设定终点：{deadline} 分钟")
 
-        # --- V3 倒计时逻辑 ---
+        # --- 阶梯判定核心 (V3.1 穿透逻辑) ---
         
-        # 1. 判定是否到达“最终死亡终点”
-        if diff >= deadline:
-            print(f"🔴 确认死亡：失联时间已达终点 {deadline} 分钟。")
-            content = row.get('encrypted_data', '无加密数据')
-            send_email(ben_email, "🔒 数字遗产移交", f"由于所有者确认失联（超过{deadline}分钟），以下是托付数据：\n\n{content}")
-            supabase.table("vaults").update({"status": "triggered"}).eq("id", user_id).execute()
-            continue
-
-        # 2. 判定是否进入“唤醒区间”
-        # 起始唤醒时间 = 死亡时间 - (总唤醒次数 * 间隔)
+        # 1. 检查是否需要补发“唤醒邮件”
         start_warning_time = deadline - (max_warns * interval)
-        
         if diff >= start_warning_time:
-            # 计算当前时间应该处于第几次唤醒
-            # 公式：(当前失联时间 - 起始唤醒时间) / 间隔
+            # 计算当前失联时间段内，理论上应该发出的总警告次数
+            # 如果失联很久，expected 可能会直接跳到 max_warns
             expected_warns = int((diff - start_warning_time) / interval) + 1
-            
-            # 限制最高警告次数
             if expected_warns > max_warns: expected_warns = max_warns
 
-            # 如果当前已发次数少于理论应发次数，则补发
-            if current_warns < expected_warns:
-                mins_left = int(deadline - diff)
-                send_email(warn_email, f"⚠️ 倒计时唤醒 ({expected_warns}/{max_warns})", 
-                           f"检测到您已失联 {int(diff)} 分钟。距离系统判定死亡还剩约 {mins_left} 分钟！请尽快登录心跳。")
-                
-                supabase.table("vaults").update({"current_warnings": expected_warns}).eq("id", user_id).execute()
-                print(f"⚠️ 已发送第 {expected_warns} 次提前唤醒邮件 (剩余约 {mins_left} 分钟)")
+            # 循环补发：如果机器人漏掉了之前的唤醒点，现在一次性补齐
+            while current_warns < expected_warns:
+                current_warns += 1
+                mins_left = max(0, int(deadline - (start_warning_time + (current_warns-1)*interval)))
+                print(f"⚠️ 正在补发第 {current_warns} 次唤醒提醒...")
+                send_email(warn_email, f"🚨 临界唤醒 ({current_warns}/{max_warns})", 
+                           f"您已失联约 {int(diff)} 分钟。这是系统判定死亡前的最后提醒！")
+                # 实时更新数据库，防止重复发送
+                supabase.table("vaults").update({"current_warnings": current_warns}).eq("id", user_id).execute()
+                time.sleep(2) # 稍微停顿，防止触发邮件系统垃圾过滤
+
+        # 2. 判定是否达到“死亡终点”
+        if diff >= deadline:
+            print(f"🔴 确认死亡判定。正在发送遗言至受益人...")
+            content = row.get('encrypted_data', '无加密数据')
+            send_email(ben_email, "🔒 GhostProtocol: 数字遗产移交", 
+                       f"系统确认所有者已失联超过 {deadline} 分钟。\n\n托付内容如下：\n{content}")
+            # 彻底结束事件：修改状态为 triggered
+            supabase.table("vaults").update({"status": "triggered"}).eq("id", user_id).execute()
+            print(f"✅ 任务结束。")
         else:
-            print(f"✅ 状态安全 (尚未进入唤醒区间，距离预警还剩 {int(start_warning_time - diff)} 分钟)")
+            print(f"🛡️ 监控中：距离死亡终点还剩 {int(deadline - diff)} 分钟")
 
 def send_email(to_email, subject, content):
     if not to_email: return
@@ -83,5 +87,5 @@ def send_email(to_email, subject, content):
     except Exception as e: print(f"❌ 邮件发送失败: {e}")
 
 if __name__ == "__main__":
-    print("🚀 GhostProtocol V3.0 (倒计时版) 巡逻中...")
+    print("🚀 GhostProtocol V3.1 (全覆盖扫描版) 启动...")
     check_vaults()
