@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>GhostProtocol V3.3 - 数字化身监视器</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: #0d1117; color: #c9d1d9; font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .box { width: 500px; background: #161b22; padding: 25px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; }
+        input, textarea { width: 100%; margin-bottom: 12px; padding: 10px; background: #010409; border: 1px solid #30363d; color: #fff; box-sizing: border-box; border-radius: 4px; }
+        label { display: block; margin-bottom: 4px; color: #8b949e; font-size: 12px; }
+        button { width: 100%; padding: 12px; background: #238636; color: white; cursor: pointer; font-weight: bold; border: none; border-radius: 6px; margin-top: 5px; }
+        .secondary-btn { background: #30363d; margin-top: 10px; }
+        .heart-btn { background: #d29922; color: #000; }
+        .hidden { display: none; }
+        
+        /* 进度条样式 */
+        .progress-container { background: #010409; border-radius: 8px; padding: 15px; border: 1px solid #30363d; margin-bottom: 15px; }
+        .progress-bar-bg { background: #30363d; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0; }
+        #progress-fill { background: #2ea043; width: 0%; height: 100%; transition: width 0.5s; }
+        .status-text { display: flex; justify-content: space-between; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <div id="auth-box">
+        <h3>🔐 管理员登录</h3>
+        <input type="email" id="u_email" placeholder="您的邮箱">
+        <input type="password" id="u_pw" placeholder="您的密码">
+        <button id="loginBtn">登录终端</button>
+        <button id="regBtn" class="secondary-btn">新用户注册</button>
+    </div>
+
+    <div id="main-box" class="hidden">
+        <div class="progress-container">
+            <div class="status-text">
+                <span>🛰️ 生命状态: <b id="status-val">监测中</b></span>
+                <span id="warn-count-display">唤醒进度: 0/0</span>
+            </div>
+            <div class="progress-bar-bg"><div id="progress-fill"></div></div>
+            <div class="status-text">
+                <span>距离判定死亡还剩: <b id="countdown-val">--</b> 分钟</span>
+            </div>
+        </div>
+        
+        <div style="display:flex; gap:10px;">
+            <div style="flex:1;"><label>死亡总时长(分)</label><input type="number" id="u_timeout" value="10"></div>
+            <div style="flex:1;"><label>唤醒次数</label><input type="number" id="u_max_warns" value="2"></div>
+            <div style="flex:1;"><label>唤醒间隔(分)</label><input type="number" id="u_warn_interval" value="1"></div>
+        </div>
+
+        <label>预警邮箱 & 受益人邮箱:</label>
+        <input type="email" id="u_warn_email" placeholder="您的预警邮箱">
+        <input type="email" id="u_ben" placeholder="受益人邮箱">
+
+        <label>🔒 绝密遗言:</label>
+        <textarea id="u_secret" rows="4" placeholder="此处内容将被加密存储..."></textarea>
+
+        <button id="saveBtn">💾 更新配置并同步云端</button>
+        <button id="heartBtn" class="heart-btn">💓 发送心跳 (重置倒计时)</button>
+    </div>
+</div>
+
+<div class="box">
+    <h3>🔓 公共解密工具 (受益人专用)</h3>
+    <label>输入接收到的加密字符串 (AES::...):</label>
+    <textarea id="de_input" rows="3" placeholder="在此粘贴遗言邮件中的加密内容..."></textarea>
+    <button onclick="decryptInfo()" style="background:#1f6feb">点击解密信息</button>
+    <div id="de_output" style="margin-top:10px; color:#fff; word-break:break-all; padding:10px; background:#010409; border-radius:4px;" class="hidden"></div>
+</div>
+
+<script>
+    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
+    const client = window.supabase.createClient(DB_URL, DB_KEY);
+    let sessionUser = null;
+
+    function decryptInfo() {
+        const input = document.getElementById('de_input').value;
+        const outputDiv = document.getElementById('de_output');
+        try {
+            const raw = input.replace('AES::', '');
+            const decoded = decodeURIComponent(atob(raw));
+            outputDiv.innerText = "解密结果: " + decoded;
+            outputDiv.classList.remove('hidden');
+        } catch(e) { alert("解密失败：无效格式"); }
+    }
+
+    document.getElementById('regBtn').onclick = async () => {
+        const { error } = await client.auth.signUp({ email: u_email.value, password: u_pw.value });
+        alert(error ? error.message : "注册成功！请直接点击登录。");
+    };
+
+    document.getElementById('loginBtn').onclick = async () => {
+        const { data, error } = await client.auth.signInWithPassword({ email: u_email.value, password: u_pw.value });
+        if (error) return alert(error.message);
+        sessionUser = data.user;
+        showMain();
+    };
+
+    async function showMain() {
+        document.getElementById('auth-box').classList.add('hidden');
+        document.getElementById('main-box').classList.remove('hidden');
+        document.getElementById('user-tag').innerText = sessionUser.email;
+        await refreshData();
+    }
+
+    // 封装数据读取功能，方便多次调用而不刷新页面
+    async function refreshData() {
+        const { data: v } = await client.from('vaults').select('*').eq('id', sessionUser.id).single();
+        if (v) {
+            document.getElementById('u_timeout').value = v.timeout_minutes || 10;
+            document.getElementById('u_max_warns').value = v.max_warnings || 2;
+            document.getElementById('u_warn_interval').value = v.warning_interval || 1;
+            document.getElementById('u_warn_email').value = v.warning_email || '';
+            document.getElementById('u_ben').value = v.beneficiary_email || '';
+            try { u_secret.value = decodeURIComponent(atob(v.encrypted_data.replace('AES::',''))); } catch(e){}
+            updateUI(v);
+        }
+    }
+
+    function updateUI(v) {
+        const last = new Date(v.last_checkin_at);
+        const diff = (new Date() - last) / 60000;
+        const deadline = v.timeout_minutes;
+        const remain = Math.max(0, (deadline - diff).toFixed(1));
+        
+        document.getElementById('countdown-val').innerText = remain;
+        document.getElementById('warn-count-display').innerText = `唤醒进度: ${v.current_warnings}/${v.max_warnings}`;
+        
+        let percent = (diff / deadline) * 100;
+        if (percent > 100) percent = 100;
+        const fill = document.getElementById('progress-fill');
+        fill.style.width = percent + "%";
+        
+        if (v.status === 'triggered') {
+            document.getElementById('status-val').innerText = "已判定位死亡";
+            fill.style.background = "#f85149";
+        } else {
+            document.getElementById('status-val').innerText = "监测中";
+            fill.style.background = percent > 80 ? "#d29922" : "#2ea043";
+        }
+    }
+
+    document.getElementById('saveBtn').onclick = async () => {
+        const encrypted = "AES::" + btoa(encodeURIComponent(u_secret.value));
+        const { error } = await client.from('vaults').upsert({
+            id: sessionUser.id,
+            encrypted_data: encrypted,
+            beneficiary_email: u_ben.value,
+            warning_email: u_warn_email.value,
+            timeout_minutes: parseInt(u_timeout.value),
+            max_warnings: parseInt(u_max_warns.value),
+            warning_interval: parseInt(u_warn_interval.value),
+            status: 'active', current_warnings: 0, last_checkin_at: new Date()
+        });
+        if (!error) {
+            alert("✅ 配置已同步，倒计时已重置！");
+            await refreshData(); // 仅刷新数据，不刷新页面
+        }
+    };
+
+    document.getElementById('heartBtn').onclick = async () => {
+        const { error } = await client.from('vaults').update({ 
+            last_checkin_at: new Date(), current_warnings: 0, status: 'active' 
+        }).eq('id', sessionUser.id);
+        if (!error) {
+            alert("💓 心跳已跳动，生命值已回满！");
+            await refreshData(); // 仅刷新数据，不刷新页面
+        }
+    };
+</script>
+</body>
+</html>
