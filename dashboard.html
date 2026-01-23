@@ -2,72 +2,275 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>GhostProtocol V3.3 - 数字化身监视器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>遗物 | 数字墓碑</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        body { background: #0d1117; color: #c9d1d9; font-family: monospace; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .box { width: 500px; background: #161b22; padding: 25px; border-radius: 12px; border: 1px solid #30363d; margin-bottom: 20px; }
-        input, textarea { width: 100%; margin-bottom: 12px; padding: 10px; background: #010409; border: 1px solid #30363d; color: #fff; box-sizing: border-box; border-radius: 4px; }
-        label { display: block; margin-bottom: 4px; color: #8b949e; font-size: 12px; }
-        button { width: 100%; padding: 12px; background: #238636; color: white; cursor: pointer; font-weight: bold; border: none; border-radius: 6px; margin-top: 5px; }
-        .secondary-btn { background: #30363d; margin-top: 10px; }
-        .heart-btn { background: #d29922; color: #000; }
+        /* --- 核心主题：博物馆/碑刻风 (移动端适配版) --- */
+        :root {
+            --bg-color: #0c0c0c;
+            --box-bg: #141414;
+            --text-main: #8a8a8a;
+            --text-highlight: #d4c5a9;
+            --border-color: #333;
+            --danger-color: #6e2e2e;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: "Songti SC", "SimSun", "STSong", "Georgia", serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            /* 手机端减少外边距，更像APP */
+            padding: 15px; 
+            margin: 0; 
+            min-height: 100vh;
+            box-sizing: border-box; /* 确保padding不撑大屏幕 */
+            -webkit-tap-highlight-color: transparent; /* 去除点击高亮 */
+        }
+
+        .box { 
+            width: 100%; 
+            /* 在大屏上限制宽度，在手机上自动填满 */
+            max-width: 500px; 
+            background: var(--box-bg); 
+            /* 手机端内边距稍微紧凑一点 */
+            padding: 25px 20px; 
+            border: 1px solid var(--border-color); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            margin-bottom: 20px; 
+            box-sizing: border-box;
+        }
+
+        h3 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            font-size: 20px; 
+            color: var(--text-highlight); 
+            letter-spacing: 6px; 
+            font-weight: normal;
+            text-align: center;
+        }
+        
+        /* 输入框：增大触控区域 */
+        input, textarea { 
+            width: 100%; 
+            margin-bottom: 15px; 
+            padding: 14px; /* 增加高度，方便手指点击 */
+            background: var(--bg-color); 
+            border: 1px solid var(--border-color); 
+            color: var(--text-highlight); 
+            box-sizing: border-box; 
+            border-radius: 0; 
+            font-family: "FangSong", "Courier New", monospace; 
+            font-size: 16px; /* 16px是防止iOS自动缩放的最佳字号 */
+            transition: all 0.3s; 
+            outline: none; 
+            -webkit-appearance: none; /* 去除iOS默认圆角阴影 */
+        }
+        input:focus, textarea:focus { 
+            border-color: #5c5c5c; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8); 
+        }
+        input.error { border-color: var(--danger-color); background: #120a0a; color: var(--danger-color); }
+        
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            color: #555; 
+            font-size: 14px; /* 稍微加大标签文字 */
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+        
+        /* 按钮：更适合拇指点击 */
+        button { 
+            width: 100%; 
+            padding: 16px; 
+            cursor: pointer; 
+            font-weight: normal; 
+            border: 1px solid var(--border-color); 
+            border-radius: 0; 
+            margin-top: 15px; 
+            font-size: 16px; 
+            font-family: inherit;
+            letter-spacing: 4px;
+            transition: all 0.2s; 
+            touch-action: manipulation; /* 优化触控响应 */
+        }
+        
+        .btn-primary { background: #1f1f1f; color: var(--text-highlight); border-color: #444; }
+        .btn-primary:active { background: var(--text-highlight); color: #000; } /* 手机上hover效果不明显，改用active */
+        
+        .btn-secondary { background: transparent; color: #666; border-color: var(--border-color); }
+        .btn-secondary:active { border-color: #666; color: #999; }
+
+        .btn-heartbeat { 
+            background: #1c261e; 
+            color: #4a7a52; 
+            height: 65px; /* 加大心跳按钮，这是核心操作 */
+            font-size: 18px; 
+            border: 1px solid #28382b;
+            margin-top: 25px;
+            font-weight: bold;
+        }
+        .btn-heartbeat:active { background: #28382b; color: #6fb57b; }
+
+        button:disabled { background: #111; color: #333; cursor: not-allowed; border-color: #222; }
+
         .hidden { display: none; }
         
-        /* 进度条样式 */
-        .progress-container { background: #010409; border-radius: 8px; padding: 15px; border: 1px solid #30363d; margin-bottom: 15px; }
-        .progress-bar-bg { background: #30363d; height: 10px; border-radius: 5px; overflow: hidden; margin: 10px 0; }
-        #progress-fill { background: #2ea043; width: 0%; height: 100%; transition: width 0.5s; }
-        .status-text { display: flex; justify-content: space-between; font-size: 13px; }
+        /* 手机适配：让三个输入框在一行能挤下 */
+        .row { display: flex; gap: 10px; }
+        .row div { flex: 1; }
+        .row input { padding: 10px; text-align: center; margin-bottom: 0;} /* 小格子里文字居中 */
+        .row label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;} 
+
+        .checkbox-wrapper { 
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px; 
+            font-size: 14px; color: #666; cursor: pointer; user-select: none; padding: 5px 0;
+        }
+        .checkbox-wrapper input { width: auto; margin: 0; }
+
+        /* --- 可视化仪表盘 --- */
+        .timeline-container { 
+            position: relative; 
+            height: 80px; 
+            background: var(--bg-color); 
+            border: 1px solid #222; 
+            margin-top: 15px; 
+            overflow: hidden; 
+            display: none; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        
+        .logic-error-overlay { 
+            position: absolute; inset: 0; 
+            background: rgba(10, 5, 5, 0.95); 
+            color: #8a3b3b; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 13px; 
+            z-index: 20; 
+            text-align: center; 
+            padding: 10px; 
+            border: 1px solid #8a3b3b; 
+        }
+        
+        .life-fill { 
+            height: 100%; 
+            background: rgba(100, 100, 100, 0.1); 
+            width: 0%; 
+            position: absolute; 
+            left: 0; top: 0; 
+            border-right: 2px solid #555; 
+            transition: width 1s linear; 
+            z-index: 1; 
+        }
+        .life-fill.preview { 
+            background: rgba(212, 197, 169, 0.05); 
+            border-right: 2px solid var(--text-highlight); 
+            width: 100% !important; 
+            transition: none; 
+        } 
+
+        .trigger-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.1); z-index: 2; pointer-events: none; }
+        .trigger-info { 
+            position: absolute; top: 5px; 
+            font-size: 10px; color: #444; 
+            transform: translateX(3px); z-index: 3; 
+            line-height: 1.2; 
+            border-left: 1px solid #333; 
+            padding-left: 4px; 
+            pointer-events: none; 
+            font-family: "FangSong", monospace;
+        }
+
+        .empty-tip { color: #333; font-size: 13px; z-index: 10; display: block; letter-spacing: 2px; }
+        
+        .death-marker { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #5c2b2b; z-index: 4; display: none; } 
+        .death-label { position: absolute; left: 6px; bottom: 6px; color: #5c2b2b; font-size: 11px; font-weight: bold; z-index: 4; display: none; }
+        
+        #real-left-time { font-family: "FangSong", monospace; font-size: 20px; font-weight: bold; color: #666; }
+        #real-left-time.danger { color: #8a6d3b; }
+        #real-left-time.dead { color: #6e2e2e; }
+
+        /* SweetAlert 手机适配 */
+        .swal2-popup { background: #141414 !important; border: 1px solid #333; color: #999 !important; border-radius: 0 !important; width: 90% !important; }
+        .swal2-title { color: var(--text-highlight) !important; font-size: 20px !important; font-family: "Songti SC", serif !important; letter-spacing: 2px; }
+        .swal2-content { color: #666 !important; font-size: 15px !important; }
+        .swal2-confirm { background-color: #333 !important; color: #ccc !important; border-radius: 0 !important; border: 1px solid #444 !important; box-shadow: none !important; width: 100% !important; padding: 12px !important;}
+        .swal2-actions { width: 100% !important; padding: 0 20px 20px 20px !important; box-sizing: border-box !important; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <div id="auth-box">
-        <h3>🔐 管理员登录</h3>
-        <input type="email" id="u_email" placeholder="您的邮箱">
-        <input type="password" id="u_pw" placeholder="您的密码">
-        <button id="loginBtn">登录终端</button>
-        <button id="regBtn" class="secondary-btn">新用户注册</button>
+<div class="box" id="auth-box">
+    <h3>身份鉴权</h3>
+    <input type="email" id="u_email" placeholder="档案ID (邮箱)">
+    <input type="password" id="u_pw" placeholder="通行密匙">
+    <button id="loginBtn" class="btn-primary">调取档案</button>
+    <button id="regBtn" class="btn-secondary">新建档案</button>
+</div>
+
+<div class="box hidden" id="main-box">
+    <h3>遗 物</h3>
+    
+    <label>铭文 / 遗言：</label>
+    <textarea id="u_secret" rows="5" placeholder="在此刻下尚未成为历史的真相..."></textarea>
+    
+    <div style="height:1px; background:#222; margin: 20px 0;"></div>
+
+    <label>交付对象：</label>
+    <div class="checkbox-wrapper" onclick="toggleSelfEmail()">
+        <input type="checkbox" id="sameAsMe"> <span>同档案持有者</span>
+    </div>
+    <input type="email" id="u_warn_email" placeholder="预警接收端">
+    <input type="email" id="u_ben" placeholder="遗物接收端">
+
+    <div style="height:1px; background:#222; margin: 20px 0;"></div>
+
+    <label>风化倒计时：</label>
+    <div class="row">
+        <div><label>存在(分)</label><input type="number" id="u_timeout" placeholder="总长"></div>
+        <div><label>唤醒</label><input type="number" id="u_max_warns" placeholder="次数"></div>
+        <div><label>间隔(分)</label><input type="number" id="u_warn_interval" placeholder="间隔"></div>
     </div>
 
-    <div id="main-box" class="hidden">
-        <div class="progress-container">
-            <div class="status-text">
-                <span>🛰️ 生命状态: <b id="status-val">监测中</b></span>
-                <span id="warn-count-display">唤醒进度: 0/0</span>
-            </div>
-            <div class="progress-bar-bg"><div id="progress-fill"></div></div>
-            <div class="status-text">
-                <span>距离判定死亡还剩: <b id="countdown-val">--</b> 分钟</span>
-            </div>
+    <label>当前状态：</label>
+    <div class="timeline-container" id="timeline-box">
+        <div class="empty-tip" id="empty-tip">等待数据刻录...</div>
+        
+        <div class="logic-error-overlay" id="logic-error">
+            <div style="font-size: 14px; margin-bottom: 5px;">逻辑悖论</div>
+            <div id="logic-error-msg" style="opacity:0.8;"></div>
         </div>
         
-        <div style="display:flex; gap:10px;">
-            <div style="flex:1;"><label>死亡总时长(分)</label><input type="number" id="u_timeout" value="10"></div>
-            <div style="flex:1;"><label>唤醒次数</label><input type="number" id="u_max_warns" value="2"></div>
-            <div style="flex:1;"><label>唤醒间隔(分)</label><input type="number" id="u_warn_interval" value="1"></div>
-        </div>
-
-        <label>预警邮箱 & 受益人邮箱:</label>
-        <input type="email" id="u_warn_email" placeholder="您的预警邮箱">
-        <input type="email" id="u_ben" placeholder="受益人邮箱">
-
-        <label>🔒 绝密遗言:</label>
-        <textarea id="u_secret" rows="4" placeholder="此处内容将被加密存储..."></textarea>
-
-        <button id="saveBtn">💾 更新配置并同步云端</button>
-        <button id="heartBtn" class="heart-btn">💓 发送心跳 (重置倒计时)</button>
+        <div class="death-marker" id="d-mark"></div>
+        <div class="death-label" id="d-lbl">遗物</div>
+        <div class="life-fill" id="life-fill"></div>
     </div>
+    
+    <div style="text-align:right; font-size:12px; color:#444; margin-top:8px;">
+        剩余时间： <span id="real-left-time">--:--:--</span>
+    </div>
+
+    <button id="saveBtn" class="btn-secondary">封存遗物</button>
+    <button id="heartBtn" class="btn-heartbeat">我仍是生者</button>
 </div>
 
 <div class="box">
-    <h3>🔓 公共解密工具 (受益人专用)</h3>
-    <label>输入接收到的加密字符串 (AES::...):</label>
-    <textarea id="de_input" rows="3" placeholder="在此粘贴遗言邮件中的加密内容..."></textarea>
-    <button onclick="decryptInfo()" style="background:#1f6feb">点击解密信息</button>
-    <div id="de_output" style="margin-top:10px; color:#fff; word-break:break-all; padding:10px; background:#010409; border-radius:4px;" class="hidden"></div>
+    <h3>发掘</h3>
+    <textarea id="de_input" rows="2" placeholder="粘贴密文..."></textarea>
+    <button onclick="decryptInfo()" class="btn-secondary" style="margin-top:0;">解读</button>
+    <div id="de_output" class="hidden" style="margin-top:20px; color:#d4c5a9; word-break:break-all; padding:20px; background:#0c0c0c; border:1px solid #333; font-size:15px; font-family: 'FangSong', monospace;"></div>
 </div>
 
 <script>
@@ -75,99 +278,281 @@
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
     let sessionUser = null;
+    let globalLastCheckin = new Date();
+    let isEditing = false;
+    let timerInterval = null;
 
-    function decryptInfo() {
-        const input = document.getElementById('de_input').value;
-        const outputDiv = document.getElementById('de_output');
-        try {
-            const raw = input.replace('AES::', '');
-            const decoded = decodeURIComponent(atob(raw));
-            outputDiv.innerText = "解密结果: " + decoded;
-            outputDiv.classList.remove('hidden');
-        } catch(e) { alert("解密失败：无效格式"); }
+    // --- 核心：错误信息汉化字典 ---
+    function translateError(msg) {
+        if (!msg) return "未知错误";
+        if (msg.includes("User already registered")) return "该身份档案已存在，请直接调取。";
+        if (msg.includes("Signup requires a valid password")) return "建档失败：请设置有效的通行密匙。";
+        if (msg.includes("Invalid login credentials")) return "鉴权失败：账号或密匙错误。";
+        if (msg.includes("Password should be at least")) return "密匙强度不足（需至少6位）。";
+        if (msg.includes("Email not confirmed")) return "需验证邮箱后方可通行。";
+        if (msg.includes("Rate limit exceeded")) return "访问频率过高，请稍候。";
+        return "系统异常：" + msg; 
     }
 
-    document.getElementById('regBtn').onclick = async () => {
-        const { error } = await client.auth.signUp({ email: u_email.value, password: u_pw.value });
-        alert(error ? error.message : "注册成功！请直接点击登录。");
-    };
+    // --- 输入监听 ---
+    ['u_timeout', 'u_max_warns', 'u_warn_interval'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            isEditing = true; 
+            validateAndRender();
+        });
+    });
 
-    document.getElementById('loginBtn').onclick = async () => {
-        const { data, error } = await client.auth.signInWithPassword({ email: u_email.value, password: u_pw.value });
-        if (error) return alert(error.message);
-        sessionUser = data.user;
-        showMain();
-    };
-
-    async function showMain() {
-        document.getElementById('auth-box').classList.add('hidden');
-        document.getElementById('main-box').classList.remove('hidden');
-        document.getElementById('user-tag').innerText = sessionUser.email;
-        await refreshData();
+    // --- 定时器 ---
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        updateTimeDisplay();
+        timerInterval = setInterval(updateTimeDisplay, 1000);
     }
 
-    // 封装数据读取功能，方便多次调用而不刷新页面
-    async function refreshData() {
-        const { data: v } = await client.from('vaults').select('*').eq('id', sessionUser.id).single();
-        if (v) {
-            document.getElementById('u_timeout').value = v.timeout_minutes || 10;
-            document.getElementById('u_max_warns').value = v.max_warnings || 2;
-            document.getElementById('u_warn_interval').value = v.warning_interval || 1;
-            document.getElementById('u_warn_email').value = v.warning_email || '';
-            document.getElementById('u_ben').value = v.beneficiary_email || '';
-            try { u_secret.value = decodeURIComponent(atob(v.encrypted_data.replace('AES::',''))); } catch(e){}
-            updateUI(v);
+    function updateTimeDisplay() {
+        if (isEditing) return;
+
+        const totalInput = document.getElementById('u_timeout');
+        if (!totalInput.value) return;
+
+        const totalMinutes = parseFloat(totalInput.value);
+        const now = new Date();
+        const elapsedMs = now - globalLastCheckin;
+        const totalMs = totalMinutes * 60 * 1000;
+        const leftMs = totalMs - elapsedMs;
+
+        const timeSpan = document.getElementById('real-left-time');
+        const fill = document.getElementById('life-fill');
+
+        if (leftMs <= 0) {
+            timeSpan.innerText = "00:00:00 (已成遗物)";
+            timeSpan.className = "dead";
+            fill.style.width = "0%";
+            fill.className = "life-fill"; 
+            return;
         }
-    }
 
-    function updateUI(v) {
-        const last = new Date(v.last_checkin_at);
-        const diff = (new Date() - last) / 60000;
-        const deadline = v.timeout_minutes;
-        const remain = Math.max(0, (deadline - diff).toFixed(1));
-        
-        document.getElementById('countdown-val').innerText = remain;
-        document.getElementById('warn-count-display').innerText = `唤醒进度: ${v.current_warnings}/${v.max_warnings}`;
-        
-        let percent = (diff / deadline) * 100;
-        if (percent > 100) percent = 100;
-        const fill = document.getElementById('progress-fill');
+        const h = Math.floor(leftMs / 3600000);
+        const m = Math.floor((leftMs % 3600000) / 60000);
+        const s = Math.floor((leftMs % 60000) / 1000);
+        const str = `${h>0 ? h+':' : ''}${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        timeSpan.innerText = str;
+
+        const percent = (leftMs / totalMs) * 100;
         fill.style.width = percent + "%";
-        
-        if (v.status === 'triggered') {
-            document.getElementById('status-val').innerText = "已判定位死亡";
-            fill.style.background = "#f85149";
+
+        if (percent < 20) {
+            timeSpan.className = "danger";
         } else {
-            document.getElementById('status-val').innerText = "监测中";
-            fill.style.background = percent > 80 ? "#d29922" : "#2ea043";
+            timeSpan.className = "";
+        }
+        fill.className = "life-fill"; 
+    }
+
+    // --- 校验与渲染 ---
+    function validateAndRender() {
+        const totalInput = document.getElementById('u_timeout');
+        const countInput = document.getElementById('u_max_warns');
+        const intervalInput = document.getElementById('u_warn_interval');
+        
+        const total = parseFloat(totalInput.value);
+        const count = parseInt(countInput.value);
+        const interval = parseFloat(intervalInput.value);
+        
+        const saveBtn = document.getElementById('saveBtn');
+        const box = document.getElementById('timeline-box');
+        const fill = document.getElementById('life-fill');
+        const errorOverlay = document.getElementById('logic-error');
+        const errorMsg = document.getElementById('logic-error-msg');
+        
+        [totalInput, countInput, intervalInput].forEach(el => el.classList.remove('error'));
+        saveBtn.disabled = false;
+        saveBtn.innerText = "封存遗物";
+        errorOverlay.style.display = 'none';
+
+        if (!total || !count || !interval) {
+            if (total || count || interval) {
+                box.style.display = 'flex';
+                document.getElementById('empty-tip').style.display = 'block';
+                fill.style.display = 'none';
+            } else {
+                box.style.display = 'none';
+            }
+            return;
+        }
+
+        const span = count * interval;
+        if (span >= total) {
+            saveBtn.disabled = true;
+            saveBtn.innerText = "无法封存";
+            totalInput.classList.add('error');
+            countInput.classList.add('error');
+            intervalInput.classList.add('error');
+            box.style.display = 'flex';
+            document.getElementById('empty-tip').style.display = 'none';
+            errorOverlay.style.display = 'flex';
+            errorMsg.innerHTML = `唤醒跨度 ${span}分 > 存在时间 ${total}分`;
+            return;
+        }
+
+        box.style.display = 'flex';
+        document.getElementById('empty-tip').style.display = 'none';
+        document.getElementById('d-mark').style.display = 'block';
+        document.getElementById('d-lbl').style.display = 'block';
+        fill.style.display = 'block';
+
+        box.querySelectorAll('.trigger-line, .trigger-info').forEach(el => el.remove());
+
+        if (isEditing) {
+            fill.className = 'life-fill preview';
+            fill.style.width = '100%';
+            document.getElementById('real-left-time').innerText = "预览模式";
+        }
+
+        for (let i = 1; i <= count; i++) {
+            const minsLeft = i * interval;
+            const posPercent = (minsLeft / total) * 100;
+            const line = document.createElement('div');
+            line.className = 'trigger-line';
+            line.style.left = posPercent + '%';
+            box.appendChild(line);
+            const info = document.createElement('div');
+            info.className = 'trigger-info';
+            info.style.left = posPercent + '%';
+            info.innerHTML = `唤醒-${count - i + 1}<br>剩${minsLeft}分`; 
+            box.appendChild(info);
         }
     }
 
+    // --- 交互逻辑 (SweetAlert) ---
     document.getElementById('saveBtn').onclick = async () => {
-        const encrypted = "AES::" + btoa(encodeURIComponent(u_secret.value));
+        const total = parseFloat(document.getElementById('u_timeout').value);
+        const count = parseInt(document.getElementById('u_max_warns').value);
+        const interval = parseFloat(document.getElementById('u_warn_interval').value);
+        
+        if (count * interval >= total) {
+             Swal.fire({ icon: 'error', title: '逻辑悖论', text: '唤醒时间超出了存在总时长', background: '#141414', color: '#999', confirmButtonText: '修正' });
+             return;
+        }
+
+        globalLastCheckin = new Date(); 
+        const secret = document.getElementById('u_secret').value;
+        const encrypted = secret ? "AES::" + btoa(encodeURIComponent(secret)) : "";
+        
         const { error } = await client.from('vaults').upsert({
             id: sessionUser.id,
             encrypted_data: encrypted,
-            beneficiary_email: u_ben.value,
-            warning_email: u_warn_email.value,
-            timeout_minutes: parseInt(u_timeout.value),
-            max_warnings: parseInt(u_max_warns.value),
-            warning_interval: parseInt(u_warn_interval.value),
-            status: 'active', current_warnings: 0, last_checkin_at: new Date()
+            beneficiary_email: document.getElementById('u_ben').value,
+            warning_email: document.getElementById('u_warn_email').value,
+            timeout_minutes: total,
+            max_warnings: count,
+            warning_interval: interval,
+            status: 'active', 
+            current_warnings: 0, 
+            last_checkin_at: globalLastCheckin
         });
-        if (!error) {
-            alert("✅ 配置已同步，倒计时已重置！");
-            await refreshData(); // 仅刷新数据，不刷新页面
+
+        if (error) {
+            Swal.fire({ icon: 'error', title: '刻录失败', text: translateError(error.message), background: '#141414', color: '#999', confirmButtonText: '重试' });
+        } else {
+            Swal.fire({ 
+                icon: 'success', 
+                title: '已封存', 
+                text: '遗物信息已刻录，时间开始流动。', 
+                background: '#141414', 
+                color: '#d4c5a9',
+                confirmButtonColor: '#333',
+                confirmButtonText: '明白'
+            });
+            isEditing = false;
+            validateAndRender();
+            startTimer(); 
         }
     };
 
     document.getElementById('heartBtn').onclick = async () => {
-        const { error } = await client.from('vaults').update({ 
-            last_checkin_at: new Date(), current_warnings: 0, status: 'active' 
-        }).eq('id', sessionUser.id);
-        if (!error) {
-            alert("💓 心跳已跳动，生命值已回满！");
-            await refreshData(); // 仅刷新数据，不刷新页面
+        globalLastCheckin = new Date(); 
+        isEditing = false;
+        startTimer();
+        client.from('vaults').update({ last_checkin_at: new Date(), current_warnings: 0, status: 'active' }).eq('id', sessionUser.id);
+        
+        Swal.fire({
+            icon: 'success',
+            title: '确认存续',
+            text: '尘埃已拂去，时间重置',
+            timer: 1500,
+            showConfirmButton: false,
+            background: '#141414',
+            color: '#d4c5a9'
+        });
+    };
+
+    // --- 基础功能 ---
+    async function refreshData() {
+        if (!sessionUser) return;
+        const { data: v } = await client.from('vaults').select('*').eq('id', sessionUser.id).single();
+        if (v) {
+            globalLastCheckin = new Date(v.last_checkin_at);
+            document.getElementById('u_timeout').value = v.timeout_minutes;
+            document.getElementById('u_max_warns').value = v.max_warnings;
+            document.getElementById('u_warn_interval').value = v.warning_interval;
+            document.getElementById('u_warn_email').value = v.warning_email || '';
+            document.getElementById('u_ben').value = v.beneficiary_email || '';
+            if (v.warning_email === sessionUser.email) {
+                document.getElementById('sameAsMe').checked = true;
+                toggleSelfEmail();
+            }
+            try { if(v.encrypted_data) document.getElementById('u_secret').value = decodeURIComponent(atob(v.encrypted_data.replace('AES::',''))); } catch(e){}
+            
+            isEditing = false;
+            validateAndRender(); 
+            startTimer();
+        } else {
+            document.getElementById('timeline-box').style.display = 'none';
+        }
+    }
+
+    document.getElementById('loginBtn').onclick = async () => {
+        const { data, error } = await client.auth.signInWithPassword({ email: u_email.value, password: u_pw.value });
+        if (error) return Swal.fire({ icon: 'error', title: '拒绝访问', text: translateError(error.message), background: '#141414', color: '#999', confirmButtonText: '确定' });
+        
+        sessionUser = data.user;
+        document.getElementById('auth-box').classList.add('hidden');
+        document.getElementById('main-box').classList.remove('hidden');
+        refreshData();
+    };
+    
+    document.getElementById('regBtn').onclick = async () => {
+        const { error } = await client.auth.signUp({ email: u_email.value, password: u_pw.value });
+        if (error) {
+             Swal.fire({ icon: 'error', title: '建档失败', text: translateError(error.message), background: '#141414', color: '#999', confirmButtonText: '确定' });
+        } else {
+             Swal.fire({ 
+                icon: 'success', 
+                title: '已建档', 
+                text: "新档案建立成功，请调取。", 
+                background: '#141414', color: '#d4c5a9',
+                confirmButtonText: '确定'
+            });
+        }
+    };
+
+    function toggleSelfEmail() {
+        const cb = document.getElementById('sameAsMe');
+        const input = document.getElementById('u_warn_email');
+        setTimeout(() => {
+            if (cb.checked && sessionUser) { input.value = sessionUser.email; input.readOnly = true; input.style.opacity = 0.6; } 
+            else { input.readOnly = false; input.style.opacity = 1; }
+        }, 10);
+    }
+    
+    window.decryptInfo = function() {
+        try {
+            const raw = document.getElementById('de_input').value.replace('AES::', '');
+            document.getElementById('de_output').innerText = decodeURIComponent(atob(raw));
+            document.getElementById('de_output').classList.remove('hidden');
+        } catch(e) { 
+            Swal.fire({ icon: 'error', title: '错误', text: '无效的密文碎片', background: '#141414', color: '#6e2e2e', confirmButtonText: '确定' }); 
         }
     };
 </script>
