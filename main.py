@@ -10,6 +10,7 @@ key = os.environ.get("SUPABASE_KEY")
 sender_email = os.environ.get("SENDER_EMAIL")
 sender_password = os.environ.get("SENDER_PASSWORD")
 
+# 注意：这里的 key 必须是 service_role key，否则无法删除 Auth 用户
 supabase = create_client(url, key)
 
 def check_vaults():
@@ -25,8 +26,7 @@ def check_vaults():
         last_checkin = row.get('last_checkin_at')
         if not last_checkin: continue
 
-        # --- 修复核心：更强壮的数据读取 ---
-        # 如果数据库里是 NULL (None)，就强制用默认值 (or 后面那个数)
+        # 读取数据 (防崩溃处理)
         try:
             deadline = int(row.get('timeout_minutes') or 10)
             max_warns = int(row.get('max_warnings') or 2)
@@ -48,10 +48,7 @@ def check_vaults():
 
         # 1. 唤醒逻辑
         start_warning_time = deadline - (max_warns * interval)
-        
-        # 逻辑保护：如果计算出的开始时间比死线还晚（参数逻辑错误），就修正为死线前一刻
-        if start_warning_time >= deadline: 
-            start_warning_time = deadline - interval
+        if start_warning_time >= deadline: start_warning_time = deadline - interval
 
         if diff >= start_warning_time and diff < deadline:
             expected_warns = int((diff - start_warning_time) / interval) + 1
@@ -66,19 +63,30 @@ def check_vaults():
                 supabase.table("vaults").update({"current_warnings": current_warns}).eq("id", user_id).execute()
                 time.sleep(1)
 
-        # 2. 死亡判定 & 销毁
+        # 2. 死亡判定 & 彻底销毁
         if diff >= deadline:
-            print(f"🔴 确认死亡！正在执行数据移交与销毁程序...")
+            print(f"🔴 确认死亡！正在执行【账号级】物理抹除...")
             content = row.get('encrypted_data', '')
             
-            # 发送遗嘱
+            # A. 发送遗嘱
             send_email(ben_email, 
                        "🔒 GhostProtocol: 数字遗产移交", 
-                       f"系统确认所有者已失联（超 {deadline} 分钟）。\n\n这是其托付的最后数据：\n\n{content}\n\n【系统提示】邮件发送完毕，该用户的所有云端数据已被永久擦除。")
+                       f"系统确认所有者已失联（超 {deadline} 分钟）。\n\n这是其托付的最后数据：\n\n{content}\n\n【系统提示】邮件发送完毕，该账号及所有数据已被永久注销。")
             
-            # 物理删除数据
-            supabase.table("vaults").delete().eq("id", user_id).execute()
-            print(f"✅ 用户数据已从数据库永久删除。")
+            # B. 物理删除数据 (Vault)
+            try:
+                supabase.table("vaults").delete().eq("id", user_id).execute()
+                print(f"✅ 用户数据表记录已删除。")
+            except Exception as e:
+                print(f"❌ 数据表删除异常 (可能已级联删除): {e}")
+
+            # C. 物理删除账号 (Auth User) - 新增功能
+            try:
+                # 使用 admin 接口直接从 Auth 系统中移除用户
+                supabase.auth.admin.delete_user(user_id)
+                print(f"✅ Supabase Auth 账号已永久注销。")
+            except Exception as e:
+                print(f"❌ 账号注销失败 (请检查是否使用了 service_role key): {e}")
 
 def send_email(to_email, subject, content):
     if not to_email: return
@@ -94,5 +102,5 @@ def send_email(to_email, subject, content):
         print(f"❌ 邮件错误: {e}")
 
 if __name__ == "__main__":
-    print("🚀 GhostProtocol V4.9 巡逻引擎启动...")
+    print("🚀 GhostProtocol V5.0 终极销毁引擎启动...")
     check_vaults()
