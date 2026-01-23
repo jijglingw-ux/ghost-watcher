@@ -5,7 +5,6 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 
-# 从 GitHub Secrets 获取环境配置
 url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_KEY")
 sender_email = os.environ.get("SENDER_EMAIL")
@@ -14,69 +13,72 @@ sender_password = os.environ.get("SENDER_PASSWORD")
 supabase = create_client(url, key)
 
 def check_vaults():
-    # 1. 抓取所有处于活跃状态的保险箱
-    res = supabase.table("vaults").select("*").eq("status", "active").execute()
-    
+    # 获取所有活跃用户
+    try:
+        res = supabase.table("vaults").select("*").eq("status", "active").execute()
+    except Exception as e:
+        print(f"数据库连接失败: {e}")
+        return
+
     for row in res.data:
         user_id = row.get('id')
         last_checkin = row.get('last_checkin_at')
-        
         if not last_checkin: continue
 
-        # --- 获取用户 V3.2 设定参数 ---
-        deadline = int(row.get('timeout_minutes', 10))   # 最终判定时间
-        max_warns = int(row.get('max_warnings', 2))      # 总唤醒次数
-        interval = int(row.get('warning_interval', 1))   # 唤醒间隔
-        current_warns = row.get('current_warnings', 0)
-        
+        # --- 修复核心：更强壮的数据读取 ---
+        # 如果数据库里是 NULL (None)，就强制用默认值 (or 后面那个数)
+        try:
+            deadline = int(row.get('timeout_minutes') or 10)
+            max_warns = int(row.get('max_warnings') or 2)
+            interval = int(row.get('warning_interval') or 1)
+            current_warns = int(row.get('current_warnings') or 0)
+        except ValueError:
+            print(f"用户 {user_id} 数据格式错误，跳过")
+            continue
+            
         warn_email = row.get('warning_email')
         ben_email = row.get('beneficiary_email')
 
-        # --- 计算失联时长 ---
+        # 计算时间
         last_time = datetime.datetime.fromisoformat(last_checkin.replace('Z', '+00:00'))
         now = datetime.datetime.now(datetime.timezone.utc)
         diff = (now - last_time).total_seconds() / 60
         
-        print(f"\n[检查用户: {user_id}]")
-        print(f"已失联: {diff:.1f} 分钟 | 死亡终点: {deadline} 分钟")
+        print(f"\n[用户 {user_id}] 失联: {diff:.1f}分 / 设定: {deadline}分")
 
-        # --- V3.2 判定逻辑链 ---
-        
-        # A. 检查并补发唤醒邮件 (由远及近补齐所有漏发的警告)
+        # 1. 唤醒逻辑
         start_warning_time = deadline - (max_warns * interval)
+        
+        # 逻辑保护：如果计算出的开始时间比死线还晚（参数逻辑错误），就修正为死线前一刻
+        if start_warning_time >= deadline: 
+            start_warning_time = deadline - interval
+
         if diff >= start_warning_time and diff < deadline:
-            # 计算当前时间点理论上应达到的警告次数
             expected_warns = int((diff - start_warning_time) / interval) + 1
             if expected_warns > max_warns: expected_warns = max_warns
 
-            # 如果记录的次数落后，开始补发
             while current_warns < expected_warns:
                 current_warns += 1
                 mins_left = int(deadline - diff)
-                print(f"⚠️ 发送唤醒预警 ({current_warns}/{max_warns})，剩余寿命约 {mins_left} 分钟")
-                send_email(warn_email, 
-                           f"🚨 GhostProtocol 临终唤醒 ({current_warns}/{max_warns})", 
-                           f"系统检测到您已失联 {int(diff)} 分钟，距离资产移交还剩约 {mins_left} 分钟，请尽快登录心跳！")
-                
-                # 同步更新数据库
+                print(f"⚠️ 发送预警 ({current_warns}/{max_warns})")
+                send_email(warn_email, f"🚨 GhostProtocol 临终唤醒 ({current_warns}/{max_warns})", 
+                           f"您已失联 {int(diff)} 分钟，距离数据移交并销毁还剩约 {mins_left} 分钟！")
                 supabase.table("vaults").update({"current_warnings": current_warns}).eq("id", user_id).execute()
-                time.sleep(1) # 避开 SMTP 频率限制
+                time.sleep(1)
 
-        # B. 终极判定：确认死亡
+        # 2. 死亡判定 & 销毁
         if diff >= deadline:
-            print(f"🔴 判定失联超限！正在向受益人发送解密数据...")
-            content = row.get('encrypted_data', '无加密数据')
+            print(f"🔴 确认死亡！正在执行数据移交与销毁程序...")
+            content = row.get('encrypted_data', '')
             
-            # 发送遗嘱邮件
+            # 发送遗嘱
             send_email(ben_email, 
-                       "🔒 GhostProtocol: 数字遗产移交通知", 
-                       f"系统确认所有者已长期失联（超 {deadline} 分钟）。\n\n以下是其托付的加密资产数据，请前往控制台解密：\n\n{content}")
+                       "🔒 GhostProtocol: 数字遗产移交", 
+                       f"系统确认所有者已失联（超 {deadline} 分钟）。\n\n这是其托付的最后数据：\n\n{content}\n\n【系统提示】邮件发送完毕，该用户的所有云端数据已被永久擦除。")
             
-            # 标记为 triggered，相当于从“活跃监控名单”中移除
-            supabase.table("vaults").update({"status": "triggered"}).eq("id", user_id).execute()
-            print(f"✅ 该用户监控任务已结束。")
-        else:
-            print(f"🛡️ 账户状态正常，进度条运行中。")
+            # 物理删除数据
+            supabase.table("vaults").delete().eq("id", user_id).execute()
+            print(f"✅ 用户数据已从数据库永久删除。")
 
 def send_email(to_email, subject, content):
     if not to_email: return
@@ -89,8 +91,8 @@ def send_email(to_email, subject, content):
             server.login(sender_email, sender_password)
             server.send_message(msg)
     except Exception as e:
-        print(f"❌ 邮件发送失败: {e}")
+        print(f"❌ 邮件错误: {e}")
 
 if __name__ == "__main__":
-    print("🚀 GhostProtocol V3.2 巡逻引擎启动...")
+    print("🚀 GhostProtocol V4.9 巡逻引擎启动...")
     check_vaults()
