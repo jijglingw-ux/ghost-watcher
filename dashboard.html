@@ -14,14 +14,12 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- GHOST WATCHER V13.2 (iOS 适配版) --- */
-        :root { --bg: #0c0c0c; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; --lock: #3d3d3d; }
+        /* --- GHOST WATCHER GENESIS (文本最终版) --- */
+        :root { --bg: #0c0c0c; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; }
         body { background: var(--bg); color: var(--text); font-family: "Songti SC", serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* 针对 iOS PWA 的顶部安全区适配 */
-        @supports (-webkit-touch-callout: none) {
-            body { padding-top: max(15px, env(safe-area-inset-top)); }
-        }
+        /* 适配 iPhone 顶部刘海 */
+        @supports (-webkit-touch-callout: none) { body { padding-top: max(15px, env(safe-area-inset-top)); } }
 
         .box { width: 100%; max-width: 500px; background: var(--card); padding: 25px 20px; border: 1px solid var(--border); box-shadow: 0 0 20px rgba(0,0,0,0.9); margin-bottom: 20px; box-sizing: border-box; }
         h3 { margin: 0 0 15px 0; border-bottom: 1px solid var(--border); padding-bottom: 15px; font-size: 20px; color: var(--accent); letter-spacing: 6px; text-align: center; }
@@ -80,7 +78,6 @@
         .swal2-title { color: var(--accent) !important; font-family: "Songti SC"; }
         .swal2-confirm { background: #333 !important; color: #ccc !important; border: 1px solid #444 !important; }
         
-        /* 锁定提示 */
         .locked-tip { font-size: 12px; color: #555; text-align: center; margin-bottom: 10px; font-style: italic; display: none; }
         .lock-icon { margin-right: 5px; }
     </style>
@@ -196,8 +193,8 @@
     let isEditing = false;
     let timerInterval = null;
     let statusWatcher = null; 
-    let isSealed = false; // 标记是否已封存
-    let existingEncryptedData = ""; // 缓存旧的加密数据用于追加
+    let isSealed = false; 
+    let existingEncryptedData = ""; 
 
     function startStatusWatcher() {
         if (statusWatcher) clearInterval(statusWatcher);
@@ -361,7 +358,7 @@
         const grpInterval = document.getElementById('grp_interval');
         
         [grpTimeout, grpWarns, grpInterval].forEach(el => el.classList.remove('error'));
-        // 注意：如果是追加模式，这里只做 UI 渲染，不控制 saveBtn 的逻辑
+        // 追加模式下，不因为输入变化而禁用按钮，但会因为封存逻辑改变按钮功能
         if (!isSealed) {
             saveBtn.disabled = false; saveBtn.innerText = "封存遗物（开启守望）"; 
         }
