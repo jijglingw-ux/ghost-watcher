@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>遗物 | 守望者</title>
+<title>遗物 | Relic</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="遗物守望">
+    <meta name="apple-mobile-web-app-title" content="遗物">
     <link rel="apple-touch-icon" href="https://via.placeholder.com/192x192/0c0c0c/d4c5a9?text=R">
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -161,7 +161,7 @@
     </div>
     <div style="text-align:right; font-size:12px; color:#444; margin-top:15px;">剩余: <span id="real-left-time">--:--</span></div>
 
-    <button id="saveBtn">封存遗物（开启守望）</button>
+    <button id="saveBtn">封存遗物</button>
     <button id="heartBtn" class="btn-heartbeat">我仍是生者</button>
 
     <div style="height:1px; background:#222; margin: 40px 0 20px 0;"></div>
@@ -371,7 +371,7 @@
         [grpTimeout, grpWarns, grpInterval].forEach(el => el.classList.remove('error'));
         // 追加模式下，不因为输入变化而禁用按钮，但会因为封存逻辑改变按钮功能
         if (!isSealed) {
-            saveBtn.disabled = false; saveBtn.innerText = "封存遗物（开启守望）"; 
+            saveBtn.disabled = false; saveBtn.innerText = "确认封存（Seal）";
         }
         errorOverlay.style.display = 'none';
         
