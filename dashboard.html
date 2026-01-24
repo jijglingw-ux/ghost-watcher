@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>遗物 | Relic</title>
+    <title>遗物 | Relic</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- GHOST WATCHER V13.4 (即刻终结版) --- */
+        /* --- RELIC V1.0 (PULUVO OFFICIAL) --- */
         :root { --bg: #0c0c0c; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; }
         body { background: var(--bg); color: var(--text); font-family: "Songti SC", serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
@@ -161,7 +161,7 @@
     </div>
     <div style="text-align:right; font-size:12px; color:#444; margin-top:15px;">剩余: <span id="real-left-time">--:--</span></div>
 
-    <button id="saveBtn">封存遗物</button>
+    <button id="saveBtn">确认封存 (Seal)</button>
     <button id="heartBtn" class="btn-heartbeat">我仍是生者</button>
 
     <div style="height:1px; background:#222; margin: 40px 0 20px 0;"></div>
@@ -182,6 +182,7 @@
 </div>
 
 <script>
+    // 配置保持不变
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
@@ -192,9 +193,8 @@
     let statusWatcher = null; 
     let isSealed = false; 
     let existingEncryptedData = ""; 
-    let hasTriggeredDeath = false; // 防止重复触发
+    let hasTriggeredDeath = false;
 
-    // --- 核心改动：独立的“死亡执行程序” ---
     async function triggerDeathProtocol(reason) {
         if (hasTriggeredDeath) return;
         hasTriggeredDeath = true;
@@ -203,14 +203,12 @@
         if (timerInterval) clearInterval(timerInterval);
         isEditing = false;
         
-        // 尝试登出
         await client.auth.signOut();
         
-        // 弹出终结界面
         Swal.fire({
             icon: 'warning',
             title: '信号中断',
-            html: `<span style="color:#888">生命体征已归零 (${reason})。<br>遗物移交程序已启动。<br>根据协议，生者权限已永久终止。</span>`,
+            html: `<span style="color:#888">生命体征已归零 (${reason})。<br>遗物交付程序已启动。<br>生者权限已永久终止。</span>`,
             background: '#141414',
             color: '#d4c5a9',
             allowOutsideClick: false,
@@ -223,13 +221,11 @@
         if (statusWatcher) clearInterval(statusWatcher);
         statusWatcher = setInterval(async () => {
             if (!sessionUser) return;
-            // 依然保留服务器检查，以防前端计时器被篡改或不准
             const { data, error } = await client.from('vaults').select('status').eq('id', sessionUser.id).maybeSingle();
-            
             if (data && data.status !== 'active') {
                 triggerDeathProtocol("服务器确认");
             }
-        }, 5000); 
+        }, 5000);
     }
 
     function getMinutes(valId, unitId) {
@@ -259,7 +255,7 @@
         const { data: v } = await client.from('vaults').select('status').eq('id', user.id).single();
         if (v && v.status !== 'active') {
             await client.auth.signOut();
-            return Swal.fire({icon: 'error', title: '身份已销毁', html: '<span style="color:#888">系统记录显示该档案持有者已确认失联。<br>遗物移交程序已启动，原账号访问权限已永久移除。</span>', background: '#141414', color: '#6e2e2e', confirmButtonText: '离开'});
+            return Swal.fire({icon: 'error', title: '身份已销毁', html: '<span style="color:#888">档案已锁定或移交。<br>原账号访问权限已永久移除。</span>', background: '#141414', color: '#6e2e2e', confirmButtonText: '离开'});
         }
         sessionUser = user;
         document.getElementById('auth-box').classList.add('hidden');
@@ -294,25 +290,22 @@
         if (!sessionUser) return;
         let raw = document.getElementById('de_input').value.trim();
         if (!raw) return Swal.fire({icon:'warning', title:'无内容', text:'请粘贴提取码', background:'#141414', color:'#ccc'});
-        
         if (raw.startsWith("RELIC::")) {
             const targetId = raw.replace("RELIC::", "").trim();
             const { data, error } = await client.from('vaults').select('encrypted_data, beneficiary_email, status, last_checkin_at').eq('id', targetId).maybeSingle();
             
             if (!data) return Swal.fire({icon:'error', title:'不存在', text:'该遗物已超过时限被永久销毁，或提取码错误。', background:'#141414', color:'#6e2e2e'});
-            
             if (data.status === 'pending') {
                 await client.from('vaults').update({ status: 'reading', last_checkin_at: new Date().toISOString() }).eq('id', targetId);
-                Swal.fire({icon:'warning', title:'自毁程序启动', text:'遗言已解封。数据将在 30分钟 后物理销毁。', background:'#141414', color:'#d4c5a9', confirmButtonText:'查看真相'});
+                Swal.fire({icon:'warning', title:'自毁程序启动', text:'信物已解封。数据将在 30分钟 后物理销毁。', background:'#141414', color:'#d4c5a9', confirmButtonText:'查看真相'});
             } else if (data.status === 'reading') {
                 const passed = (new Date() - new Date(data.last_checkin_at)) / 60000;
-                if (passed > 30) return Swal.fire({icon:'error', title:'已销毁', text:'时间已到，遗物已随风而逝。', background:'#141414', color:'#6e2e2e'});
+                if (passed > 30) return Swal.fire({icon:'error', title:'已销毁', text:'时间已到，信物已随风而逝。', background:'#141414', color:'#6e2e2e'});
                 Swal.fire({icon:'info', title:'倒计时中', text: `剩余约 ${Math.ceil(30 - passed)} 分钟。`, background:'#141414', color:'#ccc', timer: 2000, showConfirmButton:false});
             }
             raw = data.encrypted_data;
         }
 
-        // --- 支持多段遗言的解密逻辑 ---
         if (raw.includes("|AES::")) {
             const parts = raw.split("|");
             let fullText = "";
@@ -324,7 +317,8 @@
                     fullText += `【记录 ${idx}】\n` + dec;
                     idx++;
                 } else {
-                    fullText = null; break; // 只要有一段解不开，就视为失败
+                    fullText = null;
+                    break; 
                 }
             }
             if (fullText) {
@@ -341,7 +335,7 @@
             }
         }
         
-        Swal.fire({icon:'error', title:'拒绝访问', text:'您的登录邮箱['+sessionUser.email+']与此遗物的指定继承人不符。', background:'#141414', color:'#6e2e2e'});
+        Swal.fire({icon:'error', title:'拒绝访问', text:'您的登录邮箱['+sessionUser.email+']与此信物的指定继承人不符。', background:'#141414', color:'#6e2e2e'});
     }
 
     function toggleSelfEmail() {
@@ -369,12 +363,12 @@
         const grpInterval = document.getElementById('grp_interval');
         
         [grpTimeout, grpWarns, grpInterval].forEach(el => el.classList.remove('error'));
-        // 追加模式下，不因为输入变化而禁用按钮，但会因为封存逻辑改变按钮功能
+        
         if (!isSealed) {
-            saveBtn.disabled = false; saveBtn.innerText = "确认封存（Seal）";
+            saveBtn.disabled = false;
+            saveBtn.innerText = "确认封存 (Seal)"; 
         }
         errorOverlay.style.display = 'none';
-        
         if (!total || !count || !interval) {
             if (total || count || interval) { box.style.display = 'flex'; document.getElementById('empty-tip').style.display = 'block'; fill.style.display = 'none'; }
             else { box.style.display = 'none'; }
@@ -419,27 +413,23 @@
         const benEmail = document.getElementById('u_ben').value;
         
         if (!secret) return Swal.fire({icon:'warning', title:'空数据', text:'请填写内容', background:'#141414', color:'#ccc'});
-
-        // 1. 追加模式
+        
         if (isSealed) {
             const newEncrypted = encryptData(secret, benEmail);
             const finalData = existingEncryptedData ? (existingEncryptedData + "|" + newEncrypted) : newEncrypted;
-            
             const { error } = await client.from('vaults').update({
                 encrypted_data: finalData,
                 last_checkin_at: new Date() 
             }).eq('id', sessionUser.id);
-            
             if (error) Swal.fire({icon:'error', title:'失败', text: translateError(error.message), background:'#141414', color:'#ccc'});
             else {
-                existingEncryptedData = finalData; 
+                existingEncryptedData = finalData;
                 document.getElementById('u_secret').value = ""; 
-                Swal.fire({icon:'success', title:'已追加', text:'新的嘱托已融入遗物，等待开启。', background:'#141414', color:'#d4c5a9'});
+                Swal.fire({icon:'success', title:'已追加', text:'新的铭文已融入遗物，等待开启。', background:'#141414', color:'#d4c5a9'});
             }
             return;
         }
 
-        // 2. 初次封存模式
         const total = getMinutes('u_timeout_val', 'u_timeout_unit');
         const interval = getMinutes('u_interval_val', 'u_interval_unit');
         const count = parseInt(document.getElementById('u_max_warns').value);
@@ -457,7 +447,7 @@
         });
         if (error) Swal.fire({icon:'error', title:'失败', text: translateError(error.message), background:'#141414', color:'#ccc'});
         else { 
-            Swal.fire({icon:'success', title:'已封存', text:'遗言已锁定。不可撤销，不可修改规则。', background:'#141414', color:'#d4c5a9'}); 
+            Swal.fire({icon:'success', title:'已封存', text:'信物已锁定。不可撤销，不可修改规则。', background:'#141414', color:'#d4c5a9'});
             isEditing = false; 
             refreshData(); 
         }
@@ -475,17 +465,14 @@
         document.getElementById('header-user-email').innerText = sessionUser.email;
         document.getElementById('current-user-email').innerText = sessionUser.email;
         const { data: v } = await client.from('vaults').select('*').eq('id', sessionUser.id).single();
-        
         if (v && v.status !== 'active') { await client.auth.signOut(); location.reload(); return; }
 
         if (v) {
-            // --- 锁定逻辑 ---
             isSealed = true;
             existingEncryptedData = v.encrypted_data; 
             
             const idsToLock = ['u_timeout_val', 'u_timeout_unit', 'u_max_warns', 'u_interval_val', 'u_interval_unit', 'u_warn_email', 'u_ben', 'sameAsMe'];
             idsToLock.forEach(id => document.getElementById(id).disabled = true);
-            
             document.querySelectorAll('.input-group').forEach(el => el.classList.add('disabled'));
             document.getElementById('locked-status').style.display = 'block';
             document.getElementById('saveBtn').innerText = "追加一段铭文 (不可修改旧文)";
@@ -498,8 +485,8 @@
             document.getElementById('u_ben').value = v.beneficiary_email||'';
             if(v.warning_email===sessionUser.email) { document.getElementById('sameAsMe').checked=true; }
             
-            document.getElementById('u_secret').value = ""; 
-            document.getElementById('u_secret').placeholder = "（旧内容已封存。在此输入新的嘱托，将追加到遗物末尾...）"; 
+            document.getElementById('u_secret').value = "";
+            document.getElementById('u_secret').placeholder = "（旧内容已封存。在此输入新的铭文，将追加到遗物末尾...）"; 
             
             isEditing = false; 
             validateAndRender(); 
@@ -515,11 +502,10 @@
         if (error) Swal.fire({icon:'error', title:'失败', text: translateError(error.message), background:'#141414', color:'#ccc'});
         else Swal.fire({icon:'success', title:'成功', text:'已建档，请调取。', background:'#141414', color:'#d4c5a9'});
     };
-
     window.doLogout = async () => { 
         if (statusWatcher) clearInterval(statusWatcher); 
         await client.auth.signOut(); 
-        location.reload(); 
+        location.reload();
     };
 
     function startTimer() { 
@@ -534,13 +520,11 @@
             const el = document.getElementById('real-left-time'); 
             const fill = document.getElementById('life-fill'); 
             
-            // --- 核心修改：本地倒计时归零，立即触发死亡 ---
             if (left <= 0) { 
                 el.innerText="00:00:00 (已成遗物)"; 
                 el.className="dead"; 
                 fill.style.width="0%"; 
-                
-                triggerDeathProtocol("本地倒计时终结"); // <--- 这里！不等服务器！
+                triggerDeathProtocol("本地倒计时终结"); 
                 return; 
             } 
             
