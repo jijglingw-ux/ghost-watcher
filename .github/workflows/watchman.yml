@@ -1,0 +1,34 @@
+name: Watchman Daemon
+
+on:
+  schedule:
+    # 每 30 分钟运行一次 (格式: 分 时 日 月 周)
+    - cron: '*/5 * * * *'
+  # 允许你手动点击按钮运行 (方便测试)
+  workflow_dispatch:
+
+jobs:  
+  vigil:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install supabase
+
+    - name: Run Watchman
+      env:
+        # 这里会自动读取你在 Settings 里填的密钥
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+      run: python main.py
