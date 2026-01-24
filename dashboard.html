@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- V10.1 最终版 UI --- */
+        /* --- PROJECT RELIC V11.0 FINAL --- */
         :root { --bg: #0c0c0c; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; }
         body { background: var(--bg); color: var(--text); font-family: "Songti SC", serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         .box { width: 100%; max-width: 500px; background: var(--card); padding: 25px 20px; border: 1px solid var(--border); box-shadow: 0 0 20px rgba(0,0,0,0.9); margin-bottom: 20px; box-sizing: border-box; }
@@ -22,15 +22,13 @@
         .btn-heartbeat { background: #1c261e; color: #4a7a52; border: 1px solid #28382b; margin-top: 25px; font-weight: bold; }
         .hidden { display: none; }
         .row { display: flex; gap: 10px; } .row div { flex: 1; } .row input { text-align: center; }
-        
-        /* 复选框 */
+        /* Checkbox */
         .checkbox-wrapper { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: 14px; color: #888; cursor: pointer; padding: 8px 0; user-select: none; }
         .checkbox-wrapper input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
         .checkmark { height: 16px; width: 16px; background-color: transparent; border: 1px solid #666; display: inline-block; position: relative; }
         .checkbox-wrapper input:checked ~ .checkmark { border-color: var(--accent); background-color: rgba(212, 197, 169, 0.1); }
         .checkbox-wrapper input:checked ~ .checkmark:after { content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px; border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg); }
-
-        /* 时间轴 */
+        /* Timeline */
         .timeline-container { position: relative; height: 80px; background: #0c0c0c; border: 1px solid #222; margin-top: 15px; display: none; align-items: center; justify-content: center; overflow:hidden;}
         .logic-error-overlay { position: absolute; inset: 0; background: rgba(10, 5, 5, 0.95); color: #8a3b3b; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; z-index: 20; text-align: center; padding: 10px; border: 1px solid #8a3b3b; }
         .life-fill { height: 100%; background: rgba(100, 100, 100, 0.1); width: 0%; position: absolute; left: 0; top: 0; border-right: 2px solid #555; transition: width 1s linear; z-index: 1; }
@@ -41,7 +39,6 @@
         .death-label { position: absolute; left: 6px; bottom: 6px; color: #5c2b2b; font-size: 11px; font-weight: bold; z-index: 4; display: none; }
         #real-left-time { font-family: "FangSong", monospace; font-size: 20px; font-weight: bold; color: #666; }
         #real-left-time.danger { color: #8a6d3b; } #real-left-time.dead { color: #6e2e2e; }
-        
         .swal2-popup { background: #141414 !important; border: 1px solid #333; color: #999 !important; border-radius: 0 !important; width: 90% !important; }
         .swal2-title { color: var(--accent) !important; font-family: "Songti SC"; }
         .swal2-confirm { background: #333 !important; color: #ccc !important; border: 1px solid #444 !important; }
@@ -140,7 +137,7 @@
         return "系统异常：" + msg; 
     }
 
-    // --- 核心：阅后即焚逻辑 ---
+    // --- 阅后即焚逻辑 ---
     async function handleDecrypt() {
         if (!sessionUser) return;
         let raw = document.getElementById('de_input').value.trim();
@@ -148,44 +145,48 @@
 
         if (raw.startsWith("RELIC::")) {
             const targetId = raw.replace("RELIC::", "").trim();
-            // 1. 先查数据
+            // 1. 获取遗物状态
             const { data, error } = await client.from('vaults').select('encrypted_data, beneficiary_email, status, last_checkin_at').eq('id', targetId).maybeSingle();
             
-            if (!data) return Swal.fire({icon:'error', title:'无效', text:'该遗物已超过时限被永久销毁，或提取码错误。', background:'#141414', color:'#6e2e2e'});
+            if (!data) return Swal.fire({icon:'error', title:'不存在', text:'该遗物已失效或已被物理销毁。', background:'#141414', color:'#6e2e2e'});
             
-            // 2. 检查状态并触发“开箱”
-            if (data.status === 'triggered') {
-                // 第一次看！触发30分钟倒计时
+            // 2. 判断状态
+            if (data.status === 'pending') {
+                // 第一次阅读：触发“阅读模式”，重置倒计时起点
                 await client.from('vaults').update({ 
-                    status: 'unlocked', 
-                    last_checkin_at: new Date().toISOString() // 重置时间为现在
+                    status: 'reading', 
+                    last_checkin_at: new Date().toISOString() 
                 }).eq('id', targetId);
                 
                 Swal.fire({
                     icon:'warning', title:'自毁程序启动', 
-                    text:'遗言已解封。数据将在 30分钟 后物理销毁。', 
-                    background:'#141414', color:'#d4c5a9', confirmButtonText:'立即查看'
+                    text:'遗言已解封。此信息将在 30分钟 后永久销毁。', 
+                    background:'#141414', color:'#d4c5a9', confirmButtonText:'查看真相'
                 });
-            } else if (data.status === 'unlocked') {
-                // 已经在倒计时中
-                const unlockTime = new Date(data.last_checkin_at);
-                const passedMins = (new Date() - unlockTime) / 60000;
+            } else if (data.status === 'reading') {
+                // 正在阅读中：检查剩余时间
+                const startReadTime = new Date(data.last_checkin_at);
+                const passedMins = (new Date() - startReadTime) / 60000;
                 if (passedMins > 30) {
-                    return Swal.fire({icon:'error', title:'已销毁', text:'遗物已随风而逝。', background:'#141414', color:'#6e2e2e'});
+                    return Swal.fire({icon:'error', title:'已销毁', text:'时间已到，遗物已随风而逝。', background:'#141414', color:'#6e2e2e'});
                 }
-                // 还可以看
+                const left = Math.ceil(30 - passedMins);
+                Swal.fire({
+                    icon:'info', title:'倒计时中', 
+                    text: `距离销毁还剩约 ${left} 分钟。`, 
+                    background:'#141414', color:'#ccc', timer: 2000, showConfirmButton:false
+                });
             }
 
             raw = data.encrypted_data;
         }
 
-        // 解密
+        // 解密展示
         const result = decryptData(raw, sessionUser.email);
         
         if (result) {
             document.getElementById('de_output').innerText = result;
             document.getElementById('de_output').classList.remove('hidden');
-            // 显示成功但不弹窗打断，因为可能有自毁警告
         } else {
             Swal.fire({icon:'error', title:'拒绝访问', text:'您的登录邮箱['+sessionUser.email+']与此遗物的指定继承人不符。', background:'#141414', color:'#6e2e2e'});
         }
