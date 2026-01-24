@@ -27,27 +27,20 @@ def send_email(to_email, subject, content):
     except Exception as e:
         print(f"❌ 邮件错误: {e}")
 
-# --- 核心修复：更强壮的时间解析函数 ---
+# 强壮的时间解析
 def parse_time(time_str):
     if not time_str: return None
-    # 1. 统一把 Z 换成 +00:00
     clean_str = time_str.replace('Z', '+00:00')
     try:
-        # 2. 尝试直接解析
         return datetime.datetime.fromisoformat(clean_str)
     except ValueError:
-        # 3. 如果报错 (例如 .36+00:00 这种精度问题)
-        # 直接截断小数点后的部分，保留到秒，强制加上 UTC 时区
         try:
-            base_time = clean_str.split('.')[0] # 拿到 2026-01-24T04:09:26
-            return datetime.datetime.fromisoformat(base_time + "+00:00")
-        except Exception as e:
-            print(f"❌ 时间格式解析严重错误: {time_str} -> {e}")
-            return None
+            return datetime.datetime.fromisoformat(clean_str.split('.')[0] + "+00:00")
+        except: return None
 
 def check_vaults():
     # ====================================================
-    # 任务 A: 检查活跃用户 (status = active)
+    # 任务 A: 监测活人 (status = active)
     # ====================================================
     try:
         res = supabase.table("vaults").select("*").eq("status", "active").execute()
@@ -57,8 +50,6 @@ def check_vaults():
     for row in active_vaults:
         user_id = row.get('id')
         last_checkin = row.get('last_checkin_at')
-        
-        # 使用新的解析函数
         last_time = parse_time(last_checkin)
         if not last_time: continue
 
@@ -75,7 +66,7 @@ def check_vaults():
         now = datetime.datetime.now(datetime.timezone.utc)
         diff = (now - last_time).total_seconds() / 60
         
-        # 1. 预警 (唤醒)
+        # 1. 唤醒阶段
         start_warn_time = deadline - (max_warns * interval)
         if start_warn_time < 0: start_warn_time = deadline - interval
 
@@ -86,76 +77,75 @@ def check_vaults():
             while current_warns < expected_warns:
                 current_warns += 1
                 mins_left = int(deadline - diff)
-                print(f"⚠️ 发送唤醒 {user_id} ({current_warns}/{max_warns})")
-                
-                body = f"遗物系统检测到您已失联。\n距离遗言发出还剩 {mins_left} 分钟。\n请立即登录续期：{SITE_URL}"
+                print(f"⚠️ 唤醒 {user_id} ({current_warns}/{max_warns})")
+                body = f"检测到失联迹象。\n遗言将于 {mins_left} 分钟后发出。\n请立即登录续期：{SITE_URL}"
                 send_email(warn_email, f"🚨 唤醒警告 ({current_warns}/{max_warns})", body)
-                
                 supabase.table("vaults").update({"current_warnings": current_warns}).eq("id", user_id).execute()
                 time.sleep(1)
 
-        # 2. 死亡判定 (发送提取码，状态转为 Triggered)
+        # 2. 确认失联 -> 移入“数字灵柩” (Status: pending)
         if diff >= deadline:
-            print(f"🔴 确认失联 {user_id} -> 发送提取码")
+            print(f"🔴 用户 {user_id} 失联 -> 账号停用，等待提取")
             
             relic_token = f"RELIC::{user_id}"
             
             ben_body = f"""
-            【遗物 | 最终交付】
+            【遗物 | 提取通知】
 
             您好。
             原持有者已确认失联。
-            根据其失联前设定，系统已生成唯一的【遗物提取码】。
+            根据设定，其留下的加密遗言已进入【待提取】状态。
 
             ----------------------------------------
             提取码：
             {relic_token}
             ----------------------------------------
 
-            【紧急注意】
-            1. 此提取码有效期仅为 30分钟。
-            2. 30分钟后，系统将执行物理销毁，此码将永久失效。
-            3. 请立即前往官网：{SITE_URL}
-            4. 必须使用本邮箱 ({ben_email}) 登录。
-            5. 在底部“发掘”处粘贴提取码。
+            【阅后即焚机制说明】
+            1. 数据目前安全保存在“数字灵柩”中，无时间限制。
+            2. 当您在网站输入提取码并【解密成功】的瞬间，将触发自毁程序。
+            3. 解密后 30分钟，数据将永久物理销毁。
 
-            (倒计时已开始...)
+            请在准备好后，访问官网提取：
+            {SITE_URL}
+            (请使用本邮箱 {ben_email} 作为身份验证)
             """
             
-            send_email(ben_email, "⏳ 【遗物】30分钟后销毁 - 请立即提取", ben_body)
+            send_email(ben_email, "🔒 【遗物】待提取 - 包含阅后即焚数据", ben_body)
             
-            # 更新状态为 triggered
+            # 关键：状态改为 pending，停止一切活动监测，静默等待
             supabase.table("vaults").update({
-                "status": "triggered"
+                "status": "pending",
+                "last_checkin_at": datetime.datetime.now(datetime.timezone.utc).isoformat() # 记录死亡时间
             }).eq("id", user_id).execute()
 
     # ====================================================
-    # 任务 B: 检查已解锁用户 (status = unlocked) -> 30分钟后销毁
+    # 任务 B: 监测“正在阅读”的遗物 (status = reading)
     # ====================================================
     try:
-        res = supabase.table("vaults").select("*").eq("status", "unlocked").execute()
-        unlocked_vaults = res.data
-    except: unlocked_vaults = []
+        # 只有受益人点击了解密，状态才会变成 reading
+        res = supabase.table("vaults").select("*").eq("status", "reading").execute()
+        reading_vaults = res.data
+    except: reading_vaults = []
 
-    for row in unlocked_vaults:
+    for row in reading_vaults:
         user_id = row.get('id')
-        unlock_time_str = row.get('last_checkin_at') 
+        start_read_time_str = row.get('last_checkin_at') # 这里记录的是“开始阅读时间”
         
-        # 使用新的解析函数
-        unlock_time = parse_time(unlock_time_str)
-        if not unlock_time: continue
+        start_read_time = parse_time(start_read_time_str)
+        if not start_read_time: continue
 
         now = datetime.datetime.now(datetime.timezone.utc)
-        diff_mins = (now - unlock_time).total_seconds() / 60
+        diff_mins = (now - start_read_time).total_seconds() / 60
         
         if diff_mins >= 30: 
-            print(f"💀 阅后即焚时间到：删除 {user_id}")
+            print(f"💀 阅读时间结束 ({diff_mins:.1f}m)：物理销毁 {user_id}")
             supabase.table("vaults").delete().eq("id", user_id).execute()
         else:
-            print(f"⏳ {user_id} 正在阅读中: 剩余 {int(30 - diff_mins)} 分钟存活")
+            print(f"⏳ {user_id} 正在阅读中: 剩余 {int(30 - diff_mins)} 分钟")
 
 if __name__ == "__main__":
-    print("🚀 遗物系统 V10.2 (时间格式修复版) 启动...")
+    print("🚀 遗物系统 V11.0 (阅后即焚终极版) 启动...")
     while True:
         check_vaults()
         print("💤 ...")
