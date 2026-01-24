@@ -5,7 +5,7 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 
-# --- 配置区 (自动读取环境变量) ---
+# --- 配置区 (自动读取 GitHub 环境变量) ---
 url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_KEY")
 sender_email = os.environ.get("SENDER_EMAIL")
@@ -15,7 +15,7 @@ sender_password = os.environ.get("SENDER_PASSWORD")
 # 注意：必须使用 service_role key 才能有权限查询 auth.users
 supabase = create_client(url, key)
 
-# 你的网站地址 (如果有变动，请修改这里)
+# 你的网站地址 (邮件中“点击查看”的链接)
 SITE_URL = "https://jijglingw-ux.github.io/ghost-watcher" 
 
 def send_email(to_email, subject, content):
@@ -91,7 +91,7 @@ def check_vaults():
                     mins_left = int(deadline - diff)
                     print(f"⚠️ [唤醒] 正在呼叫持有者 {user_id} (第 {target_warn_level} 次)")
                     
-                    # --- 唤醒邮件文案 (已更新为 Relic 风格) ---
+                    # --- 唤醒邮件文案 (Relic 风格) ---
                     body = f"""
 【一级状态警报】遗物托管协议即将触发
 
@@ -120,7 +120,7 @@ def check_vaults():
 
         # === B. 确认失联 -> 执行移交 (发给受益人) ===
         if diff >= deadline:
-            # 尝试将状态从 active 改为 pending
+            # 尝试将状态从 active 改为 pending (锁定)
             lock_res = supabase.table("vaults").update({
                 "status": "pending",
                 "last_checkin_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -147,7 +147,7 @@ def check_vaults():
 
                 print(f"📧 正在发送给受益人 {ben_email}...")
                 
-                # --- 最终交付邮件文案 (已更新为 Relic 风格) ---
+                # --- 最终交付邮件文案 (Relic 风格) ---
                 ben_subject = f"【重要】来自 [{owner_identity}] 的数字信物交付 (Relic Protocol)"
                 ben_body = f"""
 {ben_email}，您好。
