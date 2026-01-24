@@ -28,14 +28,13 @@ def send_email(to_email, subject, content):
         print(f"❌ 邮件错误: {e}")
 
 def check_vaults():
-    # ----------------------------------------------------
+    # ====================================================
     # 任务 A: 检查活跃用户 (status = active)
-    # ----------------------------------------------------
+    # ====================================================
     try:
         res = supabase.table("vaults").select("*").eq("status", "active").execute()
         active_vaults = res.data
-    except:
-        active_vaults = []
+    except: active_vaults = []
 
     for row in active_vaults:
         user_id = row.get('id')
@@ -52,12 +51,11 @@ def check_vaults():
         warn_email = row.get('warning_email')
         ben_email = row.get('beneficiary_email')
 
-        # 计算失联时长
         last_time = datetime.datetime.fromisoformat(last_checkin.replace('Z', '+00:00'))
         now = datetime.datetime.now(datetime.timezone.utc)
         diff = (now - last_time).total_seconds() / 60
         
-        # 1. 预警阶段
+        # 1. 预警 (唤醒)
         start_warn_time = deadline - (max_warns * interval)
         if start_warn_time < 0: start_warn_time = deadline - interval
 
@@ -68,22 +66,21 @@ def check_vaults():
             while current_warns < expected_warns:
                 current_warns += 1
                 mins_left = int(deadline - diff)
-                print(f"⚠️ 发送预警给 {user_id} ({current_warns}/{max_warns})")
+                print(f"⚠️ 发送唤醒 {user_id} ({current_warns}/{max_warns})")
                 
-                body = f"遗物系统检测到您已失联。\n距离数据移交/销毁还剩 {mins_left} 分钟。\n请立即登录续期：{SITE_URL}"
-                send_email(warn_email, f"🚨 最终警告 ({current_warns}/{max_warns})", body)
+                body = f"遗物系统检测到您已失联。\n距离遗言发出还剩 {mins_left} 分钟。\n请立即登录续期：{SITE_URL}"
+                send_email(warn_email, f"🚨 唤醒警告 ({current_warns}/{max_warns})", body)
                 
                 supabase.table("vaults").update({"current_warnings": current_warns}).eq("id", user_id).execute()
                 time.sleep(1)
 
-        # 2. 死亡判定 (触发 30分钟倒计时)
+        # 2. 死亡判定 (发送提取码，状态转为 Triggered)
         if diff >= deadline:
-            print(f"🔴 确认死亡 {user_id} -> 进入30分钟销毁倒计时")
+            print(f"🔴 确认失联 {user_id} -> 发送提取码")
             
-            # 生成提取码 (即 User ID)
             relic_token = f"RELIC::{user_id}"
             
-            # --- 邮件文案已更新 ---
+            # --- 邮件文案更新：强调解密后才销毁 ---
             ben_body = f"""
             【遗物 | 最终交付】
 
@@ -96,50 +93,48 @@ def check_vaults():
             {relic_token}
             ----------------------------------------
 
-            【紧急注意】
-            1. 此提取码有效期仅为 30分钟。
-            2. 30分钟后，系统将执行物理销毁，此码将永久失效。
-            3. 请立即前往官网：{SITE_URL}
-            4. 必须使用本邮箱 ({ben_email}) 登录。
-            5. 在底部“发掘”处粘贴提取码。
+            【重要提示】
+            1. 此提取码目前永久有效，您可以随时提取。
+            2. 【警告】一旦您在网站上输入提取码并成功“提取并解读”，系统将启动【30分钟自毁程序】。
+            3. 解密 30分钟后，数据将执行物理销毁，再次输入提取码将无效。
 
-            (倒计时已开始...)
+            请在准备好阅读真相时，访问：{SITE_URL}
+            (务必使用本邮箱 {ben_email} 登录)
             """
             
-            send_email(ben_email, "⏳ 【遗物】30分钟后销毁 - 请立即提取", ben_body)
+            send_email(ben_email, "🔒 【遗物】资产移交 - 解密后即刻销毁", ben_body)
             
-            # 更新状态为 triggered，并重置时间为现在 (作为销毁倒计时的起点)
-            now_str = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            # 状态设为 triggered (等待受益人操作)，不更新时间，不删除
             supabase.table("vaults").update({
-                "status": "triggered", 
-                "last_checkin_at": now_str  # 复用此字段记录“触发时间”
+                "status": "triggered"
             }).eq("id", user_id).execute()
 
-    # ----------------------------------------------------
-    # 任务 B: 检查已触发用户 (status = triggered) -> 执行销毁
-    # ----------------------------------------------------
+    # ====================================================
+    # 任务 B: 检查已解锁用户 (status = unlocked) -> 30分钟后销毁
+    # ====================================================
     try:
-        res = supabase.table("vaults").select("*").eq("status", "triggered").execute()
-        triggered_vaults = res.data
-    except:
-        triggered_vaults = []
+        # 只检查那些已经被受益人打开过的遗物
+        res = supabase.table("vaults").select("*").eq("status", "unlocked").execute()
+        unlocked_vaults = res.data
+    except: unlocked_vaults = []
 
-    for row in triggered_vaults:
+    for row in unlocked_vaults:
         user_id = row.get('id')
-        trigger_time_str = row.get('last_checkin_at') # 这里存储的是触发时间
+        unlock_time_str = row.get('last_checkin_at') # 这里的 last_checkin_at 记录的是“解锁时间”
         
-        trigger_time = datetime.datetime.fromisoformat(trigger_time_str.replace('Z', '+00:00'))
-        now = datetime.datetime.now(datetime.timezone.utc)
-        diff_mins = (now - trigger_time).total_seconds() / 60
-        
-        if diff_mins >= 30: # 超过30分钟
-            print(f"💀 销毁时刻已到：删除 {user_id}")
-            supabase.table("vaults").delete().eq("id", user_id).execute()
-        else:
-            print(f"⏳ {user_id} 等待销毁: 剩余 {int(30 - diff_mins)} 分钟")
+        if unlock_time_str:
+            unlock_time = datetime.datetime.fromisoformat(unlock_time_str.replace('Z', '+00:00'))
+            now = datetime.datetime.now(datetime.timezone.utc)
+            diff_mins = (now - unlock_time).total_seconds() / 60
+            
+            if diff_mins >= 30: # 解锁超过30分钟，删！
+                print(f"💀 阅后即焚时间到：删除 {user_id}")
+                supabase.table("vaults").delete().eq("id", user_id).execute()
+            else:
+                print(f"⏳ {user_id} 正在阅读中: 剩余 {int(30 - diff_mins)} 分钟存活")
 
 if __name__ == "__main__":
-    print("🚀 遗物系统 V9.1 (文案修正版) 启动...")
+    print("🚀 遗物系统 V10.0 (阅后即焚版) 启动...")
     while True:
         check_vaults()
         print("💤 ...")
