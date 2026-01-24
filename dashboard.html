@@ -8,88 +8,194 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- V9.0 自动销毁版 (UI保持不变) --- */
-        :root { --bg: #000; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; }
-        body { background: var(--bg); color: var(--text); font-family: "Songti SC", serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        .box { width: 100%; max-width: 500px; background: var(--card); padding: 25px 20px; border: 1px solid var(--border); box-shadow: 0 0 20px rgba(0,0,0,0.9); margin-bottom: 20px; box-sizing: border-box; }
-        h3 { margin: 0 0 15px 0; border-bottom: 1px solid var(--border); padding-bottom: 15px; font-size: 20px; color: var(--accent); letter-spacing: 6px; text-align: center; }
-        input, textarea { width: 100%; margin-bottom: 15px; padding: 14px; background: #0c0c0c; border: 1px solid var(--border); color: var(--accent); box-sizing: border-box; border-radius: 0; font-family: "FangSong", monospace; font-size: 16px; outline: none; -webkit-appearance: none; }
-        input:focus, textarea:focus { border-color: #5c5c5c; }
-        label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; font-weight: bold; }
-        button { width: 100%; padding: 16px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: #888; margin-top: 10px; font-size: 16px; letter-spacing: 2px; }
-        .btn-primary { background: #1f1f1f; color: var(--accent); border-color: #444; }
-        .btn-heartbeat { background: #1c261e; color: #4a7a52; border: 1px solid #28382b; margin-top: 25px; font-weight: bold; }
+        /* --- 核心主题：博物馆/碑刻风 V9.2 (文案精修版) --- */
+        :root {
+            --bg-color: #0c0c0c;
+            --box-bg: #141414;
+            --text-main: #8a8a8a;
+            --text-highlight: #d4c5a9;
+            --border-color: #333;
+            --danger-color: #6e2e2e;
+            --safe-color: #162b20;
+            --warn-color: #5c402b;
+        }
+
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: "Songti SC", "SimSun", "STSong", "Georgia", serif; 
+            display: flex; flex-direction: column; align-items: center; 
+            padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        .box { 
+            width: 100%; max-width: 500px; background: var(--box-bg); 
+            padding: 25px 20px; border: 1px solid var(--border-color); 
+            box-shadow: 0 0 20px rgba(0,0,0,0.9); margin-bottom: 20px; box-sizing: border-box; 
+        }
+
+        h3 {
+            margin-top: 0; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;
+            font-size: 20px; color: var(--text-highlight); letter-spacing: 6px; 
+            font-weight: normal; text-align: center;
+        }
+        
+        input, textarea { 
+            width: 100%; margin-bottom: 15px; padding: 14px; 
+            background: var(--bg-color); border: 1px solid var(--border-color); 
+            color: var(--text-highlight); box-sizing: border-box; border-radius: 0; 
+            font-family: "FangSong", "Courier New", monospace; font-size: 16px; 
+            transition: all 0.3s; outline: none; -webkit-appearance: none; 
+        }
+        input:focus, textarea:focus { border-color: #5c5c5c; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+        input.error { border-color: var(--danger-color); background: #120a0a; color: var(--danger-color); }
+        
+        label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; letter-spacing: 1px; font-weight: bold; }
+        
+        button { 
+            width: 100%; padding: 16px; cursor: pointer; font-weight: normal; 
+            border: 1px solid var(--border-color); border-radius: 0; margin-top: 15px; 
+            font-size: 16px; font-family: inherit; letter-spacing: 4px; transition: all 0.2s; 
+        }
+        
+        .btn-primary { background: #1f1f1f; color: var(--text-highlight); border-color: #444; }
+        .btn-secondary { background: transparent; color: #666; border-color: var(--border-color); }
+        
+        .btn-heartbeat { 
+            background: #1c261e; color: #4a7a52; height: 65px; font-size: 18px; 
+            border: 1px solid #28382b; margin-top: 25px; font-weight: bold; 
+        }
+        .btn-heartbeat:active { background: #28382b; color: #6fb57b; }
+
+        button:disabled { background: #111; color: #333; cursor: not-allowed; border-color: #222; }
+
         .hidden { display: none; }
-        .row { display: flex; gap: 10px; } .row div { flex: 1; } .row input { text-align: center; }
-        .checkbox-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 14px; cursor: pointer; }
-        .timeline-container { position: relative; height: 80px; background: #0c0c0c; border: 1px solid #222; margin-top: 15px; display: none; align-items: center; justify-content: center; overflow:hidden;}
-        .life-fill { height: 100%; background: rgba(100, 100, 100, 0.1); width: 0%; position: absolute; left: 0; top: 0; border-right: 2px solid #555; transition: width 1s linear; z-index: 1; }
-        .life-fill.preview { background: rgba(212, 197, 169, 0.05); border-right: 2px solid var(--accent); width: 100% !important; transition: none; } 
+        .row { display: flex; gap: 10px; } .row div { flex: 1; }
+        .row input { padding: 10px; text-align: center; margin-bottom: 0;} 
+        .row label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;} 
+
+        .checkbox-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 14px; color: #666; cursor: pointer; padding: 5px 0; }
+        .checkbox-wrapper input { width: auto; margin: 0; }
+
+        /* --- 交互式时光尺 --- */
+        .timeline-container { 
+            position: relative; height: 80px; background: var(--bg-color); 
+            border: 1px solid #222; margin-top: 15px; overflow: hidden; 
+            display: none; align-items: center; justify-content: center; 
+        }
+        
+        .logic-error-overlay { 
+            position: absolute; inset: 0; background: rgba(10, 5, 5, 0.95); 
+            color: #8a3b3b; display: none; flex-direction: column; 
+            align-items: center; justify-content: center; font-size: 13px; 
+            z-index: 20; text-align: center; padding: 10px; border: 1px solid #8a3b3b; 
+        }
+        
+        .life-fill { 
+            height: 100%; background: rgba(100, 100, 100, 0.1); width: 0%; 
+            position: absolute; left: 0; top: 0; border-right: 2px solid #555; 
+            transition: width 1s linear; z-index: 1; 
+        }
+        .life-fill.preview { 
+            background: rgba(212, 197, 169, 0.05); border-right: 2px solid var(--text-highlight); 
+            width: 100% !important; transition: none; 
+        } 
+
         .trigger-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.1); z-index: 2; pointer-events: none; }
-        .trigger-info { position: absolute; top: 5px; font-size: 10px; color: #444; transform: translateX(3px); z-index: 3; border-left: 1px solid #333; padding-left: 4px; pointer-events: none; font-family: "FangSong"; }
+        .trigger-info { 
+            position: absolute; top: 5px; font-size: 10px; color: #444; 
+            transform: translateX(3px); z-index: 3; line-height: 1.2; 
+            border-left: 1px solid #333; padding-left: 4px; pointer-events: none; 
+            font-family: "FangSong", monospace;
+        }
+
+        .empty-tip { color: #333; font-size: 13px; z-index: 10; display: block; letter-spacing: 2px; }
+        
         .death-marker { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #5c2b2b; z-index: 4; display: none; } 
         .death-label { position: absolute; left: 6px; bottom: 6px; color: #5c2b2b; font-size: 11px; font-weight: bold; z-index: 4; display: none; }
+        
         #real-left-time { font-family: "FangSong", monospace; font-size: 20px; font-weight: bold; color: #666; }
-        #real-left-time.danger { color: #8a6d3b; } #real-left-time.dead { color: #6e2e2e; }
+        #real-left-time.danger { color: #8a6d3b; }
+        #real-left-time.dead { color: #6e2e2e; }
+
+        /* SweetAlert */
         .swal2-popup { background: #141414 !important; border: 1px solid #333; color: #999 !important; border-radius: 0 !important; width: 90% !important; }
-        .swal2-title { color: var(--accent) !important; font-family: "Songti SC"; }
-        .swal2-confirm { background: #333 !important; color: #ccc !important; border: 1px solid #444 !important; }
+        .swal2-title { color: var(--text-highlight) !important; font-size: 20px !important; font-family: "Songti SC", serif !important; letter-spacing: 2px; }
+        .swal2-content { color: #666 !important; font-size: 15px !important; }
+        .swal2-confirm { background-color: #333 !important; color: #ccc !important; border-radius: 0 !important; border: 1px solid #444 !important; width: 100% !important; padding: 12px !important;}
+        .swal2-actions { width: 100% !important; padding: 0 20px 20px 20px !important; box-sizing: border-box !important; }
     </style>
 </head>
 <body>
 
 <div class="box" id="auth-box">
     <h3>身份鉴权</h3>
-    <input type="email" id="u_email" placeholder="档案ID (邮箱)">
-    <input type="password" id="u_pw" placeholder="通行密匙">
-    <button id="loginBtn" class="btn-primary">调取档案 (登录)</button>
-    <button id="regBtn" style="border:none;">新建档案 (注册)</button>
+    <input type="email" id="u_email" placeholder="邮箱（档案ID）">
+    <input type="password" id="u_pw" placeholder="密码（通行密钥）">
+    <button id="loginBtn" class="btn-primary">登录（调取档案）</button>
+    <button id="regBtn" class="btn-secondary">注册（新建档案）</button>
 </div>
 
 <div class="box hidden" id="main-box">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
-        <span style="font-size:12px; color:#555;" id="header-user-email">--</span>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">
+        <span style="font-size:12px; color:#555; font-family:'FangSong';" id="header-user-email">--</span>
         <span style="font-size:12px; color:#d4c5a9; cursor:pointer;" onclick="doLogout()">[ 退出 ]</span>
     </div>
 
     <h3>遗 物</h3>
+    
     <label>铭文 / 遗言：</label>
     <textarea id="u_secret" rows="5" placeholder="在此刻下尚未成为历史的真相..."></textarea>
     
     <div style="height:1px; background:#222; margin: 20px 0;"></div>
+
     <label>交付对象：</label>
     <div class="checkbox-wrapper" onclick="toggleSelfEmail()">
-        <input type="checkbox" id="sameAsMe"> <span>唤醒提醒发给自己</span>
+        <input type="checkbox" id="sameAsMe"> <span>向自己发送唤醒</span>
     </div>
-    <input type="email" id="u_warn_email" placeholder="唤醒接收端">
-    <input type="email" id="u_ben" placeholder="遗物接收端 (唯一钥匙)">
+    <input type="email" id="u_warn_email" placeholder="唤醒接收邮箱">
+    <input type="email" id="u_ben" placeholder="遗物接收邮箱 (唯一解密钥匙)">
 
     <div style="height:1px; background:#222; margin: 20px 0;"></div>
-    <label>风化倒计时：</label>
+
+    <label>遗言发出倒计时：</label>
     <div class="row">
-        <div><label>存在(分)</label><input type="number" id="u_timeout"></div>
-        <div><label>唤醒</label><input type="number" id="u_max_warns"></div>
-        <div><label>间隔</label><input type="number" id="u_warn_interval"></div>
+        <div><label>存在(分)</label><input type="number" id="u_timeout" placeholder="总长"></div>
+        <div><label>唤醒（次数）</label><input type="number" id="u_max_warns" placeholder="次数"></div>
+        <div><label>间隔(分)</label><input type="number" id="u_warn_interval" placeholder="间隔"></div>
     </div>
 
     <div class="timeline-container" id="timeline-box">
+        <div class="empty-tip" id="empty-tip">等待数据刻录...</div>
+        
+        <div class="logic-error-overlay" id="logic-error">
+            <div style="font-size: 14px; margin-bottom: 5px;">逻辑悖论</div>
+            <div id="logic-error-msg" style="opacity:0.8;"></div>
+        </div>
+        
         <div class="death-marker" id="d-mark"></div>
         <div class="death-label" id="d-lbl">遗物</div>
         <div class="life-fill" id="life-fill"></div>
     </div>
-    <div style="text-align:right; font-size:12px; color:#444; margin-top:15px;">剩余: <span id="real-left-time">--:--</span></div>
+    
+    <div style="text-align:right; font-size:12px; color:#444; margin-top:15px;">
+        剩余时间： <span id="real-left-time">--:--:--</span>
+    </div>
 
-    <button id="saveBtn">封存遗物</button>
+    <button id="saveBtn" class="btn-secondary">封存遗物</button>
     <button id="heartBtn" class="btn-heartbeat">我仍是生者</button>
 
     <div style="height:1px; background:#222; margin: 40px 0 20px 0;"></div>
     <h3>发掘</h3>
-    <p style="font-size:12px; color:#555; margin-bottom:10px; border:1px dashed #333; padding:10px; text-align:center;">
-        当前验证身份：<span id="current-user-email" style="color:#d4c5a9;">--</span>
+    <p style="font-size:12px; color:#555; margin-bottom:10px; font-family: 'FangSong'; border:1px dashed #333; padding:10px; text-align: center;">
+        当前验证身份：<br>
+        <span id="current-user-email" style="color:#d4c5a9; font-weight:bold;">--</span>
     </p>
     <textarea id="de_input" rows="2" placeholder="粘贴提取码 (RELIC::...)"></textarea>
     <button onclick="handleDecrypt()" class="btn-secondary" style="margin-top:0;">提取并解读</button>
-    <div id="de_output" class="hidden" style="margin-top:20px; color:#d4c5a9; word-break:break-all; padding:20px; background:#0c0c0c; border:1px solid #333; font-size:15px; font-family: 'FangSong';"></div>
+    <div id="de_output" class="hidden" style="margin-top:20px; color:#d4c5a9; word-break:break-all; padding:20px; background:#0c0c0c; border:1px solid #333; font-size:15px; font-family: 'FangSong', monospace;"></div>
 </div>
 
 <script>
@@ -101,7 +207,7 @@
     let isEditing = false;
     let timerInterval = null;
 
-    // --- 核心算法 ---
+    // --- 核心：身份锁死加密算法 ---
     function encryptData(text, targetEmail) {
         if (!text || !targetEmail) return null;
         const autoKey = "IDENTITY_LOCK::" + targetEmail.trim().toLowerCase(); 
@@ -113,32 +219,39 @@
         const autoKey = "IDENTITY_LOCK::" + currentUserEmail.trim().toLowerCase();
         try {
             const bytes = CryptoJS.AES.decrypt(ciphertext.replace("AES::", ""), autoKey);
-            return bytes.toString(CryptoJS.enc.Utf8) || null;
+            const originalText = bytes.toString(CryptoJS.enc.Utf8);
+            return originalText || null;
         } catch (e) { return null; }
     }
 
-    // --- 智能解密流程 (V9.0) ---
+    // --- 汉化报错 (UI文案同步更新) ---
+    function translateError(msg) {
+        if (!msg) return "未知错误";
+        if (msg.includes("User already registered")) return "该身份档案已存在，请直接“登录（调取档案）”。";
+        if (msg.includes("Signup requires a valid password")) return "建档失败：请设置有效的密码（通行密钥）。";
+        if (msg.includes("Invalid login credentials")) return "鉴权失败：邮箱或密码错误。";
+        if (msg.includes("Password should be at least")) return "密码强度不足（需至少6位）。";
+        return "系统异常：" + msg; 
+    }
+
+    // --- 智能解密流程 ---
     async function handleDecrypt() {
         if (!sessionUser) return;
         let raw = document.getElementById('de_input').value.trim();
         if (!raw) return Swal.fire({icon:'warning', title:'无内容', text:'请粘贴提取码', background:'#141414', color:'#ccc'});
 
-        // 1. 如果是提取码 (RELIC::ID) -> 去服务器取货
+        // 1. 提取码逻辑
         if (raw.startsWith("RELIC::")) {
             const targetId = raw.replace("RELIC::", "").trim();
-            // 查询数据库
             const { data, error } = await client.from('vaults').select('encrypted_data, beneficiary_email').eq('id', targetId).maybeSingle();
             
             if (!data) {
-                // 查不到数据 -> 说明已经被物理销毁了
                 return Swal.fire({icon:'error', title:'无效', text:'该遗物已超过时限被永久销毁，或提取码错误。', background:'#141414', color:'#6e2e2e'});
             }
-            
-            // 查到了 -> 获取真实的密文
             raw = data.encrypted_data;
         }
 
-        // 2. 进行身份验证解密
+        // 2. 身份验证解密
         const result = decryptData(raw, sessionUser.email);
         
         if (result) {
@@ -150,7 +263,7 @@
         }
     }
 
-    // --- 业务逻辑 ---
+    // --- 业务逻辑：封存 ---
     document.getElementById('saveBtn').onclick = async () => {
         const secret = document.getElementById('u_secret').value;
         const benEmail = document.getElementById('u_ben').value;
@@ -166,22 +279,34 @@
         globalLastCheckin = new Date(); 
         
         const { error } = await client.from('vaults').upsert({
-            id: sessionUser.id, encrypted_data: encrypted, beneficiary_email: benEmail,
+            id: sessionUser.id,
+            encrypted_data: encrypted,
+            beneficiary_email: benEmail,
             warning_email: document.getElementById('u_warn_email').value,
-            timeout_minutes: total, max_warnings: count, warning_interval: interval,
-            status: 'active', current_warnings: 0, last_checkin_at: globalLastCheckin
+            timeout_minutes: total,
+            max_warnings: count,
+            warning_interval: interval,
+            status: 'active', 
+            current_warnings: 0, 
+            last_checkin_at: globalLastCheckin
         });
 
-        if (error) Swal.fire({icon:'error', title:'失败', text: error.message, background:'#141414', color:'#ccc'});
-        else {
+        if (error) {
+            Swal.fire({icon:'error', title:'刻录失败', text: translateError(error.message), background:'#141414', color:'#999', confirmButtonText: '重试'});
+        } else {
             Swal.fire({icon:'success', title:'已封存', text:'遗言已锁定。只有使用['+benEmail+']登录才能解开。', background:'#141414', color:'#d4c5a9'});
-            isEditing = false; renderVisual(); startTimer(); 
+            isEditing = false;
+            renderVisual();
+            startTimer(); 
         }
     };
 
-    // --- 基础部分 (可视化与交互) ---
+    // --- 基础部分 ---
     ['u_timeout', 'u_max_warns', 'u_warn_interval'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { isEditing = true; renderVisual(); });
+        document.getElementById(id).addEventListener('input', () => {
+            isEditing = true; 
+            renderVisual();
+        });
     });
 
     function renderVisual() {
@@ -243,14 +368,13 @@
     
     document.getElementById('regBtn').onclick = async () => {
         const { error } = await client.auth.signUp({ email: u_email.value, password: u_pw.value });
-        if (error) Swal.fire({icon:'error', title:'失败', text: '无法建档: '+error.message, background:'#141414', color:'#ccc'});
+        if (error) Swal.fire({icon:'error', title:'失败', text: translateError(error.message), background:'#141414', color:'#ccc'});
         else Swal.fire({icon:'success', title:'成功', text:'已建档，请调取。', background:'#141414', color:'#d4c5a9'});
     };
 
     window.doLogout = async () => { await client.auth.signOut(); location.reload(); };
     function toggleSelfEmail() { const cb=document.getElementById('sameAsMe'); const inp=document.getElementById('u_warn_email'); setTimeout(()=>{if(cb.checked && sessionUser) inp.value=sessionUser.email; else inp.readOnly=false;},10); }
-    function startTimer() { if (timerInterval) clearInterval(timerInterval); setInterval(() => { if (isEditing) return; const left = (parseFloat(document.getElementById('u_timeout').value)*60000)-(new Date()-globalLastCheckin); const el = document.getElementById('real-left-time'); const fill = document.getElementById('life-fill'); if (left<=0) { el.innerText="00:00:00"; el.className="dead"; fill.style.width="0%"; return; } const p = (left/(parseFloat(document.getElementById('u_timeout').value)*60000))*100; fill.style.width=p+"%"; el.innerText=Math.floor(left/60000)+":"+Math.floor((left%60000)/1000).toString().padStart(2,'0'); }, 1000); }
+    function startTimer() { if (timerInterval) clearInterval(timerInterval); setInterval(() => { if (isEditing) return; const left = (parseFloat(document.getElementById('u_timeout').value)*60000)-(new Date()-globalLastCheckin); const el = document.getElementById('real-left-time'); const fill = document.getElementById('life-fill'); if (left<=0) { el.innerText="00:00:00 (已成遗物)"; el.className="dead"; fill.style.width="0%"; return; } const p = (left/(parseFloat(document.getElementById('u_timeout').value)*60000))*100; fill.style.width=p+"%"; el.innerText=Math.floor(left/60000)+":"+Math.floor((left%60000)/1000).toString().padStart(2,'0'); }, 1000); }
 </script>
 </body>
 </html>
-
