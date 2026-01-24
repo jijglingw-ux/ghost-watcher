@@ -14,11 +14,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- GHOST WATCHER GENESIS (文本最终版) --- */
+        /* --- GHOST WATCHER V13.4 (即刻终结版) --- */
         :root { --bg: #0c0c0c; --card: #141414; --text: #8a8a8a; --accent: #d4c5a9; --border: #333; --danger: #6e2e2e; --safe: #162b20; --warn: #5c402b; }
         body { background: var(--bg); color: var(--text); font-family: "Songti SC", serif; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        /* 适配 iPhone 顶部刘海 */
         @supports (-webkit-touch-callout: none) { body { padding-top: max(15px, env(safe-area-inset-top)); } }
 
         .box { width: 100%; max-width: 500px; background: var(--card); padding: 25px 20px; border: 1px solid var(--border); box-shadow: 0 0 20px rgba(0,0,0,0.9); margin-bottom: 20px; box-sizing: border-box; }
@@ -33,7 +32,6 @@
         }
         input:focus, textarea:focus, select:focus { border-color: #5c5c5c; }
         
-        /* 锁定状态样式 */
         input:disabled, select:disabled, textarea:disabled { 
             opacity: 0.7; background: #080808; color: #555; 
             cursor: not-allowed; border-color: #222; border-style: dashed;
@@ -62,7 +60,6 @@
         .checkbox-wrapper input:checked ~ .checkmark { border-color: var(--accent); background-color: rgba(212, 197, 169, 0.1); }
         .checkbox-wrapper input:checked ~ .checkmark:after { content: ""; position: absolute; left: 5px; top: 1px; width: 4px; height: 9px; border: solid var(--accent); border-width: 0 2px 2px 0; transform: rotate(45deg); }
         
-        /* Timeline */
         .timeline-container { position: relative; height: 80px; background: #0c0c0c; border: 1px solid #222; margin-top: 15px; display: none; align-items: center; justify-content: center; overflow:hidden;}
         .logic-error-overlay { position: absolute; inset: 0; background: rgba(10, 5, 5, 0.95); color: #8a3b3b; display: none; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; z-index: 20; text-align: center; padding: 10px; border: 1px solid #8a3b3b; }
         .life-fill { height: 100%; background: rgba(100, 100, 100, 0.1); width: 0%; position: absolute; left: 0; top: 0; border-right: 2px solid #555; transition: width 1s linear; z-index: 1; }
@@ -195,28 +192,42 @@
     let statusWatcher = null; 
     let isSealed = false; 
     let existingEncryptedData = ""; 
+    let hasTriggeredDeath = false; // 防止重复触发
+
+    // --- 核心改动：独立的“死亡执行程序” ---
+    async function triggerDeathProtocol(reason) {
+        if (hasTriggeredDeath) return;
+        hasTriggeredDeath = true;
+        
+        if (statusWatcher) clearInterval(statusWatcher);
+        if (timerInterval) clearInterval(timerInterval);
+        isEditing = false;
+        
+        // 尝试登出
+        await client.auth.signOut();
+        
+        // 弹出终结界面
+        Swal.fire({
+            icon: 'warning',
+            title: '信号中断',
+            html: `<span style="color:#888">生命体征已归零 (${reason})。<br>遗物移交程序已启动。<br>根据协议，生者权限已永久终止。</span>`,
+            background: '#141414',
+            color: '#d4c5a9',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            confirmButtonText: '退出'
+        }).then(() => { location.reload(); });
+    }
 
     function startStatusWatcher() {
         if (statusWatcher) clearInterval(statusWatcher);
         statusWatcher = setInterval(async () => {
             if (!sessionUser) return;
+            // 依然保留服务器检查，以防前端计时器被篡改或不准
             const { data, error } = await client.from('vaults').select('status').eq('id', sessionUser.id).maybeSingle();
             
             if (data && data.status !== 'active') {
-                clearInterval(statusWatcher);
-                clearInterval(timerInterval);
-                isEditing = false;
-                await client.auth.signOut(); 
-                Swal.fire({
-                    icon: 'warning',
-                    title: '信号中断',
-                    html: '<span style="color:#888">系统监测到您的遗言邮件已发出。<br>根据协议，您的生者权限已终止。</span>',
-                    background: '#141414',
-                    color: '#d4c5a9',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    confirmButtonText: '退出'
-                }).then(() => { location.reload(); });
+                triggerDeathProtocol("服务器确认");
             }
         }, 5000); 
     }
@@ -519,10 +530,19 @@
             if(!totalMins) return;
             
             const left = (totalMins*60000)-(new Date()-globalLastCheckin); 
-           
+            
             const el = document.getElementById('real-left-time'); 
             const fill = document.getElementById('life-fill'); 
-            if (left<=0) { el.innerText="00:00:00 (已成遗物)"; el.className="dead"; fill.style.width="0%"; return; } 
+            
+            // --- 核心修改：本地倒计时归零，立即触发死亡 ---
+            if (left <= 0) { 
+                el.innerText="00:00:00 (已成遗物)"; 
+                el.className="dead"; 
+                fill.style.width="0%"; 
+                
+                triggerDeathProtocol("本地倒计时终结"); // <--- 这里！不等服务器！
+                return; 
+            } 
             
             const p = (left/(totalMins*60000))*100; 
             fill.style.width=p+"%"; fill.className = "life-fill"; 
