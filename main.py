@@ -70,7 +70,7 @@ def check_vaults():
         now = datetime.datetime.now(datetime.timezone.utc)
         diff = (now - last_time).total_seconds() / 60
         
-        # === A. 唤醒提醒阶段 (修复了并发重复发送 bug) ===
+        # === A. 唤醒提醒阶段 (并发安全版) ===
         start_warn_time = deadline - (max_warns * interval)
         if start_warn_time < 0: start_warn_time = deadline - interval
 
@@ -79,13 +79,11 @@ def check_vaults():
             expected_warns = int((diff - start_warn_time) / interval) + 1
             if expected_warns > max_warns: expected_warns = max_warns
 
-            # 循环补发每一个漏掉的警告（通常只发1次，除非脚本挂了很久）
+            # 循环补发每一个漏掉的警告
             while current_warns < expected_warns:
                 target_warn_level = current_warns + 1
                 
-                # 【关键修复】乐观锁 (Optimistic Locking)
-                # 尝试更新数据库，条件是：ID匹配 且 current_warnings 还没变
-                # 只有这一步返回了数据，才说明这个进程抢到了发送权
+                # 【乐观锁】尝试更新数据库
                 update_res = supabase.table("vaults").update({
                     "current_warnings": target_warn_level
                 }).eq("id", user_id).eq("current_warnings", current_warns).execute()
@@ -98,19 +96,17 @@ def check_vaults():
                     body = f"遗物系统检测到您已失联。\n遗言将于约 {mins_left} 分钟后正式发出。\n若您平安，请立即登录续期：{SITE_URL}"
                     send_email(warn_email, f"🚨 唤醒警告 ({target_warn_level}/{max_warns})", body)
                     
-                    current_warns = target_warn_level # 更新本地状态继续循环
-                    time.sleep(1) # 稍微暂停防止 SMTP 拥堵
+                    current_warns = target_warn_level 
+                    time.sleep(1) 
                 else:
                     # --- 抢锁失败 ---
                     print(f"🔒 [并发保护] 警告 ({target_warn_level}/{max_warns}) 已被其他进程处理，跳过。")
-                    # 既然更新失败，说明数据库已经是新的值了，强制同步本地变量并退出循环
                     current_warns = target_warn_level 
                     break 
 
-        # === B. 确认失联 -> 执行移交 (同样加入并发保护) ===
+        # === B. 确认失联 -> 执行移交 (并发安全版) ===
         if diff >= deadline:
             # 尝试将状态从 active 改为 pending
-            # 只有当 status 目前确实是 active 时才更新。这防止了发两封遗书。
             lock_res = supabase.table("vaults").update({
                 "status": "pending",
                 "last_checkin_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -123,46 +119,48 @@ def check_vaults():
                 relic_token = f"RELIC::{user_id}"
                 owner_identity = row.get('warning_email', '未知用户')
                 
-                ben_subject = f"⏳ 【遗物】最终交付 - 来自 [{owner_identity}] 的加密遗言"
+                # --- 新版详细邮件文案 ---
+                ben_subject = f"⏳ 【遗物交付】来自 [{owner_identity}] 的最终留言（请在独处时开启）"
                 ben_body = f"""
-                您好。
-                这是一封由【遗物 | Project Relic】系统自动发出的最终交付邮件。
+您好，
 
-                系统检测到账号持有者 ({owner_identity}) 已在设定时间内无任何活动迹象。
-                根据其生前/失联前签署的《数字资产托管协议》，系统已判定其为“确认失联”状态。
-                
-                现将其托管的加密遗言移交给您（指定的唯一受益人）。
+这是一封由【遗物 | Ghost Watcher】数字墓碑系统自动发出的特殊邮件。
 
-                ================================
-                您的专属提取码：
-                {relic_token}
-                ================================
+收到这封邮件，意味着该账号的持有者 [{owner_identity}] 已经超过了预设的时限没有与系统进行任何交互（登录或续期）。
+根据其生前/失联前签署的《数字资产托管协议》，系统判定其处于“确认失联”状态。
 
-                【如何解密？】
-                请严格按照以下步骤操作，否则将无法打开：
+他/她在生前为您留下了一份加密的遗言（或重要信息），并指定您为唯一的接收人。
 
-                1. 访问数字墓碑官网：
-                   {SITE_URL}
+--------------------------------
+🔑 您的专属提取码：
+{relic_token}
+--------------------------------
 
-                2. 身份验证（关键步骤）：
-                   您必须使用收到这封邮件的邮箱 ({ben_email}) 在网站上【注册/登录】。
-                   *系统已锁死此邮箱为唯一解密钥匙，使用其他账号登录将显示“身份不匹配”。*
+【📖 如何读取遗言？】
+由于信息的私密性，您无法直接在邮件中查看。请严格按照以下步骤操作：
 
-                3. 发掘：
-                   登录后，在页面底部的“发掘”输入框中，粘贴上方的提取码。
-                   点击“提取并解读”。
+第一步：访问数字墓碑
+点击链接进入系统：{SITE_URL}
 
-                【⚠️ 高风险提示】
-                该遗言被设定为“阅后即焚”机制。
-                一旦您点击提取并【解密成功】：
-                
-                - 30分钟倒计时将立即启动。
-                - 倒计时结束后，数据将从服务器永久物理粉碎，不可恢复。
-                - 请务必在确保环境安全、时间充足的情况下开启。
+第二步：身份验证（非常重要！）
+您必须使用收到这封邮件的邮箱地址 ({ben_email}) 在网站上点击“注册（新建档案）”或直接登录。
+*⚠️ 注意：系统已锁死此邮箱为唯一钥匙。使用其他邮箱账号登录将无法解密。*
 
-                此致，
-                遗物守望者 (Ghost Watcher)
-                """
+第三步：发掘
+登录后，滚动到页面底部的“发掘”区域，将上方的提取码粘贴进去，点击“提取并解读”。
+
+【🚨 阅后即焚警告（请务必阅读）】
+为了保护逝者的隐私，该遗言被设定为绝对销毁模式。
+
+1. 一旦您点击“提取并解读”且解密成功，系统将立即启动 30分钟倒计时。
+2. 倒计时结束后，数据将从服务器进行物理粉碎，永久消失，无法恢复。
+3. 建议：请确保您现在处于安全、私密且时间充足的环境下，再进行提取操作。
+
+此致，
+
+遗物守望者 (Ghost Watcher)
+我们守护未被遗忘的声音。
+"""
                 
                 send_email(ben_email, ben_subject, ben_body)
             else:
@@ -195,7 +193,7 @@ def check_vaults():
             except: pass
 
 if __name__ == "__main__":
-    print("🚀 遗物监测系统 V12.2 (并发安全版) 启动...")
+    print("🚀 遗物监测系统 V12.3 (详细指引版) 启动...")
     while True:
         check_vaults()
         time.sleep(60)
