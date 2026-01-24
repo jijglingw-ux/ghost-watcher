@@ -8,16 +8,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
-        /* --- 核心主题：博物馆/碑刻风 V9.2 (文案精修版) --- */
+        /* --- PROJECT RELIC V10.0 FINAL THEME --- */
         :root {
             --bg-color: #0c0c0c;
             --box-bg: #141414;
             --text-main: #8a8a8a;
-            --text-highlight: #d4c5a9;
+            --text-highlight: #d4c5a9; /* 青铜金 */
             --border-color: #333;
-            --danger-color: #6e2e2e;
-            --safe-color: #162b20;
-            --warn-color: #5c402b;
+            --danger-color: #6e2e2e;   /* 警示红 */
+            --safe-color: #162b20;     /* 沉静绿 */
+            --warn-color: #5c402b;     /* 锈蚀铜 */
         }
 
         body { 
@@ -51,6 +51,15 @@
         input:focus, textarea:focus { border-color: #5c5c5c; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
         input.error { border-color: var(--danger-color); background: #120a0a; color: var(--danger-color); }
         
+        /* 锁定状态输入框 (变暗沉) */
+        input:read-only { 
+            opacity: 0.5; 
+            background: #111; 
+            color: #666; 
+            cursor: not-allowed; 
+            border-color: #222;
+        }
+        
         label { display: block; margin-bottom: 8px; color: #555; font-size: 14px; letter-spacing: 1px; font-weight: bold; }
         
         button { 
@@ -75,10 +84,41 @@
         .row input { padding: 10px; text-align: center; margin-bottom: 0;} 
         .row label { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;} 
 
-        .checkbox-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; font-size: 14px; color: #666; cursor: pointer; padding: 5px 0; }
-        .checkbox-wrapper input { width: auto; margin: 0; }
+        /* --- 定制复选框 UI (青铜方框) --- */
+        .checkbox-wrapper { 
+            display: flex; align-items: center; gap: 12px; margin-bottom: 15px; 
+            font-size: 14px; color: #888; cursor: pointer; padding: 8px 0; 
+            user-select: none;
+        }
+        .checkbox-wrapper input { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+        
+        .checkmark {
+            height: 16px; width: 16px; 
+            background-color: transparent; 
+            border: 1px solid #666; 
+            display: inline-block; position: relative;
+            transition: all 0.2s;
+        }
+        
+        /* 选中状态 */
+        .checkbox-wrapper input:checked ~ .checkmark {
+            border-color: var(--text-highlight);
+            background-color: rgba(212, 197, 169, 0.1);
+        }
+        
+        /* 对号绘制 */
+        .checkbox-wrapper input:checked ~ .checkmark:after {
+            content: ""; position: absolute;
+            left: 5px; top: 1px;
+            width: 4px; height: 9px;
+            border: solid var(--text-highlight);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        
+        .checkbox-wrapper:hover .checkmark { border-color: #999; }
 
-        /* --- 交互式时光尺 --- */
+        /* --- 核心交互：倒序里程碑时间轴 --- */
         .timeline-container { 
             position: relative; height: 80px; background: var(--bg-color); 
             border: 1px solid #222; margin-top: 15px; overflow: hidden; 
@@ -92,6 +132,7 @@
             z-index: 20; text-align: center; padding: 10px; border: 1px solid #8a3b3b; 
         }
         
+        /* 进度条 (流逝感) */
         .life-fill { 
             height: 100%; background: rgba(100, 100, 100, 0.1); width: 0%; 
             position: absolute; left: 0; top: 0; border-right: 2px solid #555; 
@@ -102,6 +143,7 @@
             width: 100% !important; transition: none; 
         } 
 
+        /* 唤醒刻度线 */
         .trigger-line { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.1); z-index: 2; pointer-events: none; }
         .trigger-info { 
             position: absolute; top: 5px; font-size: 10px; color: #444; 
@@ -112,6 +154,7 @@
 
         .empty-tip { color: #333; font-size: 13px; z-index: 10; display: block; letter-spacing: 2px; }
         
+        /* 死亡标记 (Left Anchor) */
         .death-marker { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #5c2b2b; z-index: 4; display: none; } 
         .death-label { position: absolute; left: 6px; bottom: 6px; color: #5c2b2b; font-size: 11px; font-weight: bold; z-index: 4; display: none; }
         
@@ -119,7 +162,7 @@
         #real-left-time.danger { color: #8a6d3b; }
         #real-left-time.dead { color: #6e2e2e; }
 
-        /* SweetAlert */
+        /* SweetAlert 定制 */
         .swal2-popup { background: #141414 !important; border: 1px solid #333; color: #999 !important; border-radius: 0 !important; width: 90% !important; }
         .swal2-title { color: var(--text-highlight) !important; font-size: 20px !important; font-family: "Songti SC", serif !important; letter-spacing: 2px; }
         .swal2-content { color: #666 !important; font-size: 15px !important; }
@@ -152,9 +195,13 @@
     <div style="height:1px; background:#222; margin: 20px 0;"></div>
 
     <label>交付对象：</label>
-    <div class="checkbox-wrapper" onclick="toggleSelfEmail()">
-        <input type="checkbox" id="sameAsMe"> <span>向自己发送唤醒</span>
-    </div>
+    
+    <label class="checkbox-wrapper">
+        <input type="checkbox" id="sameAsMe" onchange="toggleSelfEmail()">
+        <span class="checkmark"></span>
+        <span>向自己发送唤醒</span>
+    </label>
+
     <input type="email" id="u_warn_email" placeholder="唤醒接收邮箱">
     <input type="email" id="u_ben" placeholder="遗物接收邮箱 (唯一解密钥匙)">
 
@@ -163,7 +210,7 @@
     <label>遗言发出倒计时：</label>
     <div class="row">
         <div><label>存在(分)</label><input type="number" id="u_timeout" placeholder="总长"></div>
-        <div><label>唤醒（次数）</label><input type="number" id="u_max_warns" placeholder="次数"></div>
+        <div><label>唤醒(次)</label><input type="number" id="u_max_warns" placeholder="次数"></div>
         <div><label>间隔(分)</label><input type="number" id="u_warn_interval" placeholder="间隔"></div>
     </div>
 
@@ -224,7 +271,6 @@
         } catch (e) { return null; }
     }
 
-    // --- 汉化报错 (UI文案同步更新) ---
     function translateError(msg) {
         if (!msg) return "未知错误";
         if (msg.includes("User already registered")) return "该身份档案已存在，请直接“登录（调取档案）”。";
@@ -234,36 +280,104 @@
         return "系统异常：" + msg; 
     }
 
-    // --- 智能解密流程 ---
-    async function handleDecrypt() {
-        if (!sessionUser) return;
-        let raw = document.getElementById('de_input').value.trim();
-        if (!raw) return Swal.fire({icon:'warning', title:'无内容', text:'请粘贴提取码', background:'#141414', color:'#ccc'});
-
-        // 1. 提取码逻辑
-        if (raw.startsWith("RELIC::")) {
-            const targetId = raw.replace("RELIC::", "").trim();
-            const { data, error } = await client.from('vaults').select('encrypted_data, beneficiary_email').eq('id', targetId).maybeSingle();
-            
-            if (!data) {
-                return Swal.fire({icon:'error', title:'无效', text:'该遗物已超过时限被永久销毁，或提取码错误。', background:'#141414', color:'#6e2e2e'});
-            }
-            raw = data.encrypted_data;
-        }
-
-        // 2. 身份验证解密
-        const result = decryptData(raw, sessionUser.email);
+    // --- 交互逻辑：自动填入/锁定 ---
+    function toggleSelfEmail() {
+        const cb = document.getElementById('sameAsMe');
+        const input = document.getElementById('u_warn_email');
         
-        if (result) {
-            document.getElementById('de_output').innerText = result;
-            document.getElementById('de_output').classList.remove('hidden');
-            Swal.fire({icon:'success', title:'验证通过', text:'真相已显现', background:'#141414', color:'#d4c5a9', timer:1500, showConfirmButton:false});
+        // 确保勾选状态同步
+        if (cb.checked && sessionUser) {
+            input.value = sessionUser.email;
+            input.readOnly = true; // 锁定状态，触发CSS变暗
         } else {
-            Swal.fire({icon:'error', title:'拒绝访问', text:'您的登录邮箱['+sessionUser.email+']与此遗物的指定继承人不符。', background:'#141414', color:'#6e2e2e'});
+            input.readOnly = false; // 解锁状态，恢复高亮
         }
     }
 
-    // --- 业务逻辑：封存 ---
+    // --- 实时可视化渲染 ---
+    ['u_timeout', 'u_max_warns', 'u_warn_interval'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+            isEditing = true; 
+            validateAndRender();
+        });
+    });
+
+    function validateAndRender() {
+        const totalInput = document.getElementById('u_timeout');
+        const countInput = document.getElementById('u_max_warns');
+        const intervalInput = document.getElementById('u_warn_interval');
+        
+        const total = parseFloat(totalInput.value);
+        const count = parseInt(countInput.value);
+        const interval = parseFloat(intervalInput.value);
+        
+        const saveBtn = document.getElementById('saveBtn');
+        const box = document.getElementById('timeline-box');
+        const fill = document.getElementById('life-fill');
+        const errorOverlay = document.getElementById('logic-error');
+        const errorMsg = document.getElementById('logic-error-msg');
+        
+        [totalInput, countInput, intervalInput].forEach(el => el.classList.remove('error'));
+        saveBtn.disabled = false;
+        saveBtn.innerText = "封存遗物";
+        errorOverlay.style.display = 'none';
+
+        if (!total || !count || !interval) {
+            if (total || count || interval) {
+                box.style.display = 'flex';
+                document.getElementById('empty-tip').style.display = 'block';
+                fill.style.display = 'none';
+            } else {
+                box.style.display = 'none';
+            }
+            return;
+        }
+
+        const span = count * interval;
+        if (span >= total) {
+            saveBtn.disabled = true;
+            saveBtn.innerText = "无法封存";
+            totalInput.classList.add('error');
+            countInput.classList.add('error');
+            intervalInput.classList.add('error');
+            box.style.display = 'flex';
+            document.getElementById('empty-tip').style.display = 'none';
+            errorOverlay.style.display = 'flex';
+            errorMsg.innerHTML = `唤醒跨度 ${span}分 > 存在时间 ${total}分`;
+            return;
+        }
+
+        box.style.display = 'flex';
+        document.getElementById('empty-tip').style.display = 'none';
+        document.getElementById('d-mark').style.display = 'block';
+        document.getElementById('d-lbl').style.display = 'block';
+        fill.style.display = 'block';
+
+        box.querySelectorAll('.trigger-line, .trigger-info').forEach(el => el.remove());
+
+        if (isEditing) {
+            fill.className = 'life-fill preview';
+            fill.style.width = '100%';
+            document.getElementById('real-left-time').innerText = "预览模式";
+        }
+
+        // 生成唤醒节点 (倒序)
+        for (let i = 1; i <= count; i++) {
+            const minsLeft = i * interval;
+            const posPercent = (minsLeft / total) * 100;
+            const line = document.createElement('div');
+            line.className = 'trigger-line';
+            line.style.left = posPercent + '%';
+            box.appendChild(line);
+            const info = document.createElement('div');
+            info.className = 'trigger-info';
+            info.style.left = posPercent + '%';
+            info.innerHTML = `唤-${count - i + 1}<br>${minsLeft}m`; 
+            box.appendChild(info);
+        }
+    }
+
+    // --- 业务逻辑 ---
     document.getElementById('saveBtn').onclick = async () => {
         const secret = document.getElementById('u_secret').value;
         const benEmail = document.getElementById('u_ben').value;
@@ -296,45 +410,40 @@
         } else {
             Swal.fire({icon:'success', title:'已封存', text:'遗言已锁定。只有使用['+benEmail+']登录才能解开。', background:'#141414', color:'#d4c5a9'});
             isEditing = false;
-            renderVisual();
+            validateAndRender();
             startTimer(); 
         }
     };
 
-    // --- 基础部分 ---
-    ['u_timeout', 'u_max_warns', 'u_warn_interval'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-            isEditing = true; 
-            renderVisual();
-        });
-    });
+    // --- 解密逻辑 ---
+    async function handleDecrypt() {
+        if (!sessionUser) return;
+        let raw = document.getElementById('de_input').value.trim();
+        if (!raw) return Swal.fire({icon:'warning', title:'无内容', text:'请粘贴提取码', background:'#141414', color:'#ccc'});
 
-    function renderVisual() {
-        const total = parseFloat(document.getElementById('u_timeout').value)||0;
-        const count = parseInt(document.getElementById('u_max_warns').value)||0;
-        const interval = parseFloat(document.getElementById('u_warn_interval').value)||0;
-        const box = document.getElementById('timeline-box');
-        
-        if (!total) { box.style.display = 'none'; return; }
-        box.style.display = 'flex';
-        document.getElementById('d-mark').style.display='block'; document.getElementById('d-lbl').style.display='block';
-        
-        const fill = document.getElementById('life-fill');
-        fill.style.display='block';
-        if(isEditing) { fill.className='life-fill preview'; fill.style.width='100%'; document.getElementById('real-left-time').innerText="预览"; }
+        if (raw.startsWith("RELIC::")) {
+            const targetId = raw.replace("RELIC::", "").trim();
+            const { data, error } = await client.from('vaults').select('encrypted_data, beneficiary_email').eq('id', targetId).maybeSingle();
+            
+            if (!data) {
+                return Swal.fire({icon:'error', title:'无效', text:'该遗物已超过时限被永久销毁，或提取码错误。', background:'#141414', color:'#6e2e2e'});
+            }
+            raw = data.encrypted_data;
+        }
 
-        box.querySelectorAll('.trigger-line, .trigger-info').forEach(el => el.remove());
-        for(let i=1; i<=count; i++) {
-            const minsLeft = i * interval;
-            const pos = (minsLeft/total)*100;
-            if(pos>100) continue; 
-            const l = document.createElement('div'); l.className='trigger-line'; l.style.left=pos+'%'; box.appendChild(l);
-            const t = document.createElement('div'); t.className='trigger-info'; t.style.left=pos+'%'; t.innerHTML=`唤-${count-i+1}<br>${minsLeft}m`; box.appendChild(t);
+        const result = decryptData(raw, sessionUser.email);
+        
+        if (result) {
+            document.getElementById('de_output').innerText = result;
+            document.getElementById('de_output').classList.remove('hidden');
+            Swal.fire({icon:'success', title:'验证通过', text:'真相已显现', background:'#141414', color:'#d4c5a9', timer:1500, showConfirmButton:false});
+        } else {
+            Swal.fire({icon:'error', title:'拒绝访问', text:'您的登录邮箱['+sessionUser.email+']与此遗物的指定继承人不符。', background:'#141414', color:'#6e2e2e'});
         }
     }
 
     document.getElementById('heartBtn').onclick = async () => {
-        globalLastCheckin = new Date(); isEditing = false; renderVisual(); startTimer();
+        globalLastCheckin = new Date(); isEditing = false; validateAndRender(); startTimer();
         client.from('vaults').update({ last_checkin_at: new Date(), current_warnings: 0, status: 'active' }).eq('id', sessionUser.id);
         Swal.fire({icon:'success', title:'存续', text:'时间重置', background:'#141414', color:'#d4c5a9', timer:1000, showConfirmButton:false});
     };
@@ -351,9 +460,15 @@
             document.getElementById('u_warn_interval').value = v.warning_interval;
             document.getElementById('u_warn_email').value = v.warning_email||'';
             document.getElementById('u_ben').value = v.beneficiary_email||'';
-            if(v.warning_email===sessionUser.email) { document.getElementById('sameAsMe').checked=true; toggleSelfEmail(); }
+            
+            // 数据回显时，如果邮箱相同，自动勾选并锁定
+            if(v.warning_email === sessionUser.email) { 
+                document.getElementById('sameAsMe').checked = true; 
+                toggleSelfEmail(); 
+            }
+            
             if(v.encrypted_data) { document.getElementById('u_secret').value=""; document.getElementById('u_secret').placeholder="（内容已加密封存）"; }
-            isEditing = false; renderVisual(); startTimer();
+            isEditing = false; validateAndRender(); startTimer();
         }
     }
 
@@ -373,8 +488,7 @@
     };
 
     window.doLogout = async () => { await client.auth.signOut(); location.reload(); };
-    function toggleSelfEmail() { const cb=document.getElementById('sameAsMe'); const inp=document.getElementById('u_warn_email'); setTimeout(()=>{if(cb.checked && sessionUser) inp.value=sessionUser.email; else inp.readOnly=false;},10); }
-    function startTimer() { if (timerInterval) clearInterval(timerInterval); setInterval(() => { if (isEditing) return; const left = (parseFloat(document.getElementById('u_timeout').value)*60000)-(new Date()-globalLastCheckin); const el = document.getElementById('real-left-time'); const fill = document.getElementById('life-fill'); if (left<=0) { el.innerText="00:00:00 (已成遗物)"; el.className="dead"; fill.style.width="0%"; return; } const p = (left/(parseFloat(document.getElementById('u_timeout').value)*60000))*100; fill.style.width=p+"%"; el.innerText=Math.floor(left/60000)+":"+Math.floor((left%60000)/1000).toString().padStart(2,'0'); }, 1000); }
+    function startTimer() { if (timerInterval) clearInterval(timerInterval); setInterval(() => { if (isEditing) return; const left = (parseFloat(document.getElementById('u_timeout').value)*60000)-(new Date()-globalLastCheckin); const el = document.getElementById('real-left-time'); const fill = document.getElementById('life-fill'); if (left<=0) { el.innerText="00:00:00 (已成遗物)"; el.className="dead"; fill.style.width="0%"; return; } const p = (left/(parseFloat(document.getElementById('u_timeout').value)*60000))*100; fill.style.width=p+"%"; fill.className = "life-fill"; el.innerText=Math.floor(left/60000)+":"+Math.floor((left%60000)/1000).toString().padStart(2,'0'); }, 1000); }
 </script>
 </body>
 </html>
