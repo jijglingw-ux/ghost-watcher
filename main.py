@@ -12,6 +12,7 @@ sender_email = os.environ.get("SENDER_EMAIL")
 sender_password = os.environ.get("SENDER_PASSWORD")
 
 # 初始化 Supabase
+# 注意：必须使用 service_role key 才能有权限查询 auth.users
 supabase = create_client(url, key)
 
 # 你的网站地址
@@ -71,6 +72,7 @@ def check_vaults():
         diff = (now - last_time).total_seconds() / 60
         
         # === A. 唤醒提醒阶段 (发给账号持有者本人) ===
+        # 这里依然发给 warning_email，因为这是用户指定的“叫醒”渠道
         start_warn_time = deadline - (max_warns * interval)
         if start_warn_time < 0: start_warn_time = deadline - interval
 
@@ -81,7 +83,7 @@ def check_vaults():
             while current_warns < expected_warns:
                 target_warn_level = current_warns + 1
                 
-                # 【乐观锁】防止重复发送唤醒邮件
+                # 【乐观锁】防止重复发送
                 update_res = supabase.table("vaults").update({
                     "current_warnings": target_warn_level
                 }).eq("id", user_id).eq("current_warnings", current_warns).execute()
@@ -90,7 +92,6 @@ def check_vaults():
                     mins_left = int(deadline - diff)
                     print(f"⚠️ [唤醒] 正在呼叫持有者 {user_id} (第 {target_warn_level} 次)")
                     
-                    # --- 文案：警报风格 ---
                     body = f"""
 【一级状态警报】守望者协议即将触发
 
@@ -127,12 +128,27 @@ def check_vaults():
 
             # 只有抢到锁的进程，才发送最终遗物邮件
             if lock_res.data and len(lock_res.data) > 0:
-                owner_identity = row.get('warning_email', '未知用户')
+                print(f"🔴 [移交] 用户 {user_id} 确认失联。正在查询注册信息...")
+                
                 relic_token = f"RELIC::{user_id}"
                 
-                print(f"🔴 [移交] 用户 {owner_identity} 确认失联。正在发送给受益人 {ben_email}...")
+                # --- 【逻辑修改】查询注册邮箱 (Auth Email) ---
+                owner_identity = "未知用户"
+                try:
+                    # 使用 Admin API 通过 ID 查真实的注册邮箱
+                    user_data = supabase.auth.admin.get_user_by_id(user_id)
+                    if user_data and user_data.user and user_data.user.email:
+                        owner_identity = user_data.user.email
+                        print(f"✅ 已获取真实注册身份: {owner_identity}")
+                    else:
+                        # 如果查不到（极少情况），回退使用 warning_email
+                        owner_identity = row.get('warning_email', '未知用户')
+                except Exception as e:
+                    print(f"⚠️ 获取注册信息失败: {e}，将使用备用邮箱身份。")
+                    owner_identity = row.get('warning_email', '未知用户')
+
+                print(f"📧 正在发送给受益人 {ben_email}...")
                 
-                # --- 文案：防呆/清晰指引 ---
                 ben_subject = f"【重要】来自 [{owner_identity}] 的数字遗物交付"
                 ben_body = f"""
 您好。
@@ -210,7 +226,7 @@ def check_vaults():
             except: pass
 
 if __name__ == "__main__":
-    print("🚀 遗物监测系统 V13.2 (创世版) 启动...")
+    print("🚀 遗物监测系统 V13.3 (身份校准版) 启动...")
     while True:
         check_vaults()
         time.sleep(60)
