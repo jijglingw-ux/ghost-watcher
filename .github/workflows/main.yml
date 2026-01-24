@@ -1,29 +1,38 @@
-name: Watchman V2
+name: Watchman Daemon
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # 每5分钟运行一次
-  workflow_dispatch:      # 允许手动点击测试
+    # 每 5 分钟自动运行一次 (GitHub 免费版极限)
+    - cron: '*/5 * * * *'
+  # 允许在 Actions 页面手动点击 "Run workflow" 按钮进行测试
+  workflow_dispatch:
 
 jobs:
-  run_script:
+  vigil:
     runs-on: ubuntu-latest
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    # 1. 拉取你的代码仓库
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
+    # 2. 准备 Python 3.9 环境
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+    # 3. 安装依赖 (直接安装 supabase，防止找不到 requirements.txt 报错)
+    - name: Install dependencies
+      run: |
+        pip install supabase
 
-      - name: Run Watchman
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
-        run: python main.py
+    # 4. 运行守望者脚本
+    - name: Run Watchman
+      env:
+        # 从 Settings -> Secrets 读取密钥注入到环境变量
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+      run: python main.py
