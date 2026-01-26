@@ -2,179 +2,86 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relic V4.5 | 零知识信托</title>
+    <title>Relic Phoenix V4.5</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
-    
-    <style>
-        :root { --bg: #000; --text: #0f0; --border: #0f0; }
-        body { background: var(--bg); color: var(--text); font-family: "Courier New", monospace; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .terminal { border: 1px solid var(--border); padding: 20px; max-width: 600px; width: 100%; box-shadow: 0 0 10px var(--border); }
-        input, textarea, select, button { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
-        button { border-color: var(--border); color: var(--border); cursor: pointer; font-weight: bold; }
-        button:hover { background: var(--border); color: #000; }
-        .hidden { display: none; }
-    </style>
+    <style>body{background:#000;color:#0f0;font-family:monospace;padding:20px}input,textarea,button{width:100%;background:#111;border:1px solid #333;color:#fff;padding:10px;margin:5px 0}</style>
 </head>
 <body>
-
-<div class="terminal" id="app">
-    <h2 style="border-bottom: 1px dashed #0f0; padding-bottom:10px;">RELIC_PROTOCOL_V4.5 // EXTREME</h2>
-    
-    <div id="auth-panel">
-        <input type="email" id="email" placeholder="身份ID (Email)">
-        <input type="password" id="password" placeholder="访问令牌 (Password)">
-        <button onclick="login()">接入系统</button>
-        <button onclick="signup()">创建身份</button>
-    </div>
-
-    <div id="dashboard" class="hidden">
-        <div style="text-align:right; font-size:12px; margin-bottom:10px;">[ <span onclick="logout()" style="cursor:pointer">断开链接</span> ]</div>
-        <p id="status-text" style="color:#aaa">等待指令...</p>
-        
-        <textarea id="secret" rows="5" placeholder="输入机密数据...&#10;注意：数据将经过 AES-256 (本地) + RSA-1024 (公钥封装) 双重加密。"></textarea>
-        <input type="email" id="beneficiary" placeholder="受益人邮箱">
-        
-        <div style="display:flex; gap:10px;">
-            <input type="number" id="timeout_val" placeholder="倒计时">
-            <select id="timeout_unit"><option value="1">分钟</option><option value="60">小时</option><option value="1440">天</option></select>
+    <h2>RELIC PHOENIX SYSTEM</h2>
+    <div id="app">
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login / Signup</button>
+        <div id="dash" style="display:none;margin-top:20px;">
+            <textarea id="secret" rows="4" placeholder="SECRET DATA"></textarea>
+            <input type="email" id="ben" placeholder="Beneficiary Email">
+            <input type="number" id="time" placeholder="Minutes to timeout" value="1">
+            <button onclick="deploy()">ENCRYPT & DEPLOY</button>
         </div>
-        
-        <button onclick="deploy()">加密并部署死手开关</button>
+        <div id="decrypt" style="display:none;border:1px solid red;padding:10px;margin-top:20px;"></div>
     </div>
-
-    <div id="decrypt-panel" class="hidden">
-        <h3>解密终端</h3>
-        <p id="decrypt-msg">正在提取锚点数据...</p>
-        <div id="decrypt-result" style="border:1px dashed #0f0; padding:10px; white-space:pre-wrap; display:none;"></div>
-    </div>
-</div>
 
 <script>
-    // --- 极客配置区 ---
-    // 请在此处填入您的 Supabase URL 和 Anon Key
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     
-    // 【关键】V4.5 核心升级：看门狗公钥 (前端只管加密，绝对解不开)
-    // 请替换为您生成的公钥，保留 -----BEGIN/END PUBLIC KEY-----
+    // 👇👇👇 必须换成您刚才生成的公钥 👇👇👇
     const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw00qdQVOTWUnsRRA92HK
-HV14Vt3LhGKtHXyfyxSqQI6T1NG3UDDvo1sJMKC1NEgca2TL1QolT9OkcCGGSyR1
-Y6BjdoEqXv8gy3tfrRRndzl0w1rVpfzRQL2nv/1/k2b3zKj7vVaPuQIXBSedKMXO
-YW6s6T9fis9QtC/mwasBoqi1w3EXXHjrXLxwNGOt6pvLRTk8iTAPsYPl/hoqRQma
-Mc84LWFFm/V4ErUyDx9OzXKMQx5BjS9Cjt043CqJYdoKfZFXbe8amsv3LRLOPIyn
-eBhecjrsmrifYsFE2w9p1TnwL7RbEgtQ3IPaFBsQvWcpGekMuZ17+PAw13vFn6Kc
-5wIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
+x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
+trELXELa5khEOwWHj2EbOnhPdbk7aJ3Du/RmkZAu/gSVKHiWAeVPdmZuEDRP8wV1
+gIYQsnXW+gNTt0SPKdheSkWTiksSImiJlzV3HC9AS/ucx/GfAhxnLLQ67ZhRE+Ub
+ytBiBV+RfQX9P0oWbsESOD+FtiJfvKO74jA9naWsmG7hMmhotH1O1oC3YWFYvpNi
+RYytkgByTOHBmtFqUVa1jIAJGdAZ8g1jMhZOOte5NfjJ4fJQhmqzdHBlH2xU/14A
+pQIDAQAB
 -----END PUBLIC KEY-----`;
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
-    let user = null;
-
-    // 初始化
+    
     window.onload = async () => {
-        if (location.hash.includes("key=")) {
-            document.getElementById('auth-panel').classList.add('hidden');
-            document.getElementById('decrypt-panel').classList.remove('hidden');
-            handleDecryption();
-        } else {
-            const session = await client.auth.getSession();
-            if (session.data.session) {
-                user = session.data.session.user;
-                showDash();
-            }
+        if(location.hash.includes("key=")){
+            // 解密模式
+            const key = location.hash.split("key=")[1].split("&")[0];
+            const id = location.hash.split("id=")[1].split("&")[0];
+            const {data} = await client.from("vaults").select("*").eq("id", id).single();
+            try {
+                const text = CryptoJS.AES.decrypt(data.encrypted_data, key).toString(CryptoJS.enc.Utf8);
+                document.getElementById("decrypt").style.display="block";
+                document.getElementById("decrypt").innerText = "DECRYPTED: " + text;
+                client.from("vaults").update({status:'reading'}).eq('id',id);
+            } catch(e){ alert("Key Error"); }
         }
     };
 
-    // --- V4.5 加密核心 ---
-    function generateKey() {
-        const arr = new Uint8Array(32);
-        crypto.getRandomValues(arr);
-        return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('');
+    async function login() {
+        const {data, error} = await client.auth.signInWithPassword({email:email.value, password:password.value});
+        if(error) await client.auth.signUp({email:email.value, password:password.value});
+        document.getElementById("dash").style.display="block";
     }
 
     async function deploy() {
-        const secret = document.getElementById('secret').value;
-        const ben = document.getElementById('beneficiary').value;
-        const mins = document.getElementById('timeout_val').value * document.getElementById('timeout_unit').value;
+        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
+        const encryptedData = CryptoJS.AES.encrypt(secret.value, aesKey).toString();
         
-        if (!secret || !ben || !mins) return Swal.fire('Error', '数据不完整', 'error');
-
-        // 1. 生成 AES 密钥 (明文 Key，只存在于内存)
-        const aesKey = generateKey();
-        
-        // 2. 本地 AES 加密 (生成数据密文)
-        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
-        
-        // 3. 【极度重要】RSA 封装密钥
-        // 使用公钥将 AES Key 锁住。此时浏览器里没有任何人能解开它了，包括用户自己。
         const encryptor = new JSEncrypt();
         encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
         const wrappedKey = encryptor.encrypt(aesKey);
-        
-        if (!wrappedKey) return Swal.fire('Error', 'RSA 加密失败，请检查公钥', 'error');
 
-        // 4. 上传 (传上去的是：锁住的数据 + 锁住的钥匙)
-        const { error } = await client.from('vaults').upsert({
+        if(!wrappedKey) return alert("Public Key Error!");
+
+        const user = (await client.auth.getUser()).data.user;
+        await client.from("vaults").upsert({
             id: user.id,
             encrypted_data: encryptedData,
-            key_storage: wrappedKey, // 即使数据库泄露，黑客也拿不到 AES Key
-            beneficiary_email: ben,
-            timeout_minutes: mins,
+            key_storage: wrappedKey,
+            beneficiary_email: ben.value,
+            timeout_minutes: time.value,
             status: 'active',
             last_checkin_at: new Date()
         });
-
-        if (error) Swal.fire('Error', error.message, 'error');
-        else {
-            Swal.fire('Success', 'V4.5 协议已部署。服务器已致盲。', 'success');
-            document.getElementById('secret').value = ""; // 销毁内存
-        }
+        alert("System Armed.");
     }
-
-    // --- 解密逻辑 (接收端) ---
-    async function handleDecryption() {
-        const hash = location.hash;
-        try {
-            const keyPart = hash.split('key=')[1].split('&')[0]; // 从锚点拿 AES Key
-            const idPart = hash.split('id=')[1].split('&')[0];
-            
-            const { data } = await client.from('vaults').select('*').eq('id', idPart).single();
-            if (!data) throw new Error("数据已销毁");
-
-            const plaintext = CryptoJS.AES.decrypt(data.encrypted_encrypted, keyPart).toString(CryptoJS.enc.Utf8);
-            
-            if (plaintext) {
-                document.getElementById('decrypt-msg').innerText = "解密成功 (阅后即焚已启动)";
-                document.getElementById('decrypt-result').style.display = 'block';
-                document.getElementById('decrypt-result').innerText = plaintext;
-                // 触发销毁
-                if(data.status !== 'reading') client.from('vaults').update({status:'reading', last_checkin_at: new Date()}).eq('id', idPart);
-            } else {
-                throw new Error("密钥无效");
-            }
-        } catch(e) {
-            document.getElementById('decrypt-msg').innerText = "错误: " + e.message;
-            document.getElementById('decrypt-msg').style.color = "red";
-        }
-    }
-
-    // Auth Helpers
-    async function login() { 
-        const { error } = await client.auth.signInWithPassword({email:document.getElementById('email').value, password:document.getElementById('password').value});
-        if(!error) location.reload(); 
-    }
-    async function signup() {
-        const { error } = await client.auth.signUp({email:document.getElementById('email').value, password:document.getElementById('password').value});
-        if(!error) Swal.fire('Success', '注册成功', 'success');
-    }
-    async function logout() { await client.auth.signOut(); location.reload(); }
-    function showDash() { document.getElementById('auth-panel').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); }
-</script>
-</body>
-</html>
-
-
+</script></body></html>
