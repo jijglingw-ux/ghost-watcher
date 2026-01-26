@@ -2,8 +2,8 @@ name: Ghost Watcher
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *' # 每6小时自动检查一次
+  workflow_dispatch:      # 允许手动点击按钮运行
 
 jobs:
   vigil:
@@ -20,13 +20,18 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 修复 StreamReset 网络报错
+          # --- 关键修复 1：网络库降级 ---
+          # 强制安装旧版网络库，彻底解决 StreamReset / Protocol Error 报错
           pip install httpcore==0.15.0 httpx==0.23.0
+          # --- 关键修复 2：核心依赖 ---
+          # 安装 Supabase 和 RSA 加密库
           pip install supabase rsa
 
       - name: Run Watchman
         env:
-          # 👇👇👇 这里的每一行都至关重要，特别是最后一行！
+          # --- 关键修复 3：全套密钥传递 ---
+          # 这里必须列出所有5个变量，少一个都会报错！
+          # 请确保您的 GitHub Secrets 里也是这些名字，一字不差。
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
