@@ -61,9 +61,13 @@
     
     // 【关键】V4.5 核心升级：看门狗公钥 (前端只管加密，绝对解不开)
     // 请替换为您生成的公钥，保留 -----BEGIN/END PUBLIC KEY-----
-    const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8... (把您生成的公钥粘贴到这里) ...
------END PUBLIC KEY-----`;
+    const WATCHDOG_PUBLIC_KEY = `MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw00qdQVOTWUnsRRA92HK
+HV14Vt3LhGKtHXyfyxSqQI6T1NG3UDDvo1sJMKC1NEgca2TL1QolT9OkcCGGSyR1
+Y6BjdoEqXv8gy3tfrRRndzl0w1rVpfzRQL2nv/1/k2b3zKj7vVaPuQIXBSedKMXO
+YW6s6T9fis9QtC/mwasBoqi1w3EXXHjrXLxwNGOt6pvLRTk8iTAPsYPl/hoqRQma
+Mc84LWFFm/V4ErUyDx9OzXKMQx5BjS9Cjt043CqJYdoKfZFXbe8amsv3LRLOPIyn
+eBhecjrsmrifYsFE2w9p1TnwL7RbEgtQ3IPaFBsQvWcpGekMuZ17+PAw13vFn6Kc
+5wIDAQAB`;
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
     let user = null;
@@ -170,3 +174,4 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8... (把您生成的公钥粘贴到这�
 </script>
 </body>
 </html>
+
