@@ -5,21 +5,20 @@ import smtplib
 import time
 from email.mime.text import MIMEText
 
-# --- 配置区 (自动读取环境变量) ---
+# --- 环境变量配置 ---
+# 必须使用 service_role key，因为只有它有权限读取 key_storage 字段
 url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_KEY")
 sender_email = os.environ.get("SENDER_EMAIL")
 sender_password = os.environ.get("SENDER_PASSWORD")
 
-# 初始化 Supabase
-# 注意：必须使用 service_role key 才能有权限查询 auth.users
 supabase = create_client(url, key)
 
-# 你的网站地址
+# 您的前端地址 (用于生成锚点链接)
 SITE_URL = "https://jijglingw-ux.github.io/ghost-watcher" 
 
 def send_email(to_email, subject, content):
-    if not to_email: return
+    if not to_email: return False
     try:
         msg = MIMEText(content, 'plain', 'utf-8')
         msg['Subject'] = subject
@@ -28,179 +27,94 @@ def send_email(to_email, subject, content):
         with smtplib.SMTP_SSL("smtp.qq.com", 465) as server:
             server.login(sender_email, sender_password)
             server.send_message(msg)
-        print(f"✅ 邮件已发送给: {to_email}")
+        print(f"✅ 邮件已成功发送给: {to_email}")
+        return True
     except Exception as e:
         print(f"❌ 邮件发送失败: {e}")
-
-def parse_time(time_str):
-    if not time_str: return None
-    clean_str = time_str.replace('Z', '+00:00')
-    try:
-        return datetime.datetime.fromisoformat(clean_str)
-    except ValueError:
-        try:
-            return datetime.datetime.fromisoformat(clean_str.split('.')[0] + "+00:00")
-        except: return None
+        return False
 
 def check_vaults():
-    # ----------------------------------------------------
-    # 任务 1: 监测活跃者 (status = active)
-    # ----------------------------------------------------
+    print("正在巡查 Relic 信托库...")
     try:
-        # 获取所有活跃用户
+        # 获取所有活跃的信托
         res = supabase.table("vaults").select("*").eq("status", "active").execute()
-        active_vaults = res.data
+        vaults = res.data
     except Exception as e:
-        print(f"数据库读取失败: {e}")
-        active_vaults = []
+        print(f"数据库读取错误: {e}")
+        return
 
-    for row in active_vaults:
+    now = datetime.datetime.now(datetime.timezone.utc)
+
+    for row in vaults:
         user_id = row.get('id')
         last_checkin = row.get('last_checkin_at')
-        last_time = parse_time(last_checkin)
-        if not last_time: continue
+        if not last_checkin: continue
 
-        deadline = int(row.get('timeout_minutes') or 60)
-        max_warns = int(row.get('max_warnings') or 3)
-        interval = int(row.get('warning_interval') or 5)
-        current_warns = int(row.get('current_warnings') or 0)
-            
-        warn_email = row.get('warning_email')
-        ben_email = row.get('beneficiary_email')
-
-        now = datetime.datetime.now(datetime.timezone.utc)
-        diff = (now - last_time).total_seconds() / 60
+        # 时间计算
+        last_time = datetime.datetime.fromisoformat(last_checkin.replace('Z', '+00:00'))
+        timeout_mins = int(row.get('timeout_minutes') or 1440)
+        diff_mins = (now - last_time).total_seconds() / 60
         
-        # === A. 唤醒提醒阶段 (发给账号持有者本人) ===
-        start_warn_time = deadline - (max_warns * interval)
-        if start_warn_time < 0: start_warn_time = deadline - interval
-
-        if diff >= start_warn_time and diff < deadline:
-            expected_warns = int((diff - start_warn_time) / interval) + 1
-            if expected_warns > max_warns: expected_warns = max_warns
-
-            while current_warns < expected_warns:
-                target_warn_level = current_warns + 1
-                
-                # 【乐观锁】防止重复发送
-                update_res = supabase.table("vaults").update({
-                    "current_warnings": target_warn_level
-                }).eq("id", user_id).eq("current_warnings", current_warns).execute()
-
-                if update_res.data and len(update_res.data) > 0:
-                    mins_left = int(deadline - diff)
-                    print(f"⚠️ [唤醒] 正在呼叫持有者 {user_id} (第 {target_warn_level} 次)")
-                    
-                    # --- 文案更新：中性化的托管提醒 ---
-                    body = f"""
-【遗物 | Relic】托管状态通知
-
-用户 ID: {warn_email}
-系统检测到您的账号已长时间未登录。
-
-根据您设定的托管协议，若您继续未进行任何操作，系统将在约 {mins_left} 分钟后，
-自动将您托管的加密信物移交给指定的接收人。
-
-------------------------------------
-如果您只是忘记了登录，请点击下方链接重置时间：
-------------------------------------
-
->>> 点击此处登录以保持持有权：
-{SITE_URL}
-
-（此为系统自动发送，若不操作将执行自动移交程序）
-"""
-                    send_email(warn_email, f"⏰ [待办] 您的托管数据即将移交 (剩余 {mins_left} 分钟)", body)
-                    
-                    current_warns = target_warn_level 
-                    time.sleep(1) 
-                else:
-                    current_warns = target_warn_level 
-                    break 
-
-        # === B. 确认失联 -> 执行移交 (发给受益人) ===
-        if diff >= deadline:
-            # 尝试将状态从 active 改为 pending (移交中)
-            lock_res = supabase.table("vaults").update({
+        # --- 触发移交协议 (Handover Protocol) ---
+        if diff_mins >= timeout_mins:
+            print(f"⚠️ 用户 {user_id} 时限已到。正在启动移交程序...")
+            
+            # 1. 尝试锁定状态 (防止并发重复发送)
+            lock = supabase.table("vaults").update({
                 "status": "pending",
-                "last_checkin_at": datetime.datetime.now(datetime.timezone.utc).isoformat()
+                "last_checkin_at": now.isoformat()
             }).eq("id", user_id).eq("status", "active").execute()
 
-            # 只有抢到锁的进程，才发送最终邮件
-            if lock_res.data and len(lock_res.data) > 0:
-                print(f"🔴 [移交] 用户 {user_id} 确认失联。正在查询注册信息...")
+            if lock.data:
+                # 2. 只有抢到锁的进程，才有资格读取 Master Key
+                # 重新获取该行数据以拿到 Key (之前的 select 结果可能已过期)
+                secure_data = supabase.table("vaults").select("key_storage, beneficiary_email").eq("id", user_id).single().execute()
                 
-                relic_token = f"RELIC::{user_id}"
+                master_key = secure_data.data.get('key_storage')
+                ben_email = secure_data.data.get('beneficiary_email')
                 
-                # --- 查询真实的注册邮箱 (作为发件人身份) ---
-                owner_identity = "未知用户"
-                try:
-                    user_data = supabase.auth.admin.get_user_by_id(user_id)
-                    if user_data and user_data.user and user_data.user.email:
-                        owner_identity = user_data.user.email
-                        print(f"✅ 已获取真实注册身份: {owner_identity}")
-                    else:
-                        owner_identity = row.get('warning_email', '未知用户')
-                except Exception as e:
-                    print(f"⚠️ 获取注册信息失败: {e}，将使用备用邮箱身份。")
-                    owner_identity = row.get('warning_email', '未知用户')
+                if master_key and ben_email:
+                    # 3. 构造 "Magic Link" (锚点隔离技术)
+                    # 格式: site.com/#id=UUID&key=MASTER_KEY
+                    # 密钥藏在 # 后面，黑客网络拦截也看不到 Key
+                    magic_link = f"{SITE_URL}/#id={user_id}&key={master_key}"
+                    
+                    # --- 中文邮件文案 ---
+                    body = f"""
+【Relic | 遗物信托】数字信物安全移交通知
 
-                print(f"📧 正在发送给受益人 {ben_email}...")
-                
-                # --- 文案更新：礼貌、清晰的信件转交 ---
-                ben_subject = f"【遗物】您收到一份来自 [{owner_identity}] 的加密信物"
-                ben_body = f"""
 您好。
 
-这是一封来自【遗物 | Relic】托管系统的自动通知。
+这是一封自动系统通知。
+您已被指定为一份加密数据信托的受益人。
+托管人 (ID: {user_id}) 已停止活动，系统触发了自动交付协议。
 
-您的朋友（或关联人）：
-【 {owner_identity} 】
-此前在我们的系统中托管了一份加密数据，并设定了自动交付规则。
+根据预设规则，解密密钥现移交给您。
 
-由于该账号已长期未进行操作，根据协议，系统现将这份数据的提取权限移交给您。
-**您已被指定为唯一的接收人。**
+>>> 点击下方链接提取信物:
+{magic_link}
 
-这份数据的内容已加密，只有您可以解开。
-
-=========================================
-您的专属提取码 (Access Key)：
-{relic_token}
-=========================================
-
-【如何提取？】
-请按照以下步骤操作：
-
-1. 访问系统终端：
-   {SITE_URL}
-
-2. 验证身份：
-   您必须使用【收到这封信的邮箱地址】在网站上注册并登录。
-   (系统已绑定您的邮箱为唯一解密钥匙)
-
-3. 提取信物：
-   登录后，在页面底部的“发掘/解密”框中，粘贴上面的提取码。
-
------------------------------------------
-⚠️ 阅后即焚提示：
-为了保护隐私，该信物设定了最高级别的安全策略。
-解密成功后，内容将在 30分钟后 自动销毁。
-请在方便的时候开启。
------------------------------------------
-
-此致，
-
-遗物 (Relic)
-—— 值得托付的数字信箱
+【安全须知】
+1. 点击上方链接后，您的浏览器将在本地自动解密数据。
+2. 密钥已嵌入在链接中 (锚点部分)，请勿将此链接分享给他人。
+3. 一旦您成功访问，由于“阅后即焚”策略，数据将在 30 分钟后从服务器永久销毁。
 """
-                send_email(ben_email, ben_subject, ben_body)
-            else:
-                 print(f"🔒 [并发保护] 移交程序已被其他进程启动，跳过。")
+                    # 4. 发送邮件
+                    if send_email(ben_email, "【Relic】加密数字信物移交", body):
+                        # 5. 【关键步骤：零信任闭环】密钥自毁 (Key Wipe)
+                        # 邮件发出后，立即从数据库物理删除 key_storage
+                        # 此时，只有受益人的邮件里有 Key，数据库里再也没有了
+                        supabase.table("vaults").update({
+                            "key_storage": None 
+                        }).eq("id", user_id).execute()
+                        print(f"🔥 用户 {user_id} 的密钥已擦除。平台现已不掌握任何密钥。")
+                    else:
+                        print("邮件发送失败。保留密钥以便重试。")
+                        # 回滚状态以便下次重试
+                        supabase.table("vaults").update({"status": "active"}).eq("id", user_id).execute()
 
-
-    # ----------------------------------------------------
-    # 任务 2: 监测已开启的“阅后即焚” (status = reading)
-    # ----------------------------------------------------
+    # --- 监测自毁 (Self-Destruct) ---
+    # 检查状态为 reading 的记录，超过 30 分钟则物理删除
     try:
         res = supabase.table("vaults").select("*").eq("status", "reading").execute()
         reading_vaults = res.data
@@ -208,23 +122,21 @@ def check_vaults():
 
     for row in reading_vaults:
         user_id = row.get('id')
-        unlock_time = parse_time(row.get('last_checkin_at'))
-        if not unlock_time: continue
-
-        now = datetime.datetime.now(datetime.timezone.utc)
-        diff_mins = (now - unlock_time).total_seconds() / 60
+        unlock_time_str = row.get('last_checkin_at')
+        if not unlock_time_str: continue
         
-        if diff_mins >= 30: 
+        unlock_time = datetime.datetime.fromisoformat(unlock_time_str.replace('Z', '+00:00'))
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        if (now - unlock_time).total_seconds() / 60 >= 30:
             print(f"💀 销毁时间到：彻底删除记录 {user_id}")
-            # 物理删除数据库记录
+            # 1. 删除信托记录
             supabase.table("vaults").delete().eq("id", user_id).execute()
-            # 尝试注销 Auth 账号，彻底清理痕迹
+            # 2. 尝试注销 Auth 账号 (可选，彻底清除痕迹)
             try:
                 supabase.auth.admin.delete_user(user_id)
             except: pass
 
 if __name__ == "__main__":
-    print("🚀 [Relic Backend] 托管巡查任务启动...")
-    while True:
-        check_vaults()
-        time.sleep(60)
+    check_vaults()
+    # 注意：在 GitHub Actions 中不需要死循环，执行一次即可
