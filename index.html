@@ -2,294 +2,171 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Relic | 分布式信托</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://via.placeholder.com/192x192/0c0c0c/00ff9d?text=Relic">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relic V4.5 | 零知识信托</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
     
     <style>
-        /* --- UI THEME: CYBER TERMINAL --- */
-        :root { --bg: #050505; --card: #111; --text: #888; --accent: #00ff9d; --danger: #ff4d4d; }
-        body { background: var(--bg); color: var(--text); font-family: "Courier New", monospace; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        
-        .terminal { width: 100%; max-width: 600px; padding: 20px; border-left: 2px solid #333; position: relative; background: rgba(17, 17, 17, 0.8); }
-        .terminal::before { content: "RELIC_PROTOCOL_V4.0 // ZERO_TRUST"; position: absolute; top: -20px; left: 0; font-size: 10px; color: #333; }
-        
-        h1 { color: var(--accent); font-size: 18px; margin-bottom: 30px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 10px; }
-        .status { font-size: 12px; margin-bottom: 20px; color: #444; border: 1px dashed #222; padding: 10px; }
-        
-        input, textarea, select { 
-            width: 100%; background: #0a0a0a; border: 1px solid #333; color: #ddd; 
-            padding: 12px; margin-bottom: 15px; font-family: inherit; font-size: 14px; outline: none; box-sizing: border-box;
-            transition: border-color 0.3s;
-        }
-        input:focus, textarea:focus { border-color: var(--accent); }
-        input:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        button { width: 100%; padding: 15px; background: #1a1a1a; color: var(--accent); border: 1px solid var(--accent); cursor: pointer; font-weight: bold; letter-spacing: 1px; transition: all 0.2s; text-transform: uppercase; }
-        button:hover { background: var(--accent); color: #000; box-shadow: 0 0 15px var(--accent); }
-        
+        :root { --bg: #000; --text: #0f0; --border: #0f0; }
+        body { background: var(--bg); color: var(--text); font-family: "Courier New", monospace; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .terminal { border: 1px solid var(--border); padding: 20px; max-width: 600px; width: 100%; box-shadow: 0 0 10px var(--border); }
+        input, textarea, select, button { width: 100%; background: #111; border: 1px solid #333; color: #fff; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        button { border-color: var(--border); color: var(--border); cursor: pointer; font-weight: bold; }
+        button:hover { background: var(--border); color: #000; }
         .hidden { display: none; }
-        .timeline { height: 2px; background: #222; width: 100%; margin: 20px 0; position: relative; }
-        .progress { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 10px var(--accent); }
-        
-        .decrypt-box { border: 1px solid var(--accent); padding: 20px; margin-top: 20px; background: rgba(0, 255, 157, 0.05); }
-        .secret-content { color: #fff; white-space: pre-wrap; font-size: 15px; line-height: 1.6; word-break: break-all; }
-
-        /* SweetAlert 自定义 */
-        .swal2-popup { background: #111 !important; border: 1px solid #333; color: #ccc !important; border-radius: 0 !important; }
-        .swal2-title { color: var(--accent) !important; font-family: "Courier New"; }
-        .swal2-confirm { background: #333 !important; color: var(--accent) !important; border: 1px solid var(--accent) !important; box-shadow: none !important; }
     </style>
 </head>
 <body>
 
-<div class="terminal" id="auth-screen">
-    <h1>身份验证程序</h1>
-    <input type="email" id="u_email" placeholder="用户 ID (邮箱)">
-    <input type="password" id="u_pw" placeholder="访问密钥 (密码)">
-    <div style="display:flex; gap:10px;">
-        <button onclick="handleLogin()">接入系统</button>
-        <button onclick="handleRegister()" style="background:transparent; border-color:#444; color:#666;">创建新身份</button>
-    </div>
-</div>
-
-<div class="terminal hidden" id="dashboard">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h1>信托控制台</h1>
-        <span onclick="doLogout()" style="cursor:pointer; font-size:12px; color:#666;">[ 断开连接 ]</span>
-    </div>
+<div class="terminal" id="app">
+    <h2 style="border-bottom: 1px dashed #0f0; padding-bottom:10px;">RELIC_PROTOCOL_V4.5 // EXTREME</h2>
     
-    <div class="status" id="status-display">状态: 等待指令</div>
-
-    <label>加密载荷 (信息/私钥/遗言):</label>
-    <textarea id="u_secret" rows="6" placeholder="在此输入敏感数据...&#10;系统将生成高强度随机密钥在本地完成加密。&#10;服务器永远无法触碰明文。"></textarea>
-    
-    <label>指定受益人 (接收邮箱):</label>
-    <input type="email" id="u_ben" placeholder="受益人邮箱 (唯一接收地址)">
-    
-    <label>自动移交倒计时 (Dead Man's Switch):</label>
-    <div style="display:flex; gap:10px;">
-        <input type="number" id="u_time_val" placeholder="时长数值">
-        <select id="u_time_unit">
-            <option value="1440">天</option>
-            <option value="60">小时</option>
-            <option value="1">分钟</option>
-        </select>
+    <div id="auth-panel">
+        <input type="email" id="email" placeholder="身份ID (Email)">
+        <input type="password" id="password" placeholder="访问令牌 (Password)">
+        <button onclick="login()">接入系统</button>
+        <button onclick="signup()">创建身份</button>
     </div>
 
-    <div class="timeline"><div class="progress" id="life-bar"></div></div>
-    <div style="text-align:right; font-size:12px; color:#444; margin-bottom:15px;" id="timer-text">--</div>
-
-    <button onclick="updateVault()">加密并部署协议</button>
-    <p style="font-size:10px; color:#444; text-align:center; margin-top:10px;">* 每次更新将覆盖旧数据并重置倒计时</p>
-</div>
-
-<div class="terminal hidden" id="decrypt-screen">
-    <h1>解密协议</h1>
-    <div class="status" style="border-color:var(--accent); color:var(--accent);">
-        检测到锚点密钥 (ANCHOR KEY)。<br>准备执行本地解密。
-    </div>
-    <div id="loading-text" style="text-align:center; padding:20px;">正在从服务器获取密文...</div>
-    
-    <div id="final-content" class="decrypt-box hidden">
-        <label style="color:var(--accent); font-size:12px;">解密内容:</label>
-        <div class="secret-content" id="decrypted-text"></div>
-        <div style="margin-top:15px; border-top:1px dashed #444; padding-top:10px; font-size:10px; color:var(--danger);">
-            ⚠️ 安全警告：阅后即焚协议已启动。<br>数据将在 30 分钟后从服务器物理销毁。请立即保存。
+    <div id="dashboard" class="hidden">
+        <div style="text-align:right; font-size:12px; margin-bottom:10px;">[ <span onclick="logout()" style="cursor:pointer">断开链接</span> ]</div>
+        <p id="status-text" style="color:#aaa">等待指令...</p>
+        
+        <textarea id="secret" rows="5" placeholder="输入机密数据...&#10;注意：数据将经过 AES-256 (本地) + RSA-1024 (公钥封装) 双重加密。"></textarea>
+        <input type="email" id="beneficiary" placeholder="受益人邮箱">
+        
+        <div style="display:flex; gap:10px;">
+            <input type="number" id="timeout_val" placeholder="倒计时">
+            <select id="timeout_unit"><option value="1">分钟</option><option value="60">小时</option><option value="1440">天</option></select>
         </div>
+        
+        <button onclick="deploy()">加密并部署死手开关</button>
+    </div>
+
+    <div id="decrypt-panel" class="hidden">
+        <h3>解密终端</h3>
+        <p id="decrypt-msg">正在提取锚点数据...</p>
+        <div id="decrypt-result" style="border:1px dashed #0f0; padding:10px; white-space:pre-wrap; display:none;"></div>
     </div>
 </div>
 
 <script>
-    // --- 配置区 ---
-    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; // 您的 Supabase URL
-    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; // 您的 Anon Key
+    // --- 极客配置区 ---
+    // 请在此处填入您的 Supabase URL 和 Anon Key
+    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     
-    const client = window.supabase.createClient(DB_URL, DB_KEY);
-    let sessionUser = null;
+    // 【关键】V4.5 核心升级：看门狗公钥 (前端只管加密，绝对解不开)
+    // 请替换为您生成的公钥，保留 -----BEGIN/END PUBLIC KEY-----
+    const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC8... (把您生成的公钥粘贴到这里) ...
+-----END PUBLIC KEY-----`;
 
-    // --- 初始化检查 ---
+    const client = window.supabase.createClient(DB_URL, DB_KEY);
+    let user = null;
+
+    // 初始化
     window.onload = async () => {
-        // 场景 A: 受益人点击了带密钥的链接 (Magic Link)
-        // 检查 URL 锚点中是否包含 key=
-        if (window.location.hash.includes("key=")) {
-            handleMagicLink();
-            return;
-        }
-        
-        // 场景 B: 发布者正常登录
-        const { data } = await client.auth.getSession();
-        if (data.session) {
-            sessionUser = data.session.user;
-            showDashboard();
+        if (location.hash.includes("key=")) {
+            document.getElementById('auth-panel').classList.add('hidden');
+            document.getElementById('decrypt-panel').classList.remove('hidden');
+            handleDecryption();
+        } else {
+            const session = await client.auth.getSession();
+            if (session.data.session) {
+                user = session.data.session.user;
+                showDash();
+            }
         }
     };
 
-    // --- 核心加密模块 (零信任基础) ---
-    // 生成 256位 随机密钥
-    function generateMasterKey() {
-        const array = new Uint8Array(32);
-        window.crypto.getRandomValues(array);
-        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    // --- V4.5 加密核心 ---
+    function generateKey() {
+        const arr = new Uint8Array(32);
+        crypto.getRandomValues(arr);
+        return Array.from(arr, b => b.toString(16).padStart(2,'0')).join('');
     }
 
-    // 本地加密 (AES)
-    function encryptLocally(text, key) {
-        return CryptoJS.AES.encrypt(text, key).toString();
-    }
-
-    // 本地解密 (AES)
-    function decryptLocally(ciphertext, key) {
-        try {
-            const bytes = CryptoJS.AES.decrypt(ciphertext, key);
-            const originalText = bytes.toString(CryptoJS.enc.Utf8);
-            return originalText;
-        } catch (e) { return null; }
-    }
-
-    // --- 发布者操作 ---
-    async function updateVault() {
-        const secret = document.getElementById('u_secret').value;
-        const ben = document.getElementById('u_ben').value;
-        const unit = parseInt(document.getElementById('u_time_unit').value);
-        const val = parseInt(document.getElementById('u_time_val').value);
+    async function deploy() {
+        const secret = document.getElementById('secret').value;
+        const ben = document.getElementById('beneficiary').value;
+        const mins = document.getElementById('timeout_val').value * document.getElementById('timeout_unit').value;
         
-        if (!secret || !ben || !val) return Swal.fire({icon:'warning', title:'数据不完整'});
+        if (!secret || !ben || !mins) return Swal.fire('Error', '数据不完整', 'error');
 
-        // 1. 生成高强度随机密钥 (Master Key) - 此时只有浏览器知道
-        const masterKey = generateMasterKey();
+        // 1. 生成 AES 密钥 (明文 Key，只存在于内存)
+        const aesKey = generateKey();
         
-        // 2. 本地加密 (明文在此处销毁，只有密文产生)
-        const ciphertext = encryptLocally(secret, masterKey);
+        // 2. 本地 AES 加密 (生成数据密文)
+        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
+        
+        // 3. 【极度重要】RSA 封装密钥
+        // 使用公钥将 AES Key 锁住。此时浏览器里没有任何人能解开它了，包括用户自己。
+        const encryptor = new JSEncrypt();
+        encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
+        const wrappedKey = encryptor.encrypt(aesKey);
+        
+        if (!wrappedKey) return Swal.fire('Error', 'RSA 加密失败，请检查公钥', 'error');
 
-        // 3. 上传密文 + 临时托管密钥
-        // 注意：根据 V4.0 协议，服务器必须暂时持有密钥以便发送邮件。发送后脚本会立即执行擦除。
-        const totalMins = val * unit;
-        
-        // 使用 upsert 实现“覆盖更新”逻辑
+        // 4. 上传 (传上去的是：锁住的数据 + 锁住的钥匙)
         const { error } = await client.from('vaults').upsert({
-            id: sessionUser.id,
-            encrypted_data: ciphertext,
+            id: user.id,
+            encrypted_data: encryptedData,
+            key_storage: wrappedKey, // 即使数据库泄露，黑客也拿不到 AES Key
             beneficiary_email: ben,
-            key_storage: masterKey, // 此字段受数据库 RLS 保护，仅允许后端脚本读取
-            timeout_minutes: totalMins,
-            status: 'active',       // 激活状态
-            last_checkin_at: new Date() // 重置计时
+            timeout_minutes: mins,
+            status: 'active',
+            last_checkin_at: new Date()
         });
 
-        if (error) {
-            Swal.fire({icon:'error', title:'部署失败', text: error.message});
-        } else {
-            Swal.fire({
-                title: '协议已部署',
-                html: '系统已开始监测。<br>密钥已加密传输至待发送队列。<br><b>请勿向任何人透露您的内容。</b>',
-                icon: 'success'
-            });
-            loadData();
+        if (error) Swal.fire('Error', error.message, 'error');
+        else {
+            Swal.fire('Success', 'V4.5 协议已部署。服务器已致盲。', 'success');
+            document.getElementById('secret').value = ""; // 销毁内存
         }
     }
 
-    // --- 受益人操作 (Magic Link 逻辑) ---
-    async function handleMagicLink() {
-        // 隐藏登录界面，显示解密界面
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('decrypt-screen').classList.remove('hidden');
-
-        // 1. 从 URL 锚点 (#) 提取密钥
-        // 关键点：锚点数据不会发送给服务器，这是浏览器的本地行为
-        const hash = window.location.hash;
+    // --- 解密逻辑 (接收端) ---
+    async function handleDecryption() {
+        const hash = location.hash;
         try {
-            // URL 格式: site.com/#id=UUID&key=SECRET
-            const keyPart = hash.split('key=')[1].split('&')[0];
+            const keyPart = hash.split('key=')[1].split('&')[0]; // 从锚点拿 AES Key
             const idPart = hash.split('id=')[1].split('&')[0];
-
-            if (!keyPart || !idPart) throw new Error("链接破损");
-
-            // 2. 从服务器下载密文
-            const { data, error } = await client.from('vaults').select('encrypted_data, status').eq('id', idPart).single();
             
-            if (error || !data) {
-                document.getElementById('loading-text').innerText = "错误：数据不存在或已被物理销毁";
-                document.getElementById('loading-text').style.color = "var(--danger)";
-                return;
-            }
+            const { data } = await client.from('vaults').select('*').eq('id', idPart).single();
+            if (!data) throw new Error("数据已销毁");
 
-            // 3. 本地解密
-            const plaintext = decryptLocally(data.encrypted_data, keyPart);
+            const plaintext = CryptoJS.AES.decrypt(data.encrypted_encrypted, keyPart).toString(CryptoJS.enc.Utf8);
             
             if (plaintext) {
-                document.getElementById('loading-text').classList.add('hidden');
-                document.getElementById('final-content').classList.remove('hidden');
-                document.getElementById('decrypted-text').innerText = plaintext;
-                
-                // 4. 触发阅后即焚 (状态标记为 reading)
-                if (data.status !== 'reading') {
-                    client.from('vaults').update({ status: 'reading', last_checkin_at: new Date() }).eq('id', idPart);
-                }
+                document.getElementById('decrypt-msg').innerText = "解密成功 (阅后即焚已启动)";
+                document.getElementById('decrypt-result').style.display = 'block';
+                document.getElementById('decrypt-result').innerText = plaintext;
+                // 触发销毁
+                if(data.status !== 'reading') client.from('vaults').update({status:'reading', last_checkin_at: new Date()}).eq('id', idPart);
             } else {
-                Swal.fire({icon:'error', title:'解密失败', text:'密钥无效或数据已损坏'});
+                throw new Error("密钥无效");
             }
-        } catch (e) {
-            console.error(e);
-            Swal.fire({icon:'error', title:'链接无效', text:'无法解析密钥锚点'});
+        } catch(e) {
+            document.getElementById('decrypt-msg').innerText = "错误: " + e.message;
+            document.getElementById('decrypt-msg').style.color = "red";
         }
     }
 
-    // --- 辅助功能 ---
-    async function handleLogin() {
-        const { error } = await client.auth.signInWithPassword({
-            email: document.getElementById('u_email').value,
-            password: document.getElementById('u_pw').value
-        });
-        if (error) Swal.fire({icon:'error', text:error.message});
-        else location.reload();
+    // Auth Helpers
+    async function login() { 
+        const { error } = await client.auth.signInWithPassword({email:document.getElementById('email').value, password:document.getElementById('password').value});
+        if(!error) location.reload(); 
     }
-    
-    async function handleRegister() {
-        const { error } = await client.auth.signUp({
-            email: document.getElementById('u_email').value,
-            password: document.getElementById('u_pw').value
-        });
-        if (error) Swal.fire({icon:'error', text:error.message});
-        else Swal.fire({icon:'success', title:'身份已创建', text:'请登录系统'});
+    async function signup() {
+        const { error } = await client.auth.signUp({email:document.getElementById('email').value, password:document.getElementById('password').value});
+        if(!error) Swal.fire('Success', '注册成功', 'success');
     }
-
-    async function doLogout() { await client.auth.signOut(); location.reload(); }
-
-    function showDashboard() {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('dashboard').classList.remove('hidden');
-        loadData();
-    }
-
-    async function loadData() {
-        const { data } = await client.from('vaults').select('*').eq('id', sessionUser.id).single();
-        if (data) {
-            document.getElementById('u_ben').value = data.beneficiary_email || '';
-            document.getElementById('u_secret').value = ""; // 安全起见，不回显密文，只允许覆盖
-            document.getElementById('u_secret').placeholder = ":: 加密载荷已锁定 ::\n\n如需修改，请直接输入新内容并点击部署。\n新数据将直接覆盖旧版本。";
-            
-            const statusMap = { 'active': '监测中 (ACTIVE)', 'pending': '移交中 (HANDOVER)', 'reading': '销毁倒计时 (BURNING)' };
-            document.getElementById('status-display').innerText = "状态: " + (statusMap[data.status] || data.status);
-            document.getElementById('status-display').style.borderColor = "#00ff9d";
-            document.getElementById('status-display').style.color = "#00ff9d";
-            
-            // 渲染进度条
-            if (data.status === 'active') {
-                const totalMins = data.timeout_minutes;
-                const elapsed = new Date() - new Date(data.last_checkin_at);
-                const p = Math.min(100, (elapsed / (totalMins*60000)) * 100);
-                document.getElementById('life-bar').style.width = p + "%";
-                document.getElementById('timer-text').innerText = (100-p).toFixed(2) + "% 剩余";
-            }
-        }
-    }
+    async function logout() { await client.auth.signOut(); location.reload(); }
+    function showDash() { document.getElementById('auth-panel').classList.add('hidden'); document.getElementById('dashboard').classList.remove('hidden'); }
 </script>
 </body>
 </html>
