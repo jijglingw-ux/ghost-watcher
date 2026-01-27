@@ -17,13 +17,12 @@ RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
 SENDER_EMAIL = os.environ.get("EMAIL_USER")
 SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
 
-# ✅ 您的网页首页地址 (这就是手动提取的入口)
+# 您的网页首页地址
 BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
 
 def get_db():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 强力时间清洗函数
 def parse_time_safe(time_str):
     try:
         clean_str = time_str.replace('Z', '+00:00')
@@ -51,12 +50,13 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ 发送带有清晰操作指引的 HTML 邮件 (V5.4 修复版) """
+    """ V5.5 修正版：手动模式增加 ID 显示 """
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
+    user_id = str(user_id).strip() # 确保 ID 是字符串
     sender = str(SENDER_EMAIL).strip()
     
-    print(f"📧 正在尝试发信 (HTML版) -> 收件人: {to_email}")
+    print(f"📧 正在尝试发信 -> 收件人: {to_email}")
 
     if not to_email or "None" in to_email:
         print("❌ 错误: 目标邮箱无效")
@@ -65,9 +65,8 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     msg = MIMEMultipart('alternative')
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.4)"
+    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.5)"
 
-    # 自动链接 (带参数)
     full_link = f"{BASE_URL}#id={user_id}&key={aes_key}"
     
     # ================= HTML 邮件正文 =================
@@ -84,7 +83,8 @@ def send_email_via_smtp(to_email, aes_key, user_id):
             .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
             .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; }}
             .btn:hover {{ background-color: #0056b3; }}
-            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; margin-top: 10px; }}
+            .label {{ font-size: 12px; color: #666; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }}
+            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 10px; border-radius: 4px; font-size: 13px; color: #333; word-break: break-all; font-family: monospace; }}
             .manual-link {{ color: #007bff; text-decoration: underline; }}
             .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
         </style>
@@ -108,12 +108,12 @@ def send_email_via_smtp(to_email, aes_key, user_id):
 
             <div class="step">
                 <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
-                <p style="color:#666;">如果上方按钮失效，请按以下步骤操作：</p>
-                <ol style="color:#555; line-height: 1.6;">
-                    <li>访问数字信托中心：<br><a href="{BASE_URL}" class="manual-link">{BASE_URL}</a></li>
-                    <li>点击首页的 <strong>"我是受益人 (手动提取)"</strong> 按钮。</li>
-                    <li>输入下方的 <strong>安全凭证</strong>：</li>
-                </ol>
+                <p style="color:#666;">如果按钮失效，请访问 <a href="{BASE_URL}" class="manual-link">信托中心首页</a>，选择“手动提取”并输入以下两项信息：</p>
+                
+                <div class="label">1. 保险箱 ID (Vault ID):</div>
+                <div class="backup-box">{user_id}</div>
+
+                <div class="label">2. 安全凭证 (Token):</div>
                 <div class="backup-box">{aes_key}</div>
             </div>
 
@@ -126,6 +126,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     </html>
     """
     
+    # 纯文本版也要补上 ID
     text_content = f"""
     【重要】数字资产交接通知
     
@@ -134,8 +135,10 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     
     方式二：手动提取（备用）
     1. 访问网页：{BASE_URL}
-    2. 选择“手动提取”并输入下方凭证：
-    {aes_key}
+    2. 选择“手动提取”并输入以下信息：
+    
+    [ 保险箱 ID ]: {user_id}
+    [ 安全凭证 ]: {aes_key}
     """
     
     msg.attach(MIMEText(text_content, 'plain'))
@@ -158,7 +161,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
         return False
 
 def watchdog():
-    print("🐕 凤凰看门狗 V5.4 (邮件指引修复版) 启动...")
+    print("🐕 凤凰看门狗 V5.5 (ID补全版) 启动...")
     db = get_db()
     
     try:
@@ -193,6 +196,7 @@ def watchdog():
                 target_email = payload_data.get('t') or db_email 
                 
                 if aes_key and target_email:
+                    # ✅ 重点：这里把 user_id 也传进去
                     success = send_email_via_smtp(target_email, aes_key, user_id)
                     if success:
                         print(f"✅ 邮件发送成功！正在销毁钥匙...")
