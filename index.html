@@ -3,109 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V5.7 | 绝密终端</title>
+    <title>凤凰协议 V7.0 | 战略中控</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <style>
-        :root { --matrix-green: #00ff41; --danger-red: #ff3333; --panel-bg: rgba(13, 17, 23, 0.95); --glow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        :root { --matrix-green: #00ff41; --danger-red: #ff3333; --warn-yellow: #ffcc00; --bg: #0d1117; }
         * { box-sizing: border-box; }
-        body { background-color: #000; color: var(--matrix-green); font-family: 'Courier New', monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); transition: background 2s; }
-        .scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; }
-        .container { width: 90%; max-width: 500px; padding: 30px; border: 1px solid var(--matrix-green); box-shadow: var(--glow); background: var(--panel-bg); position: relative; z-index: 10; max-height: 90vh; overflow-y: auto; }
+        body { background: #000; color: var(--matrix-green); font-family: 'Courier New', monospace; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
+        .container { width: 95%; max-width: 600px; padding: 20px; border: 1px solid #333; background: rgba(13, 17, 23, 0.95); box-shadow: 0 0 20px rgba(0,255,65,0.1); max-height: 95vh; overflow-y: auto; }
         
-        /* 倒计时条 (保留视觉提示) */
-        #timer-bar { position: fixed; top: 0; left: 0; width: 100%; height: 5px; background: #333; z-index: 1000; display: none; }
-        #timer-progress { height: 100%; background: var(--danger-red); width: 100%; transition: width 1s linear; }
-        #countdown-display { position: absolute; top: 10px; right: 20px; color: var(--danger-red); font-weight: bold; font-size: 1.2rem; display: none; text-shadow: 0 0 5px var(--danger-red); z-index: 1000; }
+        /* 布局组件 */
+        .section-title { border-bottom: 1px solid #333; padding-bottom: 5px; margin: 20px 0 10px; color: #fff; font-size: 0.9rem; font-weight: bold; }
+        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .col { flex: 1; }
+        label { font-size: 0.75rem; color: #888; display: block; margin-bottom: 4px; }
+        
+        input, select, textarea { background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 10px; width: 100%; outline: none; font-family: inherit; }
+        input:focus, select:focus { border-color: var(--matrix-green); }
+        
+        /* 按钮组 */
+        button { padding: 12px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; width: 100%; }
+        button:hover { background: var(--matrix-green); color: #000; }
+        button.alive { border-color: var(--warn-yellow); color: var(--warn-yellow); font-size: 1.1rem; margin-bottom: 20px; }
+        button.alive:hover { background: var(--warn-yellow); color: #000; }
+        
+        /* 视觉时间轴 */
+        .visualizer { margin-top: 20px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; border-left: 3px solid #555; font-size: 0.8rem; }
+        .v-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .bar-container { height: 6px; background: #333; margin: 8px 0 15px; position: relative; border-radius: 3px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, var(--matrix-green) 0%, var(--warn-yellow) 80%, var(--danger-red) 100%); width: 0%; transition: width 0.5s; }
+        .marker { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; opacity: 0.5; }
+        
+        /* 倒计时大字 */
+        .live-timer { text-align: center; font-size: 1.5rem; color: #fff; margin: 10px 0; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
 
-        h2 { text-align: center; letter-spacing: 3px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; margin-bottom: 25px; font-size: 1.5rem; }
-        
-        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 15px; margin-bottom: 15px; font-family: inherit; outline: none; }
-        input:focus { border-color: var(--matrix-green); box-shadow: var(--glow); }
-        
-        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
-        button { flex: 1; padding: 15px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
-        button:hover { background: var(--matrix-green); color: #000; box-shadow: 0 0 20px var(--matrix-green); }
-        button.secondary { border-color: #666; color: #888; }
-        button.copy-btn { border-color: #00aaff; color: #00aaff; margin-top: 10px; }
-        button.copy-btn:hover { background: #00aaff; color: #fff; box-shadow: 0 0 15px #00aaff; }
-
-        .divider { border-top: 1px dashed #333; margin: 25px 0; position: relative; }
-        .divider span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); padding: 0 10px; color: #555; font-size: 0.8rem; }
-        .status-badge { display: inline-block; padding: 5px 10px; border: 1px solid var(--matrix-green); font-size: 0.8rem; margin-bottom: 20px; }
         .hidden { display: none !important; }
-        
-        #decrypt-result { margin-top: 20px; padding: 15px; border: 1px dashed var(--matrix-green); background: rgba(0, 50, 0, 0.2); line-height: 1.6; word-break: break-all; white-space: pre-wrap; font-size: 0.9rem; }
-        .manual-link { text-align: center; margin-top: 15px; font-size: 0.9rem; cursor: pointer; text-decoration: underline; color: #666; }
-        
-        /* 销毁后的样式 */
-        body.destroyed { background: #000 !important; }
-        body.destroyed .container, body.destroyed .scanlines { display: none; }
-        .destroy-msg { display: none; color: red; font-size: 2rem; text-align: center; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        body.destroyed .destroy-msg { display: block; }
+        .status-badge { display: inline-block; padding: 3px 8px; border: 1px solid var(--matrix-green); font-size: 0.7rem; margin-bottom: 15px; }
     </style>
 </head>
 <body>
-    <div id="timer-bar"><div id="timer-progress"></div></div>
-    <div id="countdown-display">24:00:00</div>
-    
-    <div class="scanlines"></div>
-    
-    <div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>
-
     <div class="container">
-        <h2 id="page-title">凤凰协议 V5.7</h2>
-        
+        <h2 style="text-align:center; margin:0 0 20px; border-bottom:1px solid var(--matrix-green); padding-bottom:15px;">凤凰协议 V7.0</h2>
+
         <div id="login-section">
-            <div class="status-badge">[ 终端状态: 就绪 ]</div>
-            <input type="email" id="email" placeholder="委托人账号">
-            <input type="password" id="password" placeholder="通行密码">
-            <div class="btn-group">
-                <button onclick="login()">登录</button>
-                <button class="secondary" onclick="signup()">注册</button>
+            <input type="email" id="email" placeholder="Email" style="margin-bottom:10px;">
+            <input type="password" id="password" placeholder="Password" style="margin-bottom:10px;">
+            <div class="row">
+                <button onclick="login()">登录中控台</button>
+                <button onclick="signup()" style="border-color:#666; color:#888;">注册</button>
             </div>
-            <div class="divider"><span>或</span></div>
-            <button class="secondary" style="width: 100%; border-style: dashed;" onclick="toggleView('manual')">我是受益人 (手动提取)</button>
+            <p style="text-align:center; font-size:12px; color:#666; cursor:pointer; text-decoration:underline;" onclick="toggleView('manual')">我是受益人 (手动提取)</p>
         </div>
 
         <div id="manual-section" class="hidden">
-            <div class="status-badge" style="color: #00ff41;">[ 安全提取通道 ]</div>
-            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">请输入邮件中的双重验证信息。</p>
-            <input type="text" id="manual-id" placeholder="保险箱 ID (Vault ID)">
-            <input type="text" id="manual-key" placeholder="提取密钥 (AES Key)">
-            <button onclick="handleManualDecrypt()">验证身份</button>
-            <div class="manual-link" onclick="toggleView('login')">&lt; 返回</div>
+            <div class="status-badge">[ 物理提取通道 ]</div>
+            <input type="text" id="manual-id" placeholder="Vault ID" style="margin-bottom:10px;">
+            <input type="text" id="manual-key" placeholder="AES Key" style="margin-bottom:10px;">
+            <button onclick="handleManualDecrypt()">验证并解密</button>
+            <p style="text-align:center; margin-top:10px; font-size:12px; cursor:pointer;" onclick="toggleView('login')">&lt; 返回</p>
         </div>
 
         <div id="dash" class="hidden">
-            <div class="status-badge" style="color:#00ff41">[ 隐形信道 ]</div>
-            <textarea id="secret" rows="5" placeholder="输入绝密内容..."></textarea>
-            <input type="email" id="ben" placeholder="受益人邮箱">
-            <label style="font-size:0.8rem; opacity:0.7;">静默触发时长 (分钟)</label>
-            <input type="number" id="time" value="1" min="1">
-            <button onclick="deploy()">部署协议</button>
-        </div>
+            <button class="alive" onclick="sendHeartbeat()">❤️ 点击签到 (重置时间)</button>
+            
+            <div class="live-timer" id="live-countdown">--:--:--</div>
+            <div style="text-align:center; font-size:10px; color:#666; margin-bottom:20px;">距离协议触发剩余时间</div>
 
-        <div id="decrypt-view" class="hidden">
-            <div class="status-badge" style="border-color: var(--danger-red); color: var(--danger-red);">[ 警告: 自毁程序已启动 ]</div>
-            <div id="decrypt-result"></div>
-            
-            <button class="copy-btn" onclick="copyContent()">📄 复制内容并保存</button>
-            
-            <div style="margin-top:20px; font-size: 12px; color: #666; text-align: center;">
-                数据将在倒计时结束后自动清除。
+            <div class="section-title">⏱️ 触发设定 (多久不签到视为死亡)</div>
+            <div class="row">
+                <input type="number" id="timeout-val" value="1" min="1" oninput="renderVisual()">
+                <select id="timeout-unit" onchange="renderVisual()" style="width:30%;">
+                    <option value="60">分</option>
+                    <option value="3600">时</option>
+                    <option value="86400">天</option>
+                    <option value="2592000">月</option>
+                    <option value="31536000" selected>年</option>
+                </select>
             </div>
+
+            <div class="section-title">🔔 唤醒预警 (触发前多久开始提醒)</div>
+            <div class="row">
+                <div class="col">
+                    <label>提前量</label>
+                    <div class="row" style="margin:0;">
+                        <input type="number" id="warn-start-val" value="7" min="1" oninput="renderVisual()">
+                        <select id="warn-start-unit" onchange="renderVisual()" style="width:50%;">
+                            <option value="60">分</option>
+                            <option value="3600">时</option>
+                            <option value="86400" selected>天</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col">
+                    <label>提醒频率</label>
+                    <div class="row" style="margin:0;">
+                        <input type="number" id="warn-int-val" value="1" min="1" oninput="renderVisual()">
+                        <select id="warn-int-unit" onchange="renderVisual()" style="width:50%;">
+                            <option value="60">分</option>
+                            <option value="3600">时</option>
+                            <option value="86400" selected>天</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col" style="flex:0.5;">
+                    <label>次数</label>
+                    <input type="number" id="warn-max" value="3" min="1" oninput="renderVisual()">
+                </div>
+            </div>
+
+            <div class="section-title">🔐 绝密信封</div>
+            <textarea id="secret" rows="2" placeholder="遗言内容 (选填，不填则仅更新时间)"></textarea>
+            <input type="email" id="ben" placeholder="受益人邮箱 (选填)" style="margin-top:5px;">
+
+            <div class="visualizer" id="visual-panel"></div>
+
+            <button onclick="deploy()" style="margin-top:15px;">🚀 同步配置到云端</button>
+        </div>
+        
+        <div id="decrypt-view" class="hidden">
+            <div class="status-badge" style="color:red; border-color:red;">DATA PURGED IN 24H</div>
+            <div id="decrypt-result" style="border:1px dashed #0f0; padding:10px; word-break:break-all;"></div>
         </div>
     </div>
 
 <script>
     // ================= 配置区 =================
-    // ⚠️ 请确认这里是您自己的 Supabase Key
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
-    
     const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
 x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
@@ -117,159 +144,221 @@ pQIDAQAB
 -----END PUBLIC KEY-----`;
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
-    
-    // 自毁时间设定 (24小时)
-    const DESTROY_TIME_MS = 24 * 60 * 60 * 1000; 
-    let countdownInterval;
+    let currentUserData = null; // 缓存用户数据
+    let timerInterval = null;
 
-    function toggleView(viewName) {
-        ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        if (viewName === 'login') document.getElementById('login-section').classList.remove('hidden');
-        if (viewName === 'manual') document.getElementById('manual-section').classList.remove('hidden');
-        if (viewName === 'dash') document.getElementById('dash').classList.remove('hidden');
-        if (viewName === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
-    }
+    // --- 核心逻辑 ---
 
-    // --- 核心解密逻辑 (升级版) ---
-
-    async function handleManualDecrypt() {
-        const id = document.getElementById('manual-id').value.trim();
-        const key = document.getElementById('manual-key').value.trim();
-        if(!id || !key) return Swal.fire({text:'请输入完整信息', background:'#000', color:'#f00'});
+    // 1. 渲染视觉推演 & 计算秒数
+    function renderVisual() {
+        const now = moment();
         
-        // 1. 先验证 (Loading)
-        Swal.fire({ title: '正在校验身份...', background: '#000', color: '#0f0', didOpen: () => Swal.showLoading() });
+        // 获取所有输入并转为秒
+        const timeoutSec = (parseInt(document.getElementById('timeout-val').value)||0) * parseInt(document.getElementById('timeout-unit').value);
+        const warnStartSec = (parseInt(document.getElementById('warn-start-val').value)||0) * parseInt(document.getElementById('warn-start-unit').value);
+        const warnIntSec = (parseInt(document.getElementById('warn-int-val').value)||0) * parseInt(document.getElementById('warn-int-unit').value);
+        const warnMax = parseInt(document.getElementById('warn-max').value)||1;
+
+        // 计算关键时间点
+        const deathTime = moment().add(timeoutSec, 'seconds');
+        const firstWarnTime = moment(deathTime).subtract(warnStartSec, 'seconds');
         
-        try {
-            const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
-            if(error || !data) throw new Error("记录不存在或已销毁");
-
-            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
-            const text = bytes.toString(CryptoJS.enc.Utf8);
-            if(!text) throw new Error("密钥错误");
-
-            // 2. 验证成功，先关闭 Loading，弹出确认警告
-            Swal.close();
-            
-            await Swal.fire({
-                title: '身份验证通过',
-                html: '<span style="color:#ff3333">⚠️ 警告：数据将在 24 小时后永久销毁</span><br><br>确认查看后，倒计时将立即开始。请确保您已准备好保存内容。',
-                icon: 'warning',
-                background: '#000',
-                color: '#fff',
-                showCancelButton: true,
-                confirmButtonColor: '#ff3333',
-                cancelButtonColor: '#333',
-                confirmButtonText: '我已知晓，立即查看',
-                cancelButtonText: '稍后查看'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // 3. 用户点击确认后，才显示内容并开始倒计时
-                    showContentAndStartTimer(text);
-                }
-                // 如果点击取消，什么都不发生，停留在输入界面
-            });
-
-        } catch(e) {
-            Swal.fire({icon:'error', title:'提取失败', text: e.message, background:'#000', color:'#f00'});
+        // 渲染HTML
+        let html = `<div class="v-row"><span style="color:#0f0">现在</span><span>${now.format('MM-DD HH:mm')}</span></div>`;
+        
+        // 进度条背景
+        html += `<div class="bar-container">`;
+        
+        // 如果预警时间有效（在现在之后，在死期之前）
+        if (firstWarnTime.isAfter(now) && firstWarnTime.isBefore(deathTime)) {
+            // 计算百分比位置
+            const percent = ((timeoutSec - warnStartSec) / timeoutSec) * 100;
+            html += `<div class="marker" style="left:${percent}%; background:#ffcc00;"></div>`; // 预警点
         }
-    }
-
-    function showContentAndStartTimer(text) {
-        toggleView('result');
-        document.getElementById("decrypt-result").innerText = text;
-        startSelfDestruct(); // 启动倒计时
-    }
-
-    function startSelfDestruct() {
-        // 显示倒计时UI
-        document.getElementById('timer-bar').style.display = 'block';
-        document.getElementById('countdown-display').style.display = 'block';
         
-        let remaining = DESTROY_TIME_MS;
-        const endTime = Date.now() + remaining;
+        html += `<div class="bar-fill" style="width:100%"></div></div>`; // 简单全填充，靠标记点定位
 
-        countdownInterval = setInterval(() => {
-            remaining = endTime - Date.now();
-            updateTimerDisplay(remaining); // 只更新显示，不再弹窗提醒
+        // 预警信息
+        if (warnStartSec > 0 && warnStartSec < timeoutSec) {
+            html += `
+            <div class="v-row" style="color:#ffcc00">
+                <span>🔔 首次唤醒</span>
+                <span>${firstWarnTime.format('MM-DD HH:mm')}</span>
+            </div>
+            <div style="font-size:10px; color:#666; margin-bottom:5px;">
+                (死期前 ${formatDuration(warnStartSec)} 开始, 每 ${formatDuration(warnIntSec)} 提醒一次, 共 ${warnMax} 次)
+            </div>`;
+        } else {
+            html += `<div style="color:red; font-size:10px;">⚠️ 预警设置无效 (时间重叠)</div>`;
+        }
 
-            if (remaining <= 0) {
-                clearInterval(countdownInterval);
-                triggerDestruction();
+        html += `
+            <div class="v-row" style="color:#ff3333; font-weight:bold; margin-top:5px;">
+                <span>🚀 协议触发</span>
+                <span>${deathTime.format('YYYY-MM-DD HH:mm')}</span>
+            </div>`;
+
+        document.getElementById('visual-panel').innerHTML = html;
+        
+        // 更新大字倒计时 (基于当前输入预览，而不是数据库)
+        // 实际上大字应该显示“数据库里的真实倒计时”，这里仅做设定时的参考
+    }
+
+    // 辅助：秒转易读文字
+    function formatDuration(seconds) {
+        if(seconds >= 86400) return (seconds/86400).toFixed(1) + "天";
+        if(seconds >= 3600) return (seconds/3600).toFixed(1) + "小时";
+        return (seconds/60).toFixed(0) + "分";
+    }
+
+    // 2. 真实倒计时 (基于数据库数据)
+    function startLiveTimer(lastCheckinStr, timeoutSec) {
+        if(timerInterval) clearInterval(timerInterval);
+        
+        const lastCheckin = moment(lastCheckinStr);
+        const deathTime = lastCheckin.add(timeoutSec, 'seconds');
+
+        timerInterval = setInterval(() => {
+            const now = moment();
+            const diff = deathTime.diff(now); // 毫秒
+
+            if (diff <= 0) {
+                document.getElementById('live-countdown').innerText = "00:00:00";
+                document.getElementById('live-countdown').style.color = "red";
+                return;
             }
+
+            const duration = moment.duration(diff);
+            const days = Math.floor(duration.asDays());
+            const hours = duration.hours().toString().padStart(2,'0');
+            const mins = duration.minutes().toString().padStart(2,'0');
+            const secs = duration.seconds().toString().padStart(2,'0');
+
+            let str = `${hours}:${mins}:${secs}`;
+            if(days > 0) str = `${days}天 ` + str;
+            
+            document.getElementById('live-countdown').innerText = str;
         }, 1000);
     }
 
-    function updateTimerDisplay(ms) {
-        if(ms < 0) ms = 0;
-        const totalSec = Math.floor(ms / 1000);
-        const h = Math.floor(totalSec / 3600).toString().padStart(2, '0');
-        const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
-        const s = (totalSec % 60).toString().padStart(2, '0');
+    // 3. 部署/签到逻辑
+    async function deploy() {
+        const user = (await client.auth.getUser()).data.user;
+        if(!user) return Swal.fire({text:'请先登录', background:'#000', color:'red'});
+
+        // 获取秒数
+        const timeoutSec = (parseInt(document.getElementById('timeout-val').value)||0) * parseInt(document.getElementById('timeout-unit').value);
+        const warnStartSec = (parseInt(document.getElementById('warn-start-val').value)||0) * parseInt(document.getElementById('warn-start-unit').value);
+        const warnIntSec = (parseInt(document.getElementById('warn-int-val').value)||0) * parseInt(document.getElementById('warn-int-unit').value);
+        const warnMax = parseInt(document.getElementById('warn-max').value)||1;
+
+        const updates = {
+            id: user.id,
+            owner_email: user.email,
+            status: 'active',
+            last_checkin_at: new Date().toISOString(),
+            timeout_seconds: timeoutSec,
+            warn_start_seconds: warnStartSec,
+            warn_interval_seconds: warnIntSec,
+            warn_max_count: warnMax,
+            warn_sent_count: 0 // 重置预警次数
+        };
+
+        // 处理遗言加密 (如果有)
+        const secret = document.getElementById("secret").value;
+        const ben = document.getElementById("ben").value;
+        if(secret && ben) {
+            const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
+            const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
+            const payload = JSON.stringify({ k: aesKey, t: ben });
+            const encryptor = new JSEncrypt();
+            encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
+            updates.encrypted_data = encryptedData;
+            updates.key_storage = encryptor.encrypt(payload);
+        }
+
+        const {error} = await client.from("vaults").upsert(updates);
+        if(error) Swal.fire({text: error.message, background:'#000', color:'red'});
+        else {
+            Swal.fire({icon:'success', title:'配置已同步', text:'心跳已重置，倒计时开始', background:'#000', color:'#0f0'});
+            startLiveTimer(updates.last_checkin_at, timeoutSec);
+        }
+    }
+
+    async function sendHeartbeat() {
+        // 简单签到，只更新时间
+        const user = (await client.auth.getUser()).data.user;
+        if(!user) return;
         
-        document.getElementById('countdown-display').innerText = `${h}:${m}:${s}`;
-        
-        // 进度条
-        const percent = (ms / DESTROY_TIME_MS) * 100;
-        document.getElementById('timer-progress').style.width = percent + '%';
+        const nowIso = new Date().toISOString();
+        const {error} = await client.from("vaults").update({
+            last_checkin_at: nowIso,
+            warn_sent_count: 0, // 重置已发预警数
+            status: 'active'
+        }).eq("id", user.id);
+
+        if(!error) {
+            Swal.fire({icon:'success', title:'签到成功', toast:true, position:'top', timer:1500, showConfirmButton:false, background:'#000', color:'#0f0'});
+            // 重新获取数据以刷新倒计时（或者直接用缓存的 timeout_seconds）
+            if(currentUserData) startLiveTimer(nowIso, currentUserData.timeout_seconds);
+        }
     }
 
-    function triggerDestruction() {
-        document.body.classList.add('destroyed');
-        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>';
+    // 视图切换与登录
+    function toggleView(view) {
+        ['login-section','manual-section','dash','decrypt-view'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+        if(view==='login') document.getElementById('login-section').classList.remove('hidden');
+        if(view==='manual') document.getElementById('manual-section').classList.remove('hidden');
+        if(view==='dash') {
+            document.getElementById('dash').classList.remove('hidden');
+            renderVisual(); // 初始化视觉图
+        }
     }
 
-    function copyContent() {
-        const text = document.getElementById("decrypt-result").innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            Swal.fire({
-                icon: 'success', title: '已复制到剪贴板', 
-                toast: true, position: 'top', showConfirmButton: false, timer: 1500,
-                background: '#000', color: '#0f0'
-            });
-        });
-    }
-
-    // --- 委托人逻辑 (保持不变) ---
     async function login() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-        const {error} = await client.auth.signInWithPassword({email, password});
-        if(error) return Swal.fire({text:'账号或密码错误', background:'#000', color:'#f00'});
+        const {data, error} = await client.auth.signInWithPassword({email, password});
+        if(error) return Swal.fire({text:'登录失败', background:'#000', color:'red'});
+        
+        // 登录成功，拉取用户配置
+        const {data: vault} = await client.from("vaults").select("*").eq("id", data.user.id).single();
+        if(vault) {
+            currentUserData = vault;
+            startLiveTimer(vault.last_checkin_at, vault.timeout_seconds);
+            // 这里可以把数据库的值回填到输入框，略
+        }
         toggleView('dash');
     }
-    
-    async function signup() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        if(!email || password.length<6) return Swal.fire({text:'格式错误', background:'#000', color:'#f00'});
-        const {error} = await client.auth.signUp({email, password});
-        if(error) return Swal.fire({text: error.message, background:'#000', color:'#f00'});
-        Swal.fire({icon:'success', title:'注册成功', text:'请查收邮件', background:'#000', color:'#0f0'});
-    }
 
-    async function deploy() {
-        const secret = document.getElementById("secret").value;
-        const ben = document.getElementById("ben").value;
-        const time = document.getElementById("time").value;
-        if(!secret || !ben) return Swal.fire({text:'信息不全', background:'#000', color:'#f00'});
-
-        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
-        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
-        const payload = JSON.stringify({ k: aesKey, t: ben });
-        const encryptor = new JSEncrypt();
-        encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
-        const wrappedPayload = encryptor.encrypt(payload);
-
-        if(!wrappedPayload) return Swal.fire({text:'加密错误', background:'#000', color:'#f00'});
-        const user = (await client.auth.getUser()).data.user;
-        const {error} = await client.from("vaults").upsert({
-            id: user.id, encrypted_data: encryptedData, key_storage: wrappedPayload,
-            timeout_minutes: time, status: 'active', last_checkin_at: new Date()
-        });
-
-        if(error) Swal.fire({text: error.message, background:'#000', color:'#f00'});
-        else Swal.fire({icon:'success', title:'部署完成', background:'#000', color:'#0f0'}).then(() => location.reload());
+    // 手动解密逻辑 (V5.7版)
+    async function handleManualDecrypt() {
+        const id = document.getElementById('manual-id').value.trim();
+        const key = document.getElementById('manual-key').value.trim();
+        if(!id || !key) return Swal.fire({text:'信息不全', background:'#000', color:'red'});
+        
+        Swal.showLoading();
+        try {
+            const {data} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
+            if(!data) throw new Error("数据不存在");
+            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
+            const text = bytes.toString(CryptoJS.enc.Utf8);
+            if(!text) throw new Error("密钥错误");
+            
+            Swal.fire({
+                title: '身份验证通过',
+                html: '<span style="color:red">⚠️ 数据将在24小时后销毁</span>',
+                icon: 'warning', background: '#000', color: '#fff',
+                showCancelButton: true, confirmButtonText: '查看', confirmButtonColor: '#d33'
+            }).then((res)=>{
+                if(res.isConfirmed) {
+                    toggleView('decrypt-view');
+                    document.getElementById('decrypt-result').innerText = text;
+                }
+            });
+        } catch(e) {
+            Swal.fire({text: e.message, background:'#000', color:'red'});
+        }
     }
 </script>
 </body>
