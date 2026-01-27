@@ -2,8 +2,8 @@ name: Phoenix Protocol Watchdog
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # 每6小时自动运行一次
-  workflow_dispatch:      # 允许手动点击运行
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   watchdog_mission:
@@ -24,11 +24,10 @@ jobs:
 
     - name: Run Watchdog Script
       env:
-        # 这里的名字 (左边) 必须和 main.py 里的 os.environ.get 对应
-        # 这里的 secrets (右边) 必须和你 GitHub Settings 里的名字对应
+        # 这里负责把 Secrets 传给 Python，缺一不可
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-        EMAIL_USER: ${{ secrets.EMAIL_USER }}  # 👈 关键修复：把发件账号传进去
-        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}  # 👈 关键修复：把发件密码传进去
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
       run: python main.py
