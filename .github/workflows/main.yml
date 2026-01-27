@@ -24,10 +24,10 @@ jobs:
 
     - name: Run Watchdog Script
       env:
-        # 👇👇👇 核心修复点：必须要有下面这 5 行 👇👇👇
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-        EMAIL_USER: ${{ secrets.EMAIL_USER }}
-        EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        # 👇这里修改了！左边是脚本要的，右边是您实际存的
+        EMAIL_USER: ${{ secrets.SENDER_EMAIL }}
+        EMAIL_PASS: ${{ secrets.SENDER_PASSWORD }}
       run: python main.py
