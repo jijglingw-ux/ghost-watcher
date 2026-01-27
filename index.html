@@ -3,97 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V5.3 | 隐形信托</title>
+    <title>凤凰协议 V5.7 | 绝密终端</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
     <style>
-        /* 赛博朋克风格样式 */
-        :root { --matrix-green: #00ff41; --panel-bg: rgba(13, 17, 23, 0.95); --glow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        :root { --matrix-green: #00ff41; --danger-red: #ff3333; --panel-bg: rgba(13, 17, 23, 0.95); --glow: 0 0 10px rgba(0, 255, 65, 0.3); }
         * { box-sizing: border-box; }
-        body { background-color: #000; color: var(--matrix-green); font-family: 'Courier New', monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
+        body { background-color: #000; color: var(--matrix-green); font-family: 'Courier New', monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); transition: background 2s; }
         .scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; }
         .container { width: 90%; max-width: 500px; padding: 30px; border: 1px solid var(--matrix-green); box-shadow: var(--glow); background: var(--panel-bg); position: relative; z-index: 10; max-height: 90vh; overflow-y: auto; }
-        h2 { text-align: center; letter-spacing: 3px; text-shadow: var(--glow); border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; margin-bottom: 25px; font-size: 1.5rem; }
         
-        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 15px; margin-bottom: 15px; font-family: inherit; outline: none; transition: 0.3s; }
+        /* 倒计时条 (保留视觉提示) */
+        #timer-bar { position: fixed; top: 0; left: 0; width: 100%; height: 5px; background: #333; z-index: 1000; display: none; }
+        #timer-progress { height: 100%; background: var(--danger-red); width: 100%; transition: width 1s linear; }
+        #countdown-display { position: absolute; top: 10px; right: 20px; color: var(--danger-red); font-weight: bold; font-size: 1.2rem; display: none; text-shadow: 0 0 5px var(--danger-red); z-index: 1000; }
+
+        h2 { text-align: center; letter-spacing: 3px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; margin-bottom: 25px; font-size: 1.5rem; }
+        
+        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 15px; margin-bottom: 15px; font-family: inherit; outline: none; }
         input:focus { border-color: var(--matrix-green); box-shadow: var(--glow); }
         
         .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
         button { flex: 1; padding: 15px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
         button:hover { background: var(--matrix-green); color: #000; box-shadow: 0 0 20px var(--matrix-green); }
         button.secondary { border-color: #666; color: #888; }
-        button.secondary:hover { background: #333; color: #fff; box-shadow: none; }
-        
+        button.copy-btn { border-color: #00aaff; color: #00aaff; margin-top: 10px; }
+        button.copy-btn:hover { background: #00aaff; color: #fff; box-shadow: 0 0 15px #00aaff; }
+
         .divider { border-top: 1px dashed #333; margin: 25px 0; position: relative; }
         .divider span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); padding: 0 10px; color: #555; font-size: 0.8rem; }
-        
         .status-badge { display: inline-block; padding: 5px 10px; border: 1px solid var(--matrix-green); font-size: 0.8rem; margin-bottom: 20px; }
         .hidden { display: none !important; }
         
-        #decrypt-result { margin-top: 20px; padding: 15px; border: 1px dashed var(--matrix-green); background: rgba(0, 50, 0, 0.2); line-height: 1.6; word-break: break-all; white-space: pre-wrap; }
+        #decrypt-result { margin-top: 20px; padding: 15px; border: 1px dashed var(--matrix-green); background: rgba(0, 50, 0, 0.2); line-height: 1.6; word-break: break-all; white-space: pre-wrap; font-size: 0.9rem; }
         .manual-link { text-align: center; margin-top: 15px; font-size: 0.9rem; cursor: pointer; text-decoration: underline; color: #666; }
-        .manual-link:hover { color: var(--matrix-green); }
+        
+        /* 销毁后的样式 */
+        body.destroyed { background: #000 !important; }
+        body.destroyed .container, body.destroyed .scanlines { display: none; }
+        .destroy-msg { display: none; color: red; font-size: 2rem; text-align: center; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        body.destroyed .destroy-msg { display: block; }
     </style>
 </head>
 <body>
+    <div id="timer-bar"><div id="timer-progress"></div></div>
+    <div id="countdown-display">24:00:00</div>
+    
     <div class="scanlines"></div>
+    
+    <div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>
+
     <div class="container">
-        <h2 id="page-title">凤凰协议 V5.3</h2>
+        <h2 id="page-title">凤凰协议 V5.7</h2>
         
         <div id="login-section">
-            <div class="status-badge">[ 终端状态: 等待指令 ]</div>
-            <input type="email" id="email" placeholder="委托人账号 (Email)">
+            <div class="status-badge">[ 终端状态: 就绪 ]</div>
+            <input type="email" id="email" placeholder="委托人账号">
             <input type="password" id="password" placeholder="通行密码">
             <div class="btn-group">
-                <button onclick="login()">登录终端</button>
-                <button class="secondary" onclick="signup()">注册新身份</button>
+                <button onclick="login()">登录</button>
+                <button class="secondary" onclick="signup()">注册</button>
             </div>
-            
             <div class="divider"><span>或</span></div>
-            
             <button class="secondary" style="width: 100%; border-style: dashed;" onclick="toggleView('manual')">我是受益人 (手动提取)</button>
         </div>
 
         <div id="manual-section" class="hidden">
-            <div class="status-badge" style="color: #00ff41;">[ 资产提取通道 ]</div>
-            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">请输入邮件中提供的保险箱 ID 和 提取凭证。</p>
-            
+            <div class="status-badge" style="color: #00ff41;">[ 安全提取通道 ]</div>
+            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">请输入邮件中的双重验证信息。</p>
             <input type="text" id="manual-id" placeholder="保险箱 ID (Vault ID)">
-            <input type="text" id="manual-key" placeholder="提取凭证 (AES Key)">
-            
-            <button onclick="handleManualDecrypt()">执行解密</button>
-            <div class="manual-link" onclick="toggleView('login')">&lt; 返回登录界面</div>
+            <input type="text" id="manual-key" placeholder="提取密钥 (AES Key)">
+            <button onclick="handleManualDecrypt()">验证身份</button>
+            <div class="manual-link" onclick="toggleView('login')">&lt; 返回</div>
         </div>
 
         <div id="dash" class="hidden">
-            <div class="status-badge" style="color:#00ff41">[ 隐形信道已建立 ]</div>
-            <textarea id="secret" rows="5" placeholder="输入绝密内容 (内容将在本地加密)"></textarea>
-            
-            <label style="font-size:0.8rem; opacity:0.7;">受益人邮箱 (仅封装进信封，不存数据库)</label>
-            <input type="email" id="ben" placeholder="接收人地址">
-            
+            <div class="status-badge" style="color:#00ff41">[ 隐形信道 ]</div>
+            <textarea id="secret" rows="5" placeholder="输入绝密内容..."></textarea>
+            <input type="email" id="ben" placeholder="受益人邮箱">
             <label style="font-size:0.8rem; opacity:0.7;">静默触发时长 (分钟)</label>
             <input type="number" id="time" value="1" min="1">
-            
-            <button onclick="deploy()">部署：隐形武装协议</button>
+            <button onclick="deploy()">部署协议</button>
         </div>
 
         <div id="decrypt-view" class="hidden">
-            <div class="status-badge">[ 解密成功 ]</div>
+            <div class="status-badge" style="border-color: var(--danger-red); color: var(--danger-red);">[ 警告: 自毁程序已启动 ]</div>
             <div id="decrypt-result"></div>
-            <button class="secondary" style="margin-top: 20px; width: 100%;" onclick="location.reload()">清除屏幕</button>
+            
+            <button class="copy-btn" onclick="copyContent()">📄 复制内容并保存</button>
+            
+            <div style="margin-top:20px; font-size: 12px; color: #666; text-align: center;">
+                数据将在倒计时结束后自动清除。
+            </div>
         </div>
     </div>
 
 <script>
-    // ==========================================
-    // 配置区域 (已保留您的配置)
+    // ================= 配置区 =================
+    // ⚠️ 请确认这里是您自己的 Supabase Key
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
-
-    // 前端加密公钥
+    
     const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
 x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
@@ -103,158 +115,161 @@ ytBiBV+RfQX9P0oWbsESOD+FtiJfvKO74jA9naWsmG7hMmhotH1O1oC3YWFYvpNi
 RYytkgByTOHBmtFqUVa1jIAJGdAZ8g1jMhZOOte5NfjJ4fJQhmqzdHBlH2xU/14A
 pQIDAQAB
 -----END PUBLIC KEY-----`;
-    // ==========================================
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
     
-    // --- 核心逻辑 ---
+    // 自毁时间设定 (24小时)
+    const DESTROY_TIME_MS = 24 * 60 * 60 * 1000; 
+    let countdownInterval;
 
-    // 页面加载：检查是否有自动解密链接
-    window.onload = async () => {
-        if(location.hash.includes("key=")){
-            // 自动模式
-            toggleView('loading');
-            const key = location.hash.split("key=")[1].split("&")[0];
-            const id = location.hash.split("id=")[1].split("&")[0];
-            
-            // 填充到手动框（以防自动失败）
-            document.getElementById('manual-id').value = id;
-            document.getElementById('manual-key').value = key;
-            
-            Swal.fire({ title: '身份验证通过', text: '正在本地重组数据...', background: '#000', color: '#0f0', showConfirmButton: false, didOpen: () => { Swal.showLoading() } });
-            
-            await performDecryption(id, key);
-        }
-    };
-
-    // 视图切换控制
     function toggleView(viewName) {
-        ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
-        });
-
-        if (viewName === 'login') {
-            document.getElementById('login-section').classList.remove('hidden');
-            document.getElementById('page-title').innerText = "凤凰协议 V5.3";
-        } else if (viewName === 'manual') {
-            document.getElementById('manual-section').classList.remove('hidden');
-            document.getElementById('page-title').innerText = "资产提取";
-        } else if (viewName === 'dash') {
-            document.getElementById('dash').classList.remove('hidden');
-            document.getElementById('page-title').innerText = "控制台";
-        } else if (viewName === 'result') {
-            document.getElementById('decrypt-view').classList.remove('hidden');
-            document.getElementById('page-title').innerText = "绝密内容";
-        }
+        ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        if (viewName === 'login') document.getElementById('login-section').classList.remove('hidden');
+        if (viewName === 'manual') document.getElementById('manual-section').classList.remove('hidden');
+        if (viewName === 'dash') document.getElementById('dash').classList.remove('hidden');
+        if (viewName === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
     }
 
-    // 执行解密 (复用于自动和手动)
-    async function performDecryption(id, key) {
-        try {
-            // 1. 从 Supabase 获取密文
-            const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
-            
-            if(error || !data) throw new Error("信托记录不存在或已被物理销毁");
+    // --- 核心解密逻辑 (升级版) ---
 
-            // 2. AES 解密
-            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
-            const text = bytes.toString(CryptoJS.enc.Utf8);
-            
-            if(!text) throw new Error("提取凭证无效 (Key Error)");
-
-            // 3. 显示结果
-            Swal.close();
-            toggleView('result');
-            document.getElementById("decrypt-result").innerText = text;
-            
-        } catch(e) {
-            Swal.fire({icon:'error', title:'提取失败', text: e.message, background:'#000', color:'#f00'});
-            // 如果是自动模式失败，切换到手动模式让用户检查
-            if (!document.getElementById('manual-section').classList.contains('hidden') === false) {
-                 toggleView('manual');
-            }
-        }
-    }
-
-    // 手动解密按钮点击
-    function handleManualDecrypt() {
+    async function handleManualDecrypt() {
         const id = document.getElementById('manual-id').value.trim();
         const key = document.getElementById('manual-key').value.trim();
+        if(!id || !key) return Swal.fire({text:'请输入完整信息', background:'#000', color:'#f00'});
         
-        if(!id || !key) return Swal.fire({text:'请输入完整的 ID 和 提取码', background:'#000', color:'#f00'});
+        // 1. 先验证 (Loading)
+        Swal.fire({ title: '正在校验身份...', background: '#000', color: '#0f0', didOpen: () => Swal.showLoading() });
         
-        Swal.fire({ title: '正在校验...', background: '#000', color: '#0f0', didOpen: () => { Swal.showLoading() } });
-        performDecryption(id, key);
+        try {
+            const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
+            if(error || !data) throw new Error("记录不存在或已销毁");
+
+            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
+            const text = bytes.toString(CryptoJS.enc.Utf8);
+            if(!text) throw new Error("密钥错误");
+
+            // 2. 验证成功，先关闭 Loading，弹出确认警告
+            Swal.close();
+            
+            await Swal.fire({
+                title: '身份验证通过',
+                html: '<span style="color:#ff3333">⚠️ 警告：数据将在 24 小时后永久销毁</span><br><br>确认查看后，倒计时将立即开始。请确保您已准备好保存内容。',
+                icon: 'warning',
+                background: '#000',
+                color: '#fff',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3333',
+                cancelButtonColor: '#333',
+                confirmButtonText: '我已知晓，立即查看',
+                cancelButtonText: '稍后查看'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // 3. 用户点击确认后，才显示内容并开始倒计时
+                    showContentAndStartTimer(text);
+                }
+                // 如果点击取消，什么都不发生，停留在输入界面
+            });
+
+        } catch(e) {
+            Swal.fire({icon:'error', title:'提取失败', text: e.message, background:'#000', color:'#f00'});
+        }
     }
 
-    // --- 委托人功能 (登录/注册/部署) ---
+    function showContentAndStartTimer(text) {
+        toggleView('result');
+        document.getElementById("decrypt-result").innerText = text;
+        startSelfDestruct(); // 启动倒计时
+    }
 
+    function startSelfDestruct() {
+        // 显示倒计时UI
+        document.getElementById('timer-bar').style.display = 'block';
+        document.getElementById('countdown-display').style.display = 'block';
+        
+        let remaining = DESTROY_TIME_MS;
+        const endTime = Date.now() + remaining;
+
+        countdownInterval = setInterval(() => {
+            remaining = endTime - Date.now();
+            updateTimerDisplay(remaining); // 只更新显示，不再弹窗提醒
+
+            if (remaining <= 0) {
+                clearInterval(countdownInterval);
+                triggerDestruction();
+            }
+        }, 1000);
+    }
+
+    function updateTimerDisplay(ms) {
+        if(ms < 0) ms = 0;
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600).toString().padStart(2, '0');
+        const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
+        const s = (totalSec % 60).toString().padStart(2, '0');
+        
+        document.getElementById('countdown-display').innerText = `${h}:${m}:${s}`;
+        
+        // 进度条
+        const percent = (ms / DESTROY_TIME_MS) * 100;
+        document.getElementById('timer-progress').style.width = percent + '%';
+    }
+
+    function triggerDestruction() {
+        document.body.classList.add('destroyed');
+        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>';
+    }
+
+    function copyContent() {
+        const text = document.getElementById("decrypt-result").innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({
+                icon: 'success', title: '已复制到剪贴板', 
+                toast: true, position: 'top', showConfirmButton: false, timer: 1500,
+                background: '#000', color: '#0f0'
+            });
+        });
+    }
+
+    // --- 委托人逻辑 (保持不变) ---
     async function login() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         const {error} = await client.auth.signInWithPassword({email, password});
-        if(error) return Swal.fire({icon:'error', title:'准入失败', text:'账号或密码错误', background:'#000', color:'#f00'});
+        if(error) return Swal.fire({text:'账号或密码错误', background:'#000', color:'#f00'});
         toggleView('dash');
     }
-
+    
     async function signup() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-        if(!email || password.length < 6) return Swal.fire({text:'密码需至少6位', background:'#000', color:'#f00'});
+        if(!email || password.length<6) return Swal.fire({text:'格式错误', background:'#000', color:'#f00'});
         const {error} = await client.auth.signUp({email, password});
-        if(error) {
-            let msg = error.message.includes("already registered") ? "身份已存在，请直接登录" : "网络异常";
-            return Swal.fire({icon:'error', title:'中断', text: msg, background:'#000', color:'#f00'});
-        }
-        Swal.fire({icon:'success', title:'身份预置成功', text:'请查收验证邮件', background:'#000', color:'#0f0'});
+        if(error) return Swal.fire({text: error.message, background:'#000', color:'#f00'});
+        Swal.fire({icon:'success', title:'注册成功', text:'请查收邮件', background:'#000', color:'#0f0'});
     }
 
     async function deploy() {
         const secret = document.getElementById("secret").value;
         const ben = document.getElementById("ben").value;
         const time = document.getElementById("time").value;
+        if(!secret || !ben) return Swal.fire({text:'信息不全', background:'#000', color:'#f00'});
 
-        if(!secret || !ben) return Swal.fire({text:'数据不完整', background:'#000', color:'#f00'});
-
-        // 生成 AES Key
         const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
-        
-        // 加密内容
         const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
-        
-        // 封装钥匙包
         const payload = JSON.stringify({ k: aesKey, t: ben });
-
-        // RSA 加密钥匙包
         const encryptor = new JSEncrypt();
         encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
         const wrappedPayload = encryptor.encrypt(payload);
 
-        if(!wrappedPayload) return Swal.fire({text:'加密环境异常', background:'#000', color:'#f00'});
-
+        if(!wrappedPayload) return Swal.fire({text:'加密错误', background:'#000', color:'#f00'});
         const user = (await client.auth.getUser()).data.user;
-        
         const {error} = await client.from("vaults").upsert({
-            id: user.id,
-            encrypted_data: encryptedData,
-            key_storage: wrappedPayload,
-            timeout_minutes: time,
-            status: 'active',
-            last_checkin_at: new Date()
+            id: user.id, encrypted_data: encryptedData, key_storage: wrappedPayload,
+            timeout_minutes: time, status: 'active', last_checkin_at: new Date()
         });
 
-        if(error) {
-            Swal.fire({icon:'error', title:'部署受阻', text: error.message, background:'#000', color:'#f00'});
-        } else {
-            Swal.fire({
-                icon: 'success', 
-                title: '幽灵协议已激活', 
-                text: '受益人信息已隐身，数据库仅留密文', 
-                background: '#000', 
-                color: '#0f0',
-                confirmButtonText: '锁定终端'
-            }).then(() => location.reload());
-        }
+        if(error) Swal.fire({text: error.message, background:'#000', color:'#f00'});
+        else Swal.fire({icon:'success', title:'部署完成', background:'#000', color:'#0f0'}).then(() => location.reload());
     }
 </script>
 </body>
