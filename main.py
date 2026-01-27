@@ -33,7 +33,7 @@ def parse_time_safe(time_str):
         return None
 
 def rsa_decrypt(encrypted_b64, private_key_pem):
-    """ 解密 RSA 包，提取隐藏的邮箱和密钥 """
+    """ 解密 RSA 包 """
     try:
         private_key = serialization.load_pem_private_key(
             private_key_pem.encode(), password=None, backend=default_backend()
@@ -50,10 +50,10 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ V5.5 修正版：手动模式增加 ID 显示 """
+    """ V5.6: 纯手动模式 + ID补全 """
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
-    user_id = str(user_id).strip() # 确保 ID 是字符串
+    user_id = str(user_id).strip()
     sender = str(SENDER_EMAIL).strip()
     
     print(f"📧 正在尝试发信 -> 收件人: {to_email}")
@@ -65,10 +65,8 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     msg = MIMEMultipart('alternative')
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.5)"
+    msg['Subject'] = "【绝密】数字资产提取通知 (Ref: V5.6)"
 
-    full_link = f"{BASE_URL}#id={user_id}&key={aes_key}"
-    
     # ================= HTML 邮件正文 =================
     html_content = f"""
     <!DOCTYPE html>
@@ -77,48 +75,49 @@ def send_email_via_smtp(to_email, aes_key, user_id):
         <style>
             body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
             .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-            .header {{ border-bottom: 2px solid #00ff41; padding-bottom: 20px; margin-bottom: 30px; }}
-            .header h2 {{ margin: 0; color: #333; }}
-            .step {{ margin-bottom: 30px; background: #fff; }}
-            .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
-            .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; }}
-            .btn:hover {{ background-color: #0056b3; }}
+            .header {{ border-bottom: 2px solid #d9534f; padding-bottom: 20px; margin-bottom: 30px; }}
+            .header h2 {{ margin: 0; color: #d9534f; }}
+            .step {{ margin-bottom: 30px; background: #fff; border-left: 4px solid #007bff; padding-left: 15px; }}
+            .step-title {{ font-weight: bold; font-size: 16px; color: #2c3e50; margin-bottom: 5px; display: block; }}
             .label {{ font-size: 12px; color: #666; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }}
-            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 10px; border-radius: 4px; font-size: 13px; color: #333; word-break: break-all; font-family: monospace; }}
-            .manual-link {{ color: #007bff; text-decoration: underline; }}
+            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 12px; border-radius: 4px; font-size: 13px; color: #333; word-break: break-all; font-family: monospace; letter-spacing: 1px; }}
+            .manual-link {{ color: #007bff; text-decoration: underline; font-weight: bold; }}
             .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
+            .warn {{ color: #d9534f; font-weight: bold; font-size: 12px; margin-top: 10px; }}
         </style>
     </head>
     <body>
         <div class="container">
             <div class="header">
-                <h2>凤凰协议 | 资产交接通知</h2>
+                <h2>凤凰协议 | 资产提取通知</h2>
             </div>
             
             <p>尊敬的受益人：</p>
-            <p>您收到这封邮件，是因为委托人设置的“数字信托”已触发交接条件。以下数据已为您准备就绪：</p>
+            <p>委托人留存的“数字信托”已激活。为确保安全，本系统采用<strong>纯手动物理提取</strong>模式。</p>
+            <p>请在电脑端操作，并确保周围环境安全。</p>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
 
             <div class="step">
-                <span class="step-title">方式一：自动解密（推荐）</span>
-                <p style="color:#666; margin:5px 0;">请直接点击下方蓝色按钮。系统将自动验证身份并解密内容。</p>
-                <a href="{full_link}" class="btn">👉 点击此处提取秘密</a>
+                <span class="step-title">第一步：访问信托终端</span>
+                <p>点击访问：<a href="{BASE_URL}" class="manual-link">{BASE_URL}</a></p>
+                <p style="font-size:12px; color:#666;">(进入页面后，请点击“我是受益人”)</p>
             </div>
 
             <div class="step">
-                <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
-                <p style="color:#666;">如果按钮失效，请访问 <a href="{BASE_URL}" class="manual-link">信托中心首页</a>，选择“手动提取”并输入以下两项信息：</p>
+                <span class="step-title">第二步：输入安全凭证</span>
+                <p>请在网页中依次输入以下两项绝密信息：</p>
                 
                 <div class="label">1. 保险箱 ID (Vault ID):</div>
                 <div class="backup-box">{user_id}</div>
 
-                <div class="label">2. 安全凭证 (Token):</div>
+                <div class="label">2. 提取密钥 (AES Key):</div>
                 <div class="backup-box">{aes_key}</div>
             </div>
 
+            <div class="warn">⚠️ 注意：解密后数据将在 24 小时后自动销毁，请及时保存。</div>
+
             <div class="footer">
-                <p>安全提示：此凭证是解密的唯一钥匙，请妥善保管。</p>
                 <p>Phoenix Protocol Automated System</p>
             </div>
         </div>
@@ -126,19 +125,18 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     </html>
     """
     
-    # 纯文本版也要补上 ID
     text_content = f"""
-    【重要】数字资产交接通知
+    【绝密】数字资产提取通知
     
-    方式一：自动解密（推荐）
-    点击链接：{full_link}
+    请按以下步骤手动提取数据：
     
-    方式二：手动提取（备用）
-    1. 访问网页：{BASE_URL}
-    2. 选择“手动提取”并输入以下信息：
+    1. 访问信托终端：{BASE_URL}
+    2. 选择“我是受益人”，并输入以下信息：
     
     [ 保险箱 ID ]: {user_id}
-    [ 安全凭证 ]: {aes_key}
+    [ 提取密钥 ]: {aes_key}
+    
+    注意：数据解密后将在24小时后自动销毁。
     """
     
     msg.attach(MIMEText(text_content, 'plain'))
@@ -161,7 +159,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
         return False
 
 def watchdog():
-    print("🐕 凤凰看门狗 V5.5 (ID补全版) 启动...")
+    print("🐕 凤凰看门狗 V5.6 (纯手动+自毁提示版) 启动...")
     db = get_db()
     
     try:
@@ -196,7 +194,6 @@ def watchdog():
                 target_email = payload_data.get('t') or db_email 
                 
                 if aes_key and target_email:
-                    # ✅ 重点：这里把 user_id 也传进去
                     success = send_email_via_smtp(target_email, aes_key, user_id)
                     if success:
                         print(f"✅ 邮件发送成功！正在销毁钥匙...")
