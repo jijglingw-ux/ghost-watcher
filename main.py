@@ -17,14 +17,18 @@ RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
 SENDER_EMAIL = os.environ.get("EMAIL_USER")
 SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
 
+# ✅ 这里已经是您刚才确认过的正确地址了
+BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
+
 def get_db():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ✅ 唯一新增的补丁：为了解决 ValueError 报错
+# ✅ [新增] 强力时间清洗函数：防止 .02 毫秒导致脚本崩溃
 def parse_time_safe(time_str):
     try:
-        # 去掉 Z，处理毫秒
+        # 去掉 Z
         clean_str = time_str.replace('Z', '+00:00')
+        # 如果包含毫秒(.), 直接截断，只保留秒级精度
         if '.' in clean_str:
             clean_str = clean_str.split('.')[0] + '+00:00'
         return datetime.fromisoformat(clean_str)
@@ -32,6 +36,7 @@ def parse_time_safe(time_str):
         return None
 
 def rsa_decrypt(encrypted_b64, private_key_pem):
+    """ 解密 RSA 包，提取隐藏的邮箱和密钥 """
     try:
         private_key = serialization.load_pem_private_key(
             private_key_pem.encode(), password=None, backend=default_backend()
@@ -48,68 +53,105 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ 保持原样：强制类型转换 + 调试信息 """
-    # 1. 强制转换为字符串 (防御性编程)
+    """ 发送带有清晰操作指引的 HTML 邮件 """
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
     sender = str(SENDER_EMAIL).strip()
     
-    print(f"📧 正在尝试发信 -> 发件人: {sender} | 收件人: {to_email}")
+    print(f"📧 正在尝试发信 (HTML版) -> 收件人: {to_email}")
 
     if not to_email or "None" in to_email:
         print("❌ 错误: 目标邮箱无效")
         return False
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = "【Relic】数字信托移交 (V5.0)"
+    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.0)"
 
-    link = f"https://jijglingw-ux.github.io/ghost-watcher/#id={user_id}&key={aes_key}"
+    link = f"{BASE_URL}#id={user_id}&key={aes_key}"
     
-    body = f"""
-    尊敬的受益人：
+    # ================= HTML 邮件正文 (美化版) =================
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .header {{ border-bottom: 2px solid #00ff41; padding-bottom: 20px; margin-bottom: 30px; }}
+            .header h2 {{ margin: 0; color: #333; }}
+            .step {{ margin-bottom: 30px; background: #fff; }}
+            .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
+            .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; }}
+            .btn:hover {{ background-color: #0056b3; }}
+            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; }}
+            .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>凤凰协议 | 资产交接通知</h2>
+            </div>
+            
+            <p>尊敬的受益人：</p>
+            <p>您收到这封邮件，是因为委托人设置的“数字信托”已触发交接条件。以下数据已为您准备就绪：</p>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+            <div class="step">
+                <span class="step-title">方式一：自动解密（推荐）</span>
+                <p style="color:#666; margin:5px 0;">请直接点击下方蓝色按钮。系统将自动验证身份并解密内容。</p>
+                <a href="{link}" class="btn">👉 点击此处提取秘密</a>
+            </div>
+
+            <div class="step">
+                <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
+                <p style="color:#666;">如果上方按钮无法点击，请保留以下<strong>安全凭证</strong>作为恢复钥匙：</p>
+                <div class="backup-box">{aes_key}</div>
+            </div>
+
+            <div class="footer">
+                <p>安全提示：此凭证是解密的唯一钥匙，请妥善保管。</p>
+                <p>Phoenix Protocol Automated System</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
     
-    这是一封由自动化“死手开关”触发的信托移交邮件。
-    委托人已长时间未签到，系统判断为“失联”。
+    text_content = f"""
+    【重要】数字资产交接通知
     
-    根据凤凰协议 V5.0，以下是解密密钥：
-    --------------------------------
-    {aes_key}
-    --------------------------------
-    
-    请点击下方链接查看完整内容：
+    方式一：点击链接自动解密（推荐）
     {link}
     
-    (本邮件由自动化程序发出，请勿回复)
+    方式二：手动解密（备用）
+    密钥凭证：{aes_key}
     """
-    msg.attach(MIMEText(body, 'plain'))
+    
+    msg.attach(MIMEText(text_content, 'plain'))
+    msg.attach(MIMEText(html_content, 'html'))
 
     try:
-        # 自动识别 SMTP
         smtp_server = "smtp.qq.com" if "qq.com" in sender else "smtp.gmail.com"
         port = 465 if "qq.com" in sender else 587
-        
-        print(f"🔌 连接 SMTP 服务器: {smtp_server}:{port}")
-        
         if port == 465:
             server = smtplib.SMTP_SSL(smtp_server, 465)
         else:
             server = smtplib.SMTP(smtp_server, port)
             server.starttls()
-        
         server.login(sender, SENDER_PASSWORD)
         server.sendmail(sender, to_email, msg.as_string())
         server.quit()
         return True
     except Exception as e:
-        print(f"❌ 邮件发送失败 (SMTP阶段): {e}")
-        # 打印变量类型以供调试
-        print(f"   Debug类型 -> Sender: {type(sender)}, To: {type(to_email)}, Pwd: {type(SENDER_PASSWORD)}")
+        print(f"❌ 邮件发送失败: {e}")
         return False
 
 def watchdog():
-    print("🐕 凤凰看门狗 V5.0 (隐形版 - 调试增强) 启动...")
+    print("🐕 凤凰看门狗 V5.1 (终极稳定版) 启动...")
     db = get_db()
     
     try:
@@ -121,14 +163,17 @@ def watchdog():
 
     now = datetime.now(timezone.utc)
     
+    if not users:
+        print("💤 暂无活跃信托任务")
+
     for row in users:
         user_id = row['id']
         db_email = row.get('beneficiary_email')
         
-        # ✅ 使用修复后的时间解析逻辑
+        # ✅ [关键修改] 使用安全的时间解析，不再直接 crash
         last_checkin = parse_time_safe(row['last_checkin_at'])
         if not last_checkin: continue
-
+            
         timeout_minutes = row['timeout_minutes']
         time_diff = (now - last_checkin).total_seconds() / 60
         
@@ -151,7 +196,7 @@ def watchdog():
                         }).eq("id", user_id).execute()
                         print("🔥 钥匙已销毁，任务完成。")
                 else:
-                    print(f"❌ 数据缺失: Key={bool(aes_key)}, Email={bool(target_email)}")
+                    print(f"❌ 数据缺失: Key或Email无法提取")
             else:
                 print("❌ RSA解密失败")
         else:
@@ -161,6 +206,6 @@ if __name__ == "__main__":
     if not RSA_PRIVATE_KEY_PEM:
         print("❌ 错误: 未检测到 RSA 私钥")
     elif not SENDER_EMAIL:
-        print("❌ 错误: 未检测到发件人邮箱 (EMAIL_USER)")
+        print("❌ 错误: 未检测到发件人邮箱")
     else:
         watchdog()
