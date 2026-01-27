@@ -1,219 +1,172 @@
-import os
-import smtplib
-import json
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timezone, timedelta
-from supabase import create_client, Client
-
-# 加密库依赖
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.backends import default_backend
-import base64
-
-# ================= 配置区 =================
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
-SENDER_EMAIL = os.environ.get("EMAIL_USER")
-SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
-
-# ⚠️⚠️⚠️ 请将下方链接替换为您自己的 GitHub Pages 网址 ⚠️⚠️⚠️
-# 如果您还没有部署，可以先保留这个演示地址进行测试
-BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
-
-def get_db():
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
-
-def rsa_decrypt(encrypted_b64, private_key_pem):
-    """ 解密 RSA 包，提取隐藏的邮箱和密钥 """
-    try:
-        private_key = serialization.load_pem_private_key(
-            private_key_pem.encode(), password=None, backend=default_backend()
-        )
-        encrypted_bytes = base64.b64decode(encrypted_b64)
-        decrypted_bytes = private_key.decrypt(encrypted_bytes, padding.PKCS1v15())
-        decrypted_str = decrypted_bytes.decode('utf-8')
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凤凰协议 V5.0 | 隐形信托</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .terminal {
+            width: 80%;
+            max-width: 600px;
+            border: 1px solid #333;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+            background: rgba(0, 20, 0, 0.9);
+        }
+        h1 { text-align: center; text-transform: uppercase; letter-spacing: 5px; border-bottom: 1px solid #0f0; padding-bottom: 10px; }
+        #status { margin: 20px 0; min-height: 20px; color: #00ff41; }
+        .hidden { display: none; }
+        .content-box {
+            border: 1px dashed #0f0;
+            padding: 15px;
+            margin-top: 20px;
+            word-wrap: break-word;
+            white-space: pre-wrap; 
+        }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
         
-        try:
-            return json.loads(decrypted_str)
-        except json.JSONDecodeError:
-            return {'k': decrypted_str, 't': None}
-    except Exception as e:
-        print(f"❌ 解密底层错误: {e}")
-        return None
+        input {
+            background: #000; border: 1px solid #0f0; color: #0f0; 
+            padding: 10px; width: 70%; font-family: inherit;
+        }
+        button {
+            background: #0f0; color: #000; border: none; 
+            padding: 10px 20px; font-weight: bold; cursor: pointer;
+            font-family: inherit;
+        }
+        button:hover { background: #fff; }
+    </style>
+</head>
+<body>
 
-def send_email_via_smtp(to_email, aes_key, user_id):
-    """ 发送带有清晰操作指引的 HTML 邮件 """
+<div class="terminal">
+    <h1>遗物解密中</h1>
+    <div id="status" class="blink">>> 正在初始化安全连接...</div>
     
-    # 1. 强制类型转换，防止报错
-    to_email = str(to_email).strip()
-    aes_key = str(aes_key).strip()
-    sender = str(SENDER_EMAIL).strip()
+    <div id="output-area" class="hidden">
+        <p>>> 绝密内容还原:</p>
+        <div id="secret-content" class="content-box"></div>
+    </div>
+
+    <div id="manual-input" class="hidden">
+        <p>>> 自动验证失败或参数缺失。</p>
+        <p>>> 请手动输入密钥 (Token):</p>
+        <input type="text" id="manual-key" placeholder="在此粘贴邮件中的密钥...">
+        <button onclick="manualDecrypt()">解密</button>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ⚠️ 配置区 (请修改这里)
+    // ==========================================
     
-    print(f"📧 正在尝试发信 (HTML版) -> 收件人: {to_email}")
+    // 1. 您的 Supabase 项目地址 (Project URL)
+    const DB_URL = 'https://您的项目ID.supabase.co'; 
 
-    if not to_email or "None" in to_email:
-        print("❌ 错误: 目标邮箱无效")
-        return False
+    // 2. 您的 Supabase 公钥 (anon key) - 这一长串
+    const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9......'; 
 
-    # 使用 alternative 类型，同时支持 HTML 和 纯文本
-    msg = MIMEMultipart('alternative')
-    msg['From'] = sender
-    msg['To'] = to_email
-    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.0)"
-
-    # 生成完整的解密链接
-    link = f"{BASE_URL}#id={user_id}&key={aes_key}"
+    // ==========================================
     
-    # ================= HTML 邮件正文 (美化版) =================
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <style>
-            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
-            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
-            .header {{ border-bottom: 2px solid #00ff41; padding-bottom: 20px; margin-bottom: 30px; }}
-            .header h2 {{ margin: 0; color: #333; }}
-            .intro {{ color: #555; line-height: 1.6; font-size: 16px; }}
-            .step {{ margin-bottom: 30px; background: #fff; }}
-            .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
-            .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; box-shadow: 0 4px 6px rgba(0,123,255,0.2); }}
-            .btn:hover {{ background-color: #0056b3; }}
-            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; }}
-            .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="header">
-                <h2>凤凰协议 | 资产交接通知</h2>
-            </div>
+    const { createClient } = supabase;
+    const db = createClient(DB_URL, DB_KEY);
+    const statusEl = document.getElementById('status');
+
+    // 从 URL 获取参数 (id 和 key)
+    function getParams() {
+        const hash = window.location.hash.substring(1); // 去掉 #
+        const params = new URLSearchParams(hash);
+        return {
+            id: params.get('id'),
+            key: params.get('key')
+        };
+    }
+
+    async function init() {
+        const { id, key } = getParams();
+        
+        if (!id) {
+            statusEl.innerText = ">> 错误: 缺少身份 ID (URL无效)";
+            statusEl.classList.remove('blink');
+            return;
+        }
+
+        if (key) {
+            statusEl.innerText = ">> 检测到密钥，正在从云端提取保险箱...";
+            await fetchAndDecrypt(id, key);
+        } else {
+            statusEl.innerText = ">> 等待手动输入凭证...";
+            statusEl.classList.remove('blink');
+            document.getElementById('manual-input').classList.remove('hidden');
+        }
+    }
+
+    async function fetchAndDecrypt(id, aesKey) {
+        try {
+            // 1. 从 Supabase 获取加密数据
+            const { data, error } = await db
+                .from('vaults')
+                .select('encrypted_data')
+                .eq('id', id)
+                .single();
+
+            if (error || !data) {
+                throw new Error("云端数据读取失败或已销毁");
+            }
+
+            statusEl.innerText = ">> 数据下载完成。正在解密...";
             
-            <p class="intro">尊敬的受益人：</p>
-            <p class="intro">您收到这封邮件，是因为委托人设置的“数字信托”已触发交接条件（如：长时间失联）。以下数据已为您准备就绪，<strong>请按照以下步骤提取内容：</strong></p>
+            // 2. 使用 AES 解密
+            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, aesKey);
+            const originalText = bytes.toString(CryptoJS.enc.Utf8);
+
+            if (!originalText) {
+                throw new Error("密钥错误，无法还原数据");
+            }
+
+            // 3. 显示结果
+            statusEl.innerText = ">> 解密成功。";
+            statusEl.classList.remove('blink');
             
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+            document.getElementById('output-area').classList.remove('hidden');
+            document.getElementById('secret-content').innerText = originalText;
+            document.getElementById('manual-input').classList.add('hidden');
 
-            <div class="step">
-                <span class="step-title">方式一：自动解密（推荐）</span>
-                <p style="color:#666; margin:5px 0;">请直接点击下方蓝色按钮。系统将自动验证身份并解密内容。</p>
-                <a href="{link}" class="btn">👉 点击此处提取秘密</a>
-            </div>
+        } catch (err) {
+            console.error(err);
+            statusEl.innerText = ">> 错误: " + err.message;
+            statusEl.style.color = "red";
+            statusEl.classList.remove('blink');
+            // 如果自动失败，显示手动框
+            document.getElementById('manual-input').classList.remove('hidden');
+        }
+    }
 
-            <div class="step">
-                <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
-                <p style="color:#666;">如果上方按钮无法点击或网页打不开，请保留以下<strong>安全凭证 (Token)</strong>，这是您恢复数据的唯一钥匙：</p>
-                <div class="backup-box">
-                    {aes_key}
-                </div>
-            </div>
+    function manualDecrypt() {
+        const inputKey = document.getElementById('manual-key').value.trim();
+        const { id } = getParams();
+        if (!inputKey) return alert("请输入密钥");
+        fetchAndDecrypt(id, inputKey);
+    }
 
-            <div class="footer">
-                <p>安全提示：此凭证是解密的唯一钥匙，请妥善保管，切勿转发。</p>
-                <p>Phoenix Protocol Automated System</p>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    # 纯文本版本 (作为后备)
-    text_content = f"""
-    【重要】数字资产交接通知
-    
-    请按照以下步骤提取数据：
-    
-    方式一：点击链接自动解密（推荐）
-    {link}
-    
-    方式二：手动解密（备用）
-    如果链接失效，请复制以下密钥作为凭证：
-    {aes_key}
-    """
-    
-    msg.attach(MIMEText(text_content, 'plain'))
-    msg.attach(MIMEText(html_content, 'html'))
+    // 启动
+    init();
+</script>
 
-    try:
-        # 自动识别 SMTP 服务器
-        smtp_server = "smtp.qq.com" if "qq.com" in sender else "smtp.gmail.com"
-        port = 465 if "qq.com" in sender else 587
-        
-        print(f"🔌 连接 SMTP 服务器: {smtp_server}:{port}")
-        
-        if port == 465:
-            server = smtplib.SMTP_SSL(smtp_server, 465)
-        else:
-            server = smtplib.SMTP(smtp_server, port)
-            server.starttls()
-        
-        server.login(sender, SENDER_PASSWORD)
-        server.sendmail(sender, to_email, msg.as_string())
-        server.quit()
-        return True
-    except Exception as e:
-        print(f"❌ 邮件发送失败: {e}")
-        return False
-
-def watchdog():
-    print("🐕 凤凰看门狗 V5.0 (UX体验版) 启动...")
-    db = get_db()
-    
-    try:
-        # 只查询 active 状态的
-        response = db.table("vaults").select("*").eq("status", "active").execute()
-        users = response.data
-    except Exception as e:
-        print(f"❌ 数据库连接失败: {e}")
-        return
-
-    now = datetime.now(timezone.utc)
-    
-    if not users:
-        print("💤 暂无活跃信托任务")
-
-    for row in users:
-        user_id = row['id']
-        db_email = row.get('beneficiary_email')
-        
-        last_checkin = datetime.fromisoformat(row['last_checkin_at'].replace('Z', '+00:00'))
-        timeout_minutes = row['timeout_minutes']
-        time_diff = (now - last_checkin).total_seconds() / 60
-        
-        if time_diff > timeout_minutes:
-            print(f"⚠️ 用户 {user_id[:8]}... 已超时 ({int(time_diff)}min > {timeout_minutes}min)。准备拆包...")
-            
-            payload_data = rsa_decrypt(row['key_storage'], RSA_PRIVATE_KEY_PEM)
-            
-            if payload_data:
-                aes_key = payload_data.get('k')
-                target_email = payload_data.get('t') or db_email 
-                
-                if aes_key and target_email:
-                    success = send_email_via_smtp(target_email, aes_key, user_id)
-                    
-                    if success:
-                        print(f"✅ 邮件发送成功！正在销毁钥匙...")
-                        # 发送成功后更新状态
-                        db.table("vaults").update({
-                            "status": "dispatched",
-                            "key_storage": "BURNED" 
-                        }).eq("id", user_id).execute()
-                        print("🔥 钥匙已销毁，任务完成。")
-                else:
-                    print(f"❌ 数据缺失: Key或Email无法提取")
-            else:
-                print("❌ RSA解密失败")
-        else:
-            print(f"✅ 用户 {user_id[:8]}... 状态正常")
-
-if __name__ == "__main__":
-    if not RSA_PRIVATE_KEY_PEM:
-        print("❌ 错误: 未检测到 RSA 私钥")
-    elif not SENDER_EMAIL:
-        print("❌ 错误: 未检测到发件人邮箱")
-    else:
-        watchdog()
+</body>
+</html>
