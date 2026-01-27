@@ -17,18 +17,16 @@ RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
 SENDER_EMAIL = os.environ.get("EMAIL_USER")
 SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
 
-# ✅ 这里已经是您刚才确认过的正确地址了
+# ✅ 您的网页首页地址 (这就是手动提取的入口)
 BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
 
 def get_db():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ✅ [新增] 强力时间清洗函数：防止 .02 毫秒导致脚本崩溃
+# 强力时间清洗函数
 def parse_time_safe(time_str):
     try:
-        # 去掉 Z
         clean_str = time_str.replace('Z', '+00:00')
-        # 如果包含毫秒(.), 直接截断，只保留秒级精度
         if '.' in clean_str:
             clean_str = clean_str.split('.')[0] + '+00:00'
         return datetime.fromisoformat(clean_str)
@@ -53,7 +51,7 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ 发送带有清晰操作指引的 HTML 邮件 """
+    """ 发送带有清晰操作指引的 HTML 邮件 (V5.4 修复版) """
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
     sender = str(SENDER_EMAIL).strip()
@@ -67,11 +65,12 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     msg = MIMEMultipart('alternative')
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.0)"
+    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.4)"
 
-    link = f"{BASE_URL}#id={user_id}&key={aes_key}"
+    # 自动链接 (带参数)
+    full_link = f"{BASE_URL}#id={user_id}&key={aes_key}"
     
-    # ================= HTML 邮件正文 (美化版) =================
+    # ================= HTML 邮件正文 =================
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -85,7 +84,8 @@ def send_email_via_smtp(to_email, aes_key, user_id):
             .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
             .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; }}
             .btn:hover {{ background-color: #0056b3; }}
-            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; }}
+            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; margin-top: 10px; }}
+            .manual-link {{ color: #007bff; text-decoration: underline; }}
             .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
         </style>
     </head>
@@ -103,12 +103,17 @@ def send_email_via_smtp(to_email, aes_key, user_id):
             <div class="step">
                 <span class="step-title">方式一：自动解密（推荐）</span>
                 <p style="color:#666; margin:5px 0;">请直接点击下方蓝色按钮。系统将自动验证身份并解密内容。</p>
-                <a href="{link}" class="btn">👉 点击此处提取秘密</a>
+                <a href="{full_link}" class="btn">👉 点击此处提取秘密</a>
             </div>
 
             <div class="step">
                 <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
-                <p style="color:#666;">如果上方按钮无法点击，请保留以下<strong>安全凭证</strong>作为恢复钥匙：</p>
+                <p style="color:#666;">如果上方按钮失效，请按以下步骤操作：</p>
+                <ol style="color:#555; line-height: 1.6;">
+                    <li>访问数字信托中心：<br><a href="{BASE_URL}" class="manual-link">{BASE_URL}</a></li>
+                    <li>点击首页的 <strong>"我是受益人 (手动提取)"</strong> 按钮。</li>
+                    <li>输入下方的 <strong>安全凭证</strong>：</li>
+                </ol>
                 <div class="backup-box">{aes_key}</div>
             </div>
 
@@ -124,11 +129,13 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     text_content = f"""
     【重要】数字资产交接通知
     
-    方式一：点击链接自动解密（推荐）
-    {link}
+    方式一：自动解密（推荐）
+    点击链接：{full_link}
     
-    方式二：手动解密（备用）
-    密钥凭证：{aes_key}
+    方式二：手动提取（备用）
+    1. 访问网页：{BASE_URL}
+    2. 选择“手动提取”并输入下方凭证：
+    {aes_key}
     """
     
     msg.attach(MIMEText(text_content, 'plain'))
@@ -151,7 +158,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
         return False
 
 def watchdog():
-    print("🐕 凤凰看门狗 V5.1 (终极稳定版) 启动...")
+    print("🐕 凤凰看门狗 V5.4 (邮件指引修复版) 启动...")
     db = get_db()
     
     try:
@@ -170,7 +177,6 @@ def watchdog():
         user_id = row['id']
         db_email = row.get('beneficiary_email')
         
-        # ✅ [关键修改] 使用安全的时间解析，不再直接 crash
         last_checkin = parse_time_safe(row['last_checkin_at'])
         if not last_checkin: continue
             
@@ -178,7 +184,7 @@ def watchdog():
         time_diff = (now - last_checkin).total_seconds() / 60
         
         if time_diff > timeout_minutes:
-            print(f"⚠️ 用户 {user_id[:8]}... 已超时 ({int(time_diff)}min > {timeout_minutes}min)。准备拆包...")
+            print(f"⚠️ 用户 {user_id[:8]}... 已超时。准备拆包...")
             
             payload_data = rsa_decrypt(row['key_storage'], RSA_PRIVATE_KEY_PEM)
             
@@ -196,7 +202,7 @@ def watchdog():
                         }).eq("id", user_id).execute()
                         print("🔥 钥匙已销毁，任务完成。")
                 else:
-                    print(f"❌ 数据缺失: Key或Email无法提取")
+                    print(f"❌ 数据缺失")
             else:
                 print("❌ RSA解密失败")
         else:
@@ -205,7 +211,5 @@ def watchdog():
 if __name__ == "__main__":
     if not RSA_PRIVATE_KEY_PEM:
         print("❌ 错误: 未检测到 RSA 私钥")
-    elif not SENDER_EMAIL:
-        print("❌ 错误: 未检测到发件人邮箱")
     else:
         watchdog()
