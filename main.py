@@ -20,6 +20,17 @@ SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
 def get_db():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# ✅ 唯一新增的补丁：为了解决 ValueError 报错
+def parse_time_safe(time_str):
+    try:
+        # 去掉 Z，处理毫秒
+        clean_str = time_str.replace('Z', '+00:00')
+        if '.' in clean_str:
+            clean_str = clean_str.split('.')[0] + '+00:00'
+        return datetime.fromisoformat(clean_str)
+    except:
+        return None
+
 def rsa_decrypt(encrypted_b64, private_key_pem):
     try:
         private_key = serialization.load_pem_private_key(
@@ -37,7 +48,7 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ 修复版：强制类型转换 + 调试信息 """
+    """ 保持原样：强制类型转换 + 调试信息 """
     # 1. 强制转换为字符串 (防御性编程)
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
@@ -114,7 +125,10 @@ def watchdog():
         user_id = row['id']
         db_email = row.get('beneficiary_email')
         
-        last_checkin = datetime.fromisoformat(row['last_checkin_at'].replace('Z', '+00:00'))
+        # ✅ 使用修复后的时间解析逻辑
+        last_checkin = parse_time_safe(row['last_checkin_at'])
+        if not last_checkin: continue
+
         timeout_minutes = row['timeout_minutes']
         time_diff = (now - last_checkin).total_seconds() / 60
         
