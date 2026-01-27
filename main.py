@@ -1,196 +1,211 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V5.0 | 隐形信托</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
-    <style>
-        /* 保持赛博朋克风格 */
-        :root { --matrix-green: #00ff41; --panel-bg: rgba(13, 17, 23, 0.95); --glow: 0 0 10px rgba(0, 255, 65, 0.3); }
-        * { box-sizing: border-box; }
-        body { background-color: #000; color: var(--matrix-green); font-family: 'Microsoft YaHei', sans-serif; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); }
-        .scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; }
-        .container { width: 100%; max-width: 500px; padding: 30px; border: 1px solid var(--matrix-green); box-shadow: var(--glow); background: var(--panel-bg); position: relative; z-index: 10; }
-        h2 { text-align: center; letter-spacing: 5px; text-shadow: var(--glow); border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; margin-bottom: 30px; }
-        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 15px; margin-bottom: 15px; font-family: inherit; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--matrix-green); box-shadow: var(--glow); }
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 15px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: var(--matrix-green); color: #000; box-shadow: 0 0 20px var(--matrix-green); }
-        button.secondary { border-color: #888; color: #888; }
-        .status-badge { display: inline-block; padding: 5px 10px; border: 1px solid var(--matrix-green); font-size: 0.8rem; margin-bottom: 20px; }
-        .hidden { display: none !important; }
-        #decrypt { margin-top: 20px; padding: 15px; border: 1px dashed var(--matrix-green); background: rgba(0, 50, 0, 0.2); line-height: 1.6; word-break: break-all; }
-    </style>
-</head>
-<body>
-    <div class="scanlines"></div>
-    <div class="container">
-        <h2>凤凰协议 <span style="font-size:0.6em;">V5.0 幽灵版</span></h2>
-        
-        <div id="login-section">
-            <div class="status-badge">[ 终端已锁定 ]</div>
-            <input type="email" id="email" placeholder="身份账号 (电子邮箱)">
-            <input type="password" id="password" placeholder="通行密码">
-            <div class="btn-group">
-                <button onclick="login()">准入登录</button>
-                <button class="secondary" onclick="signup()">初始化身份</button>
+import os
+import smtplib
+import json
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timezone, timedelta
+from supabase import create_client, Client
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.backends import default_backend
+import base64
+
+# ================= 配置区 =================
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
+SENDER_EMAIL = os.environ.get("EMAIL_USER")
+SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
+
+# ✅ 这里已经是您刚才确认过的正确地址了
+BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
+
+def get_db():
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# ✅ [新增] 强力时间清洗函数：防止 .02 毫秒导致脚本崩溃
+def parse_time_safe(time_str):
+    try:
+        # 去掉 Z
+        clean_str = time_str.replace('Z', '+00:00')
+        # 如果包含毫秒(.), 直接截断，只保留秒级精度
+        if '.' in clean_str:
+            clean_str = clean_str.split('.')[0] + '+00:00'
+        return datetime.fromisoformat(clean_str)
+    except:
+        return None
+
+def rsa_decrypt(encrypted_b64, private_key_pem):
+    """ 解密 RSA 包，提取隐藏的邮箱和密钥 """
+    try:
+        private_key = serialization.load_pem_private_key(
+            private_key_pem.encode(), password=None, backend=default_backend()
+        )
+        encrypted_bytes = base64.b64decode(encrypted_b64)
+        decrypted_bytes = private_key.decrypt(encrypted_bytes, padding.PKCS1v15())
+        decrypted_str = decrypted_bytes.decode('utf-8')
+        try:
+            return json.loads(decrypted_str)
+        except json.JSONDecodeError:
+            return {'k': decrypted_str, 't': None}
+    except Exception as e:
+        print(f"❌ 解密底层错误: {e}")
+        return None
+
+def send_email_via_smtp(to_email, aes_key, user_id):
+    """ 发送带有清晰操作指引的 HTML 邮件 """
+    to_email = str(to_email).strip()
+    aes_key = str(aes_key).strip()
+    sender = str(SENDER_EMAIL).strip()
+    
+    print(f"📧 正在尝试发信 (HTML版) -> 收件人: {to_email}")
+
+    if not to_email or "None" in to_email:
+        print("❌ 错误: 目标邮箱无效")
+        return False
+
+    msg = MIMEMultipart('alternative')
+    msg['From'] = sender
+    msg['To'] = to_email
+    msg['Subject'] = "【重要】数字资产交接：请查收解密指引 (Ref: V5.0)"
+
+    link = f"{BASE_URL}#id={user_id}&key={aes_key}"
+    
+    # ================= HTML 邮件正文 (美化版) =================
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            .header {{ border-bottom: 2px solid #00ff41; padding-bottom: 20px; margin-bottom: 30px; }}
+            .header h2 {{ margin: 0; color: #333; }}
+            .step {{ margin-bottom: 30px; background: #fff; }}
+            .step-title {{ font-weight: bold; font-size: 18px; color: #2c3e50; margin-bottom: 10px; display: block; }}
+            .btn {{ display: block; width: 100%; text-align: center; background-color: #007bff; color: #ffffff !important; padding: 18px 0; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px; margin: 15px 0; }}
+            .btn:hover {{ background-color: #0056b3; }}
+            .backup-box {{ background-color: #f8f9fa; border: 1px dashed #999; padding: 15px; border-radius: 5px; font-size: 14px; color: #333; word-break: break-all; font-family: monospace; }}
+            .footer {{ margin-top: 40px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h2>凤凰协议 | 资产交接通知</h2>
+            </div>
+            
+            <p>尊敬的受益人：</p>
+            <p>您收到这封邮件，是因为委托人设置的“数字信托”已触发交接条件。以下数据已为您准备就绪：</p>
+            
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
+
+            <div class="step">
+                <span class="step-title">方式一：自动解密（推荐）</span>
+                <p style="color:#666; margin:5px 0;">请直接点击下方蓝色按钮。系统将自动验证身份并解密内容。</p>
+                <a href="{link}" class="btn">👉 点击此处提取秘密</a>
+            </div>
+
+            <div class="step">
+                <span class="step-title" style="margin-top: 30px;">方式二：手动提取（备用）</span>
+                <p style="color:#666;">如果上方按钮无法点击，请保留以下<strong>安全凭证</strong>作为恢复钥匙：</p>
+                <div class="backup-box">{aes_key}</div>
+            </div>
+
+            <div class="footer">
+                <p>安全提示：此凭证是解密的唯一钥匙，请妥善保管。</p>
+                <p>Phoenix Protocol Automated System</p>
             </div>
         </div>
-
-        <div id="dash" class="hidden">
-            <div class="status-badge" style="color:#00ff41">[ 隐形信道已建立 ]</div>
-            <textarea id="secret" rows="5" placeholder="输入绝密内容 (内容将在本地加密)"></textarea>
-            
-            <label style="font-size:0.8rem; opacity:0.7;">受益人邮箱 (将不存储在数据库，仅封装进RSA包)</label>
-            <input type="email" id="ben" placeholder="接收人地址">
-            
-            <label style="font-size:0.8rem; opacity:0.7;">静默触发时长 (分钟)</label>
-            <input type="number" id="time" value="1" min="1">
-            
-            <button onclick="deploy()">执行：隐形武装协议</button>
-        </div>
-
-        <div id="decrypt" class="hidden"></div>
-    </div>
-
-<script>
-    // ==========================================
-    // 配置区域
-    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
-    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
-
-    // 这是你的前端公钥 (锁)
-    const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
-x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
-trELXELa5khEOwWHj2EbOnhPdbk7aJ3Du/RmkZAu/gSVKHiWAeVPdmZuEDRP8wV1
-gIYQsnXW+gNTt0SPKdheSkWTiksSImiJlzV3HC9AS/ucx/GfAhxnLLQ67ZhRE+Ub
-ytBiBV+RfQX9P0oWbsESOD+FtiJfvKO74jA9naWsmG7hMmhotH1O1oC3YWFYvpNi
-RYytkgByTOHBmtFqUVa1jIAJGdAZ8g1jMhZOOte5NfjJ4fJQhmqzdHBlH2xU/14A
-pQIDAQAB
------END PUBLIC KEY-----`;
-    // ==========================================
-
-    const client = window.supabase.createClient(DB_URL, DB_KEY);
+    </body>
+    </html>
+    """
     
-    // 自动解密逻辑
-    window.onload = async () => {
-        if(location.hash.includes("key=")){
-            document.getElementById("login-section").classList.add("hidden");
-            document.querySelector("h2").innerText = "遗物解密中";
-            const key = location.hash.split("key=")[1].split("&")[0];
-            const id = location.hash.split("id=")[1].split("&")[0];
+    text_content = f"""
+    【重要】数字资产交接通知
+    
+    方式一：点击链接自动解密（推荐）
+    {link}
+    
+    方式二：手动解密（备用）
+    密钥凭证：{aes_key}
+    """
+    
+    msg.attach(MIMEText(text_content, 'plain'))
+    msg.attach(MIMEText(html_content, 'html'))
+
+    try:
+        smtp_server = "smtp.qq.com" if "qq.com" in sender else "smtp.gmail.com"
+        port = 465 if "qq.com" in sender else 587
+        if port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, 465)
+        else:
+            server = smtplib.SMTP(smtp_server, port)
+            server.starttls()
+        server.login(sender, SENDER_PASSWORD)
+        server.sendmail(sender, to_email, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"❌ 邮件发送失败: {e}")
+        return False
+
+def watchdog():
+    print("🐕 凤凰看门狗 V5.1 (终极稳定版) 启动...")
+    db = get_db()
+    
+    try:
+        response = db.table("vaults").select("*").eq("status", "active").execute()
+        users = response.data
+    except Exception as e:
+        print(f"❌ 数据库连接失败: {e}")
+        return
+
+    now = datetime.now(timezone.utc)
+    
+    if not users:
+        print("💤 暂无活跃信托任务")
+
+    for row in users:
+        user_id = row['id']
+        db_email = row.get('beneficiary_email')
+        
+        # ✅ [关键修改] 使用安全的时间解析，不再直接 crash
+        last_checkin = parse_time_safe(row['last_checkin_at'])
+        if not last_checkin: continue
             
-            Swal.fire({ title: '身份验证通过', text: '正在本地重组数据...', background: '#000', color: '#0f0', showConfirmButton: false, didOpen: () => { Swal.showLoading() } });
-
-            try {
-                // 即使数据库记录已删，如果受益人已拿到key和密文缓存，理论上可解
-                // 但为了演示完整性，通常此时记录已被脚本删除。
-                // 这里的逻辑假设用户点击链接时，数据可能已被脚本读后即焚。
-                // *注：如果是V5.0，脚本发信后会删除记录。受益人若想看，必须脚本不删或者另存。
-                // 为了能让受益人看到，我们这里假设脚本采取“只发信不删”或“延时删除”。
-                // 如果是“阅后即焚”模式，受益人必须在邮件里直接看到内容，或者Supabase里保留密文A。
-                // 这里我们保持原逻辑：去Supabase取密文A。这意味着脚本在发信后 *不能* 立即删密文A，只能删key_storage。
-                
-                const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
-                
-                if(error || !data) throw new Error("信托记录已被销毁或不存在");
-
-                const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
-                const text = bytes.toString(CryptoJS.enc.Utf8);
-                
-                if(!text) throw new Error("密钥错误");
-
-                Swal.close();
-                const decryptBox = document.getElementById("decrypt");
-                decryptBox.classList.remove("hidden");
-                decryptBox.innerHTML = "<strong>>> 绝密内容还原：</strong><br><br>" + text;
-            } catch(e){ 
-                Swal.fire({icon:'error', title:'提取失败', text: '数据已物理销毁或链接失效', background:'#000', color:'#f00', confirmButtonText: '关闭'});
-            }
-        }
-    };
-
-    // 登录
-    async function login() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const {error} = await client.auth.signInWithPassword({email, password});
-        if(error) return Swal.fire({icon:'error', title:'准入失败', text:'账号或密码错误', background:'#000', color:'#f00', confirmButtonText: '重试'});
-        document.getElementById("login-section").classList.add("hidden");
-        document.getElementById("dash").classList.remove("hidden");
-    }
-
-    // 注册
-    async function signup() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        if(!email || password.length < 6) return Swal.fire({text:'密码需至少6位', background:'#000', color:'#f00', confirmButtonText: '修正'});
-        const {error} = await client.auth.signUp({email, password});
-        if(error) {
-            let msg = error.message.includes("already registered") ? "身份已存在，请直接登录" : "网络异常";
-            return Swal.fire({icon:'error', title:'初始化中断', text: msg, background:'#000', color:'#f00', confirmButtonText: '确定'});
-        }
-        Swal.fire({icon:'success', title:'身份预置成功', text:'激活邮件已发送，请查收', background:'#000', color:'#0f0', confirmButtonText: '了解'});
-    }
-
-    // V5.0 核心部署逻辑
-    async function deploy() {
-        const secret = document.getElementById("secret").value;
-        const ben = document.getElementById("ben").value;
-        const time = document.getElementById("time").value;
-
-        if(!secret || !ben) return Swal.fire({text:'数据不完整', background:'#000', color:'#f00'});
-
-        // 1. 生成 AES 密钥
-        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
+        timeout_minutes = row['timeout_minutes']
+        time_diff = (now - last_checkin).total_seconds() / 60
         
-        // 2. 加密秘密 (密文A)
-        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
-        
-        // 3. 【核心升级】打包 AES 密钥 + 受益人邮箱 -> JSON
-        const payload = JSON.stringify({
-            k: aesKey,
-            t: ben
-        });
+        if time_diff > timeout_minutes:
+            print(f"⚠️ 用户 {user_id[:8]}... 已超时 ({int(time_diff)}min > {timeout_minutes}min)。准备拆包...")
+            
+            payload_data = rsa_decrypt(row['key_storage'], RSA_PRIVATE_KEY_PEM)
+            
+            if payload_data:
+                aes_key = payload_data.get('k')
+                target_email = payload_data.get('t') or db_email 
+                
+                if aes_key and target_email:
+                    success = send_email_via_smtp(target_email, aes_key, user_id)
+                    if success:
+                        print(f"✅ 邮件发送成功！正在销毁钥匙...")
+                        db.table("vaults").update({
+                            "status": "dispatched",
+                            "key_storage": "BURNED" 
+                        }).eq("id", user_id).execute()
+                        print("🔥 钥匙已销毁，任务完成。")
+                else:
+                    print(f"❌ 数据缺失: Key或Email无法提取")
+            else:
+                print("❌ RSA解密失败")
+        else:
+            print(f"✅ 用户 {user_id[:8]}... 状态正常")
 
-        // 4. 用 RSA 公钥加密整个 JSON 包 (生成 key_storage)
-        const encryptor = new JSEncrypt();
-        encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
-        const wrappedPayload = encryptor.encrypt(payload); // 限制：JSEncrypt处理长文本能力有限，但JSON很短，没问题
-
-        if(!wrappedPayload) return Swal.fire({text:'加密环境异常', background:'#000', color:'#f00'});
-
-        const user = (await client.auth.getUser()).data.user;
-        
-        // 5. 上传 (注意：不再上传 beneficiary_email)
-        const {error} = await client.from("vaults").upsert({
-            id: user.id,
-            encrypted_data: encryptedData,
-            key_storage: wrappedPayload, // 这里面现在包含了隐形邮箱
-            timeout_minutes: time,
-            status: 'active',
-            last_checkin_at: new Date()
-        });
-
-        if(error) {
-            Swal.fire({icon:'error', title:'部署受阻', text: error.message, background:'#000', color:'#f00'});
-        } else {
-            Swal.fire({
-                icon: 'success', 
-                title: '幽灵协议已激活', 
-                text: '受益人信息已隐身，数据库仅留密文', 
-                background: '#000', 
-                color: '#0f0', 
-                confirmButtonText: '锁定终端'
-            });
-        }
-    }
-</script>
-</body>
-</html>
+if __name__ == "__main__":
+    if not RSA_PRIVATE_KEY_PEM:
+        print("❌ 错误: 未检测到 RSA 私钥")
+    elif not SENDER_EMAIL:
+        print("❌ 错误: 未检测到发件人邮箱")
+    else:
+        watchdog()
