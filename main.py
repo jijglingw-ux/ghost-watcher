@@ -50,7 +50,7 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email_via_smtp(to_email, aes_key, user_id):
-    """ V5.6: 纯手动模式 + ID补全 """
+    """ V5.8: 极简文案版 """
     to_email = str(to_email).strip()
     aes_key = str(aes_key).strip()
     user_id = str(user_id).strip()
@@ -65,7 +65,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     msg = MIMEMultipart('alternative')
     msg['From'] = sender
     msg['To'] = to_email
-    msg['Subject'] = "【绝密】数字资产提取通知 (Ref: V5.6)"
+    msg['Subject'] = "【绝密】数字资产提取通知"
 
     # ================= HTML 邮件正文 =================
     html_content = f"""
@@ -93,8 +93,8 @@ def send_email_via_smtp(to_email, aes_key, user_id):
             </div>
             
             <p>尊敬的受益人：</p>
-            <p>委托人留存的“数字信托”已激活。为确保安全，本系统采用<strong>纯手动物理提取</strong>模式。</p>
-            <p>请在电脑端操作，并确保周围环境安全。</p>
+            <p>委托人留存的“数字信托”已激活。以下数据已为您准备就绪。</p>
+            <p>为确保数据安全，请在<strong>电脑端</strong>执行以下操作：</p>
             
             <hr style="border: 0; border-top: 1px solid #eee; margin: 25px 0;">
 
@@ -106,7 +106,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
 
             <div class="step">
                 <span class="step-title">第二步：输入安全凭证</span>
-                <p>请在网页中依次输入以下两项绝密信息：</p>
+                <p>请在网页中依次输入以下两项信息：</p>
                 
                 <div class="label">1. 保险箱 ID (Vault ID):</div>
                 <div class="backup-box">{user_id}</div>
@@ -115,7 +115,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
                 <div class="backup-box">{aes_key}</div>
             </div>
 
-            <div class="warn">⚠️ 注意：解密后数据将在 24 小时后自动销毁，请及时保存。</div>
+            <div class="warn">⚠️ 注意：解密后数据将在 24 小时后自动销毁。</div>
 
             <div class="footer">
                 <p>Phoenix Protocol Automated System</p>
@@ -128,7 +128,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
     text_content = f"""
     【绝密】数字资产提取通知
     
-    请按以下步骤手动提取数据：
+    委托人留存的“数字信托”已激活。请在电脑端按以下步骤提取：
     
     1. 访问信托终端：{BASE_URL}
     2. 选择“我是受益人”，并输入以下信息：
@@ -159,7 +159,7 @@ def send_email_via_smtp(to_email, aes_key, user_id):
         return False
 
 def watchdog():
-    print("🐕 凤凰看门狗 V5.6 (纯手动+自毁提示版) 启动...")
+    print("🐕 凤凰看门狗 V5.8 (极简文案版) 启动...")
     db = get_db()
     
     try:
