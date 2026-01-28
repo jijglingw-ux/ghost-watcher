@@ -3,92 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 继承者</title>
+    <title>凤凰协议 | 融合核心</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --bg: #000000; --text: #fff; --secondary: #30D158; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 20px; text-align: center; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
 
-        h1 { font-weight: 200; letter-spacing: 2px; margin-bottom: 10px; color: var(--secondary); }
-        p { color: #666; font-size: 13px; margin-bottom: 40px; }
+        /* 通用标题 */
+        .header { margin-top: 40px; margin-bottom: 40px; }
+        h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
+        p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
 
-        /* 核心按钮区 */
-        .btn-main {
-            background: rgba(48, 209, 88, 0.15);
-            border: 1px solid var(--secondary);
-            color: var(--secondary);
-            padding: 15px 40px;
-            border-radius: 30px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.3s;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .btn-main:active { transform: scale(0.95); background: var(--secondary); color: #000; }
+        /* ==================== 页面 1: 角色选择 (首页) ==================== */
+        #page-home { display: flex; flex-direction: column; width: 100%; max-width: 340px; }
 
-        /* 二维码展示区 */
-        #qr-stage {
-            display: none; /* 默认隐藏 */
-            background: #fff;
-            padding: 20px;
+        .card {
+            width: 100%; height: 120px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
             border-radius: 20px;
-            box-shadow: 0 0 50px rgba(48, 209, 88, 0.2);
-            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-bottom: 20px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; position: relative; overflow: hidden;
+            transition: 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
+        .card-title { font-size: 18px; font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; }
+        .card-desc { font-size: 12px; color: #888; }
+        
+        .role-owner { border-color: rgba(10, 132, 255, 0.3); }
+        .role-owner .card-title { color: var(--accent); }
+        .role-heir { border-color: rgba(48, 209, 88, 0.3); }
+        .role-heir .card-title { color: var(--secondary); }
+
+        /* ==================== 页面 2: 受益人功能 ==================== */
+        #page-heir { display: none; width: 100%; max-width: 340px; flex-direction: column; align-items: center; }
+
+        .btn-mint {
+            background: rgba(48, 209, 88, 0.15); border: 1px solid var(--secondary); color: var(--secondary);
+            padding: 15px 40px; border-radius: 30px; font-size: 16px; cursor: pointer; margin-top: 20px;
         }
         
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        #qrcode-box {
+            display: none; background: #fff; padding: 20px; border-radius: 20px;
+            box-shadow: 0 0 50px rgba(48, 209, 88, 0.2); margin-top: 20px;
+        }
 
-        .hint-text { margin-top: 20px; font-size: 12px; color: #888; line-height: 1.6; }
+        .back-btn { margin-top: 50px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; }
+
     </style>
 </head>
 <body>
 
-    <div id="setup-stage">
-        <h1>我是继承人</h1>
-        <p>点击下方按钮，铸造您的生物密钥</p>
-        
-        <button class="btn-main" onclick="mintIdentity()">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-            铸造密钥 (FaceID/指纹)
-        </button>
+    <div class="header">
+        <h1>PHOENIX</h1>
+        <p id="subtitle">PROTOCOL V1.0</p>
     </div>
 
-    <div id="qr-stage">
-        <div id="qrcode"></div>
+    <div id="page-home">
+        <div class="card role-owner" onclick="showOwnerPage()">
+            <div class="card-title">我要封存</div>
+            <div class="card-desc">我是立嘱人 · 扫描密钥</div>
+        </div>
+
+        <div class="card role-heir" onclick="showHeirPage()">
+            <div class="card-title">我是继承人</div>
+            <div class="card-desc">我是受益人 · 生成图腾</div>
+        </div>
     </div>
-    
-    <div id="qr-hint" class="hint-text" style="display:none;">
-        <b>密钥已生成</b><br>
-        请让立嘱人使用“封存”功能扫描此码。<br>
-        <span style="color:var(--secondary)">此码包含您的公钥，可安全展示。</span>
+
+    <div id="page-heir">
+        <p style="color:var(--secondary)">铸造身份图腾</p>
+        
+        <div id="heir-step-1">
+            <button class="btn-mint" onclick="mintIdentity()">
+                启动生物共鸣 (FaceID)
+            </button>
+            <p style="margin-top:20px; font-size:12px; color:#555;">点击后将生成唯一公钥二维码</p>
+        </div>
+
+        <div id="heir-step-2" style="display:none;">
+            <div id="qrcode-box">
+                <div id="qrcode"></div>
+            </div>
+            <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
+        </div>
+
+        <div class="back-btn" onclick="goHome()">返回首页</div>
     </div>
 
 <script>
     // ============================================
-    // ⚠️ 记得填入你的 SUPABASE 配置
+    // ⚠️ 配置区
     // ============================================
     const SUPABASE_URL = '你的URL';
     const SUPABASE_KEY = '你的KEY';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // 初始化 Supabase (加了容错，防止没填报错)
+    let supabase;
+    try {
+        if (!SUPABASE_URL.includes("你的")) {
+            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+    } catch (e) { console.error("DB未连接"); }
 
-    // 工具函数：Buffer 转 Base64URL
+    // ============================================
+    // 🔄 页面切换逻辑 (路由)
+    // ============================================
+    function goHome() {
+        document.getElementById('page-home').style.display = 'flex';
+        document.getElementById('page-heir').style.display = 'none';
+        document.getElementById('subtitle').innerText = "PROTOCOL V1.0";
+    }
+
+    function showHeirPage() {
+        document.getElementById('page-home').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'flex';
+        document.getElementById('subtitle').innerText = "HEIR MODE";
+    }
+
+    function showOwnerPage() {
+        alert("【下一步开发】\n这里将调用摄像头扫描受益人的二维码。\n请先测试受益人功能。");
+    }
+
+    // ============================================
+    // 🔑 核心业务: 受益人铸造逻辑
+    // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
         return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
     }
 
-    // 🚀 核心逻辑：铸造身份 + 生成二维码
     async function mintIdentity() {
+        // 简单的环境检查
+        if (!window.PublicKeyCredential) return alert("您的设备不支持生物识别 (WebAuthn)");
+
         try {
-            // 1. 准备 WebAuthn 参数
+            // 1. 准备参数
             const userId = new Uint8Array(16);
             window.crypto.getRandomValues(userId);
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
-            // 2. 唤起 FaceID / 指纹
-            // 注意：requireResidentKey: true 是关键，它让密钥“住”在手机芯片里
+            // 2. 唤起 FaceID
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
@@ -101,7 +160,7 @@
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
                     authenticatorSelection: {
                         authenticatorAttachment: "platform", 
-                        requireResidentKey: true,
+                        requireResidentKey: true, // 关键：驻留密钥
                         userVerification: "required"
                     },
                     timeout: 60000,
@@ -109,48 +168,40 @@
                 }
             });
 
-            // 3. 获取 Credential ID (这就是我们要传给立嘱人的"公钥ID")
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 4. 在云端注册这个"空箱子"
-            // 我们先在数据库占个位，告诉系统"有一个叫 credentialId 的人存在"
-            const { error } = await supabase.from('user_vault').insert({
-                credential_id: credentialId,
-                public_key: "active", // 标记为活跃
-                sign_count: 0
-            });
-
-            // 如果已经注册过，Supabase 会报错 (因为 credential_id 是 unique)
-            // 但没关系，说明他是老用户，我们直接展示码即可
-            if (error && error.code !== '23505') {
-                throw error;
+            // 3. 写入 Supabase (如果配置了的话)
+            if (supabase) {
+                await supabase.from('user_vault').insert({
+                    credential_id: credentialId,
+                    public_key: "active",
+                    sign_count: 0
+                }).catch(err => {
+                    // 忽略重复注册错误，只报错其他严重错误
+                    if (err.code !== '23505') console.error(err);
+                });
             }
 
-            // 5. 生成二维码
-            showQRCode(credentialId);
+            // 4. 生成二维码并展示
+            document.getElementById('heir-step-1').style.display = 'none';
+            document.getElementById('heir-step-2').style.display = 'block';
+
+            // 清空旧的，防止重复生成
+            document.getElementById("qrcode").innerHTML = "";
+            
+            new QRCode(document.getElementById("qrcode"), {
+                text: credentialId, // 二维码内容 = 公钥ID
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
 
         } catch (err) {
             console.error(err);
-            alert("铸造失败: " + err.message);
+            alert("铸造取消或失败: " + err.message);
         }
-    }
-
-    // 展示二维码界面
-    function showQRCode(text) {
-        // 隐藏按钮，显示二维码
-        document.getElementById('setup-stage').style.display = 'none';
-        document.getElementById('qr-stage').style.display = 'block';
-        document.getElementById('qr-hint').style.display = 'block';
-
-        // 生成
-        new QRCode(document.getElementById("qrcode"), {
-            text: text, // 这里放入的是 credential_id
-            width: 200,
-            height: 200,
-            colorDark : "#000000",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
     }
 </script>
 
