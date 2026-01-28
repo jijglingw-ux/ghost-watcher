@@ -8,15 +8,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
 
-        /* 通用标题 */
+        /* 顶部标题 */
         .header { margin-top: 40px; margin-bottom: 40px; }
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
 
+        /* 页面容器 */
+        .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
+
         /* ==================== 页面 1: 角色选择 (首页) ==================== */
-        #page-home { display: flex; flex-direction: column; width: 100%; max-width: 340px; }
+        #page-home { display: flex; }
 
         .card {
             width: 100%; height: 120px;
@@ -27,31 +30,33 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; position: relative; overflow: hidden;
             transition: 0.2s;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
         }
         .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
-        .card-title { font-size: 18px; font-weight: 600; letter-spacing: 1px; margin-bottom: 5px; }
-        .card-desc { font-size: 12px; color: #888; }
         
         .role-owner { border-color: rgba(10, 132, 255, 0.3); }
-        .role-owner .card-title { color: var(--accent); }
+        .role-owner .card-title { color: var(--accent); font-size: 18px; font-weight: 600; margin-bottom: 5px; }
+        
         .role-heir { border-color: rgba(48, 209, 88, 0.3); }
-        .role-heir .card-title { color: var(--secondary); }
+        .role-heir .card-title { color: var(--secondary); font-size: 18px; font-weight: 600; margin-bottom: 5px; }
+        
+        .card-desc { font-size: 12px; color: #888; }
 
         /* ==================== 页面 2: 受益人功能 ==================== */
-        #page-heir { display: none; width: 100%; max-width: 340px; flex-direction: column; align-items: center; }
+        #page-heir { display: none; align-items: center; }
 
         .btn-mint {
             background: rgba(48, 209, 88, 0.15); border: 1px solid var(--secondary); color: var(--secondary);
-            padding: 15px 40px; border-radius: 30px; font-size: 16px; cursor: pointer; margin-top: 20px;
+            padding: 15px 40px; border-radius: 30px; font-size: 16px; cursor: pointer; margin-top: 20px; width: 100%; box-sizing: border-box;
         }
+        .btn-mint:active { background: var(--secondary); color: #000; }
         
         #qrcode-box {
             display: none; background: #fff; padding: 20px; border-radius: 20px;
             box-shadow: 0 0 50px rgba(48, 209, 88, 0.2); margin-top: 20px;
         }
 
-        .back-btn { margin-top: 50px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; }
+        .back-btn { margin-top: 50px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; }
 
     </style>
 </head>
@@ -62,7 +67,7 @@
         <p id="subtitle">PROTOCOL V1.0</p>
     </div>
 
-    <div id="page-home">
+    <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
             <div class="card-title">我要封存</div>
             <div class="card-desc">我是立嘱人 · 扫描密钥</div>
@@ -74,14 +79,14 @@
         </div>
     </div>
 
-    <div id="page-heir">
+    <div id="page-heir" class="page-container">
         <p style="color:var(--secondary)">铸造身份图腾</p>
         
-        <div id="heir-step-1">
+        <div id="heir-step-1" style="width:100%">
             <button class="btn-mint" onclick="mintIdentity()">
                 启动生物共鸣 (FaceID)
             </button>
-            <p style="margin-top:20px; font-size:12px; color:#555;">点击后将生成唯一公钥二维码</p>
+            <p style="margin-top:20px; font-size:12px; color:#555;">点击生成唯一公钥二维码</p>
         </div>
 
         <div id="heir-step-2" style="display:none;">
@@ -95,41 +100,53 @@
     </div>
 
 <script>
+    console.log("脚本开始加载...");
+
     // ============================================
-    // ⚠️ 配置区
+    // ⚠️ 配置区 (填这里)
     // ============================================
     const SUPABASE_URL = '你的URL';
     const SUPABASE_KEY = '你的KEY';
     
-    // 初始化 Supabase (加了容错，防止没填报错)
-    let supabase;
+    // 初始化数据库变量名为 db，避免和 supabase 库名冲突
+    let db = null; 
+    
     try {
         if (!SUPABASE_URL.includes("你的")) {
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            // 使用 window.supabase 确保调用的是库
+            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("数据库连接已初始化");
+        } else {
+            console.log("运行在离线模式 (未配置数据库)");
         }
-    } catch (e) { console.error("DB未连接"); }
+    } catch (e) { 
+        console.error("初始化错误:", e); 
+    }
 
     // ============================================
-    // 🔄 页面切换逻辑 (路由)
+    // 🔄 页面切换逻辑
     // ============================================
     function goHome() {
+        console.log("切换到首页");
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-heir').style.display = 'none';
         document.getElementById('subtitle').innerText = "PROTOCOL V1.0";
     }
 
     function showHeirPage() {
+        console.log("点击了受益人按钮"); // 调试用
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
         document.getElementById('subtitle').innerText = "HEIR MODE";
     }
 
     function showOwnerPage() {
-        alert("【下一步开发】\n这里将调用摄像头扫描受益人的二维码。\n请先测试受益人功能。");
+        console.log("点击了立嘱人按钮");
+        alert("【功能待接入】\n请先完成受益人测试，下一步我们将接入摄像头扫描功能。");
     }
 
     // ============================================
-    // 🔑 核心业务: 受益人铸造逻辑
+    // 🔑 核心业务: 受益人铸造
     // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
@@ -137,8 +154,12 @@
     }
 
     async function mintIdentity() {
-        // 简单的环境检查
-        if (!window.PublicKeyCredential) return alert("您的设备不支持生物识别 (WebAuthn)");
+        console.log("开始铸造...");
+        
+        if (!window.PublicKeyCredential) {
+            alert("错误：您的设备/浏览器不支持生物识别 (WebAuthn)。请使用 Safari 或 Chrome。");
+            return;
+        }
 
         try {
             // 1. 准备参数
@@ -147,7 +168,7 @@
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
-            // 2. 唤起 FaceID
+            // 2. 唤起 FaceID / 指纹
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
@@ -160,7 +181,7 @@
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
                     authenticatorSelection: {
                         authenticatorAttachment: "platform", 
-                        requireResidentKey: true, // 关键：驻留密钥
+                        requireResidentKey: true,
                         userVerification: "required"
                     },
                     timeout: 60000,
@@ -168,29 +189,27 @@
                 }
             });
 
+            console.log("生物识别通过");
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 3. 写入 Supabase (如果配置了的话)
-            if (supabase) {
-                await supabase.from('user_vault').insert({
+            // 3. 尝试写入数据库 (如果有配置)
+            if (db) {
+                const { error } = await db.from('user_vault').insert({
                     credential_id: credentialId,
                     public_key: "active",
                     sign_count: 0
-                }).catch(err => {
-                    // 忽略重复注册错误，只报错其他严重错误
-                    if (err.code !== '23505') console.error(err);
                 });
+                if (error && error.code !== '23505') console.error("DB写入错误:", error);
             }
 
-            // 4. 生成二维码并展示
+            // 4. 显示二维码
             document.getElementById('heir-step-1').style.display = 'none';
             document.getElementById('heir-step-2').style.display = 'block';
 
-            // 清空旧的，防止重复生成
-            document.getElementById("qrcode").innerHTML = "";
-            
-            new QRCode(document.getElementById("qrcode"), {
-                text: credentialId, // 二维码内容 = 公钥ID
+            const qrBox = document.getElementById("qrcode");
+            qrBox.innerHTML = ""; // 清空
+            new QRCode(qrBox, {
+                text: credentialId,
                 width: 200,
                 height: 200,
                 colorDark : "#000000",
@@ -200,7 +219,7 @@
 
         } catch (err) {
             console.error(err);
-            alert("铸造取消或失败: " + err.message);
+            alert("操作中断: " + err.message);
         }
     }
 </script>
