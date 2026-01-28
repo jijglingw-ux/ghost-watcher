@@ -1,33 +1,23 @@
-name: Phoenix Protocol Watchdog
+name: Phoenix Watchdog (Lite)
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '*/5 * * * *'  # 每 5 分钟自动运行一次 (GitHub 极限速度)
+  workflow_dispatch:       # 允许你在手机上点击 "Run workflow" 手动触发
 
 jobs:
-  watchdog_mission:
+  check-pulse:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-
-    - name: Install Dependencies
-      run: |
-        pip install supabase cryptography
-
-    - name: Run Watchdog Script
-      env:
-        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-        # 👇这里修改了！左边是脚本要的，右边是您实际存的
-        EMAIL_USER: ${{ secrets.SENDER_EMAIL }}
-        EMAIL_PASS: ${{ secrets.SENDER_PASSWORD }}
-      run: python main.py
+      - name: Run Watchdog Script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+        run: |
+          npm install @supabase/supabase-js nodemailer
+          node watchdog.js
