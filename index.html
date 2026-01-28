@@ -3,207 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V19.0 | 生物通行证</title>
-    
-    <script src="https://unpkg.com/@simplewebauthn/browser/dist/bundle/index.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <title>PHOENIX | 量子共鸣</title>
     <style>
-        :root { --c-bio: #ff0055; --c-bg: #000; --c-panel: #111; }
-        * { box-sizing: border-box; }
-        body { background: var(--c-bg); color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; user-select: none; }
+        body { background: #000; color: #333; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .container { text-align: center; width: 100%; max-width: 600px; padding: 20px; z-index: 2; }
+        h1 { font-weight: 100; letter-spacing: 10px; color: #fff; margin-bottom: 50px; opacity: 0.8; }
         
-        .fingerprint-bg {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.1; pointer-events: none;
-            background: repeating-radial-gradient(#333 0, #333 1px, transparent 2px, transparent 100%);
-            background-size: 20px 20px;
+        /* 呼吸灯效果模拟“共鸣” */
+        .core {
+            width: 100px; height: 100px; border-radius: 50%;
+            background: radial-gradient(circle, #fff 0%, #000 70%);
+            margin: 0 auto 40px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            transition: all 0.5s ease;
+            cursor: pointer;
         }
-
-        .card {
-            width: 360px; background: var(--c-panel); border: 1px solid #333; border-radius: 20px; padding: 40px 30px; text-align: center; position: relative; box-shadow: 0 20px 50px rgba(255, 0, 85, 0.1);
-            transition: all 0.3s;
+        .core:hover { box-shadow: 0 0 50px rgba(255,255,255,0.6); transform: scale(1.1); }
+        .core.active { animation: pulse 2s infinite; background: radial-gradient(circle, #00ffcc 0%, #000 70%); box-shadow: 0 0 60px #00ffcc; }
+        
+        textarea { background: transparent; border: 1px solid #333; color: #888; width: 100%; height: 100px; outline: none; padding: 10px; display: none; margin-bottom: 20px; }
+        .status { color: #555; font-size: 12px; margin-top: 20px; min-height: 20px; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
         }
         
-        .icon-bio {
-            font-size: 60px; margin-bottom: 20px; display: inline-block;
-            filter: drop-shadow(0 0 10px var(--c-bio));
-            animation: breathe 3s infinite ease-in-out;
-        }
-        @keyframes breathe { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
-
-        h2 { margin: 0 0 10px; letter-spacing: 2px; font-weight: 300; }
-        p { color: #666; font-size: 0.8rem; margin-bottom: 40px; }
-
-        .btn {
-            background: transparent; border: 1px solid var(--c-bio); color: var(--c-bio); padding: 15px 0; width: 100%; border-radius: 50px; font-size: 1rem; cursor: pointer; transition: 0.2s; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px;
-        }
-        .btn:hover { background: var(--c-bio); color: #fff; box-shadow: 0 0 20px var(--c-bio); }
-        .btn.secondary { border-color: #444; color: #888; }
-        .btn.secondary:hover { border-color: #fff; color: #fff; background: transparent; box-shadow: none; }
-
-        .status { position: fixed; bottom: 30px; font-size: 0.7rem; color: #444; }
-        .hidden { display: none; }
-
-        /* 模拟指纹扫描动画 */
-        .scan-line {
-            position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--c-bio);
-            box-shadow: 0 0 10px var(--c-bio);
-            animation: scan 2s infinite linear;
-            display: none;
-        }
-        .scanning .scan-line { display: block; }
-        @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        .mode-switch { position: absolute; top: 20px; right: 20px; color: #444; cursor: pointer; font-size: 12px; }
+        .mode-switch:hover { color: #fff; }
     </style>
 </head>
 <body>
-    <div class="fingerprint-bg"></div>
 
-    <div id="view-register" class="card">
-        <div class="scan-line"></div>
-        <div class="icon-bio">🧬</div>
-        <h2>PHOENIX ID</h2>
-        <p>绑定设备生物特征 (FaceID / TouchID)</p>
-        
-        <button class="btn" onclick="registerPasskey()">
-            <span>🖐</span> 创建生物通行证
-        </button>
-        <button class="btn secondary" onclick="switchView('login')">已有身份？直接验证</button>
-    </div>
+<div class="mode-switch" onclick="toggleMode()">切换模式: [ 纠缠 / 共鸣 ]</div>
 
-    <div id="view-login" class="card hidden">
-        <div class="scan-line"></div>
-        <div class="icon-bio">❤️</div>
-        <h2>身份确认</h2>
-        <p>验证生物特征以发送心跳</p>
-        
-        <button class="btn" onclick="verifyPasskey()">
-            <span>⚡</span> 验证并签到
-        </button>
-        <button class="btn secondary" onclick="switchView('register')">注册新设备</button>
-    </div>
-
-    <div class="status" id="status-text">系统就绪 | 等待生物信号</div>
+<div class="container">
+    <h1 id="title">ENTANGLEMENT</h1>
+    
+    <textarea id="secretData" placeholder="在此输入需要融入虚空的信息..."></textarea>
+    
+    <div class="core" id="soulCore" onclick="activateResonance()"></div>
+    
+    <div class="status" id="statusText">等待观测者接触...</div>
+    
+    <div id="outputHash" style="color:#00ffcc; word-break:break-all; display:none; margin-top:20px; font-size:10px;"></div>
+</div>
 
 <script>
-    // 模拟后端存储 (实际开发中这部分逻辑在服务器)
-    // 我们把 "公钥" 存在本地 localStorage 模拟服务器数据库
-    const DB_KEY_CREDENTIAL = 'phoenix_credential_id';
+    let isEncryptMode = true;
 
-    function log(msg) { document.getElementById('status-text').innerText = msg; }
-    function switchView(view) {
-        document.querySelectorAll('.card').forEach(el => el.classList.add('hidden'));
-        document.getElementById('view-' + view).classList.remove('hidden');
+    function toggleMode() {
+        isEncryptMode = !isEncryptMode;
+        document.getElementById('title').innerText = isEncryptMode ? "ENTANGLEMENT" : "RESONANCE";
+        document.getElementById('secretData').style.display = isEncryptMode ? "block" : "none";
+        document.getElementById('secretData').value = "";
+        document.getElementById('outputHash').style.display = "none";
+        document.getElementById('statusText').innerText = isEncryptMode ? "准备注入信息..." : "准备从虚空中召回...";
+        document.getElementById('soulCore').className = 'core';
     }
 
-    // --- 1. 注册 (创建 Passkey) ---
-    async function registerPasskey() {
-        document.getElementById('view-register').classList.add('scanning');
-        log("正在请求设备安全芯片...");
+    async function activateResonance() {
+        const core = document.getElementById('soulCore');
+        const status = document.getElementById('statusText');
+        const secretInput = document.getElementById('secretData');
+        
+        // 1. 模拟唤起生物识别 (WebAuthn)
+        status.innerText = "正在读取生物频率...";
+        core.classList.add('active');
 
         try {
-            // 挑战码 (Challenge)：由服务器生成的随机乱码，防重放攻击
-            // 这里我们用随机数模拟
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            // WebAuthn 创建参数
-            const publicKey = {
-                challenge: challenge,
-                rp: { name: "Phoenix Protocol", id: location.hostname }, // 依赖域名
-                user: {
-                    id: Uint8Array.from("USER_ID_123", c => c.charCodeAt(0)),
-                    name: "owner@phoenix.net",
-                    displayName: "Phoenix Commander"
-                },
-                pubKeyCredParams: [{ alg: -7, type: "public-key" }], // ES256
-                authenticatorSelection: {
-                    authenticatorAttachment: "platform", // 强制使用本机芯片(FaceID/指纹)
-                    userVerification: "required"
-                },
-                timeout: 60000
-            };
-
-            // 唤起浏览器原生弹窗
-            const credential = await navigator.credentials.create({ publicKey });
+            // 这里在真实环境会调用 navigator.credentials.get({ ... prf: true ... })
+            // 我们用延迟和伪代码模拟这个过程
+            await new Promise(r => setTimeout(r, 2000));
             
-            console.log("注册凭证:", credential);
-            
-            // 模拟：将 Credential ID 存入数据库 (这里存本地)
-            // 实际：你应该把 credential.rawId 发给 Supabase
-            // 注意：ArrayBuffer 需要转 Base64 存储
-            const credId = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-            localStorage.setItem(DB_KEY_CREDENTIAL, credId);
+            // 假设这是芯片计算出的“灵魂密钥” (由生物特征确定性生成)
+            // 在真实代码中，这个 key 是无法被 JS 伪造的，必须由硬件吐出
+            const derivedKey = await generateMockBioKey(); 
 
-            Swal.fire({
-                title: '生物绑定成功',
-                text: '您的指纹/面容已成为唯一密钥。',
-                icon: 'success',
-                background: '#111', color: '#fff', confirmButtonColor: '#ff0055'
-            }).then(() => switchView('login'));
+            if (isEncryptMode) {
+                // 加密模式
+                const secret = secretInput.value;
+                if (!secret) throw new Error("虚空是空的");
+                
+                const encrypted = await encryptData(secret, derivedKey);
+                
+                status.innerText = "纠缠完成。信息已散布。";
+                document.getElementById('outputHash').style.display = 'block';
+                document.getElementById('outputHash').innerText = "IPFS_HASH: " + encrypted; // 模拟哈希
+                secretInput.value = ""; // 清空原文
+            } else {
+                // 解密模式
+                // 模拟从 IPFS 下载回来的乱码 (这里我们假设用户填入了刚才的 hash)
+                const inputHash = prompt("请输入虚空坐标 (Encrypted String):");
+                if (!inputHash) return;
 
+                const decrypted = await decryptData(inputHash, derivedKey);
+                
+                status.innerText = "共鸣成功。实体显现。";
+                alert("解密内容:\n\n" + decrypted);
+            }
         } catch (e) {
-            console.error(e);
-            Swal.fire({ title: '绑定失败', text: e.message, icon: 'error', background: '#111', color: '#fff' });
-        } finally {
-            document.getElementById('view-register').classList.remove('scanning');
-            log("操作结束");
+            status.innerText = "共鸣失败: " + e.message;
+            core.classList.remove('active');
         }
+        
+        setTimeout(() => core.classList.remove('active'), 1000);
     }
 
-    // --- 2. 验证 (使用 Passkey) ---
-    async function verifyPasskey() {
-        const savedCredId = localStorage.getItem(DB_KEY_CREDENTIAL);
-        if (!savedCredId) return Swal.fire({ title: '未找到通行证', text: '请先注册', icon: 'warning', background: '#111', color: '#fff' });
+    // --- 模拟底层密码学逻辑 ---
 
-        document.getElementById('view-login').classList.add('scanning');
-        log("正在验证生物特征...");
-
-        try {
-            // 还原 Credential ID
-            const allowCredentials = [{
-                type: "public-key",
-                id: Uint8Array.from(atob(savedCredId), c => c.charCodeAt(0))
-            }];
-
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const publicKey = {
-                challenge: challenge,
-                allowCredentials: allowCredentials,
-                userVerification: "required"
-            };
-
-            // 唤起验证
-            const assertion = await navigator.credentials.get({ publicKey });
-            
-            console.log("验证凭证:", assertion);
-
-            // 成功！
-            // 在真实场景中，这里会把 assertion 发给后端 main.py 验证签名
-            // 验证通过后，后端更新数据库的 last_checkin_at
-            
-            Swal.fire({
-                title: '身份确认',
-                text: '心跳已发送。死手开关重置。',
-                icon: 'success',
-                background: '#111', color: '#fff', confirmButtonColor: '#ff0055'
-            });
-
-        } catch (e) {
-            console.error(e);
-            Swal.fire({ title: '验证失败', text: '无法确认身份', icon: 'error', background: '#111', color: '#fff' });
-        } finally {
-            document.getElementById('view-login').classList.remove('scanning');
-            log("等待下一次指令...");
-        }
+    async function generateMockBioKey() {
+        // 真实场景：这里是 WebAuthn PRF 扩展
+        // 模拟：使用一个固定的种子模拟“指纹”
+        const enc = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+            "raw", 
+            enc.encode("USER_BIO_UNIQUE_SIGNAL_V1"), // 假设这是生物芯片的输出
+            { name: "PBKDF2" }, 
+            false, 
+            ["deriveKey"]
+        );
+        return window.crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: enc.encode("PHOENIX_SALT"), iterations: 100000, hash: "SHA-256" },
+            keyMaterial,
+            { name: "AES-GCM", length: 256 },
+            true,
+            ["encrypt", "decrypt"]
+        );
     }
-    
-    // 初始化判断
-    if(localStorage.getItem(DB_KEY_CREDENTIAL)) {
-        switchView('login');
+
+    async function encryptData(data, key) {
+        const enc = new TextEncoder();
+        const iv = window.crypto.getRandomValues(new Uint8Array(12));
+        const ciphertext = await window.crypto.subtle.encrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            enc.encode(data)
+        );
+        // 拼接 IV 和 密文转 Base64
+        const buffer = new Uint8Array(iv.byteLength + ciphertext.byteLength);
+        buffer.set(iv);
+        buffer.set(new Uint8Array(ciphertext), iv.byteLength);
+        return btoa(String.fromCharCode(...buffer));
+    }
+
+    async function decryptData(base64Data, key) {
+        const binaryString = atob(base64Data);
+        const buffer = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) buffer[i] = binaryString.charCodeAt(i);
+        
+        const iv = buffer.slice(0, 12);
+        const data = buffer.slice(12);
+        
+        const decrypted = await window.crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: iv },
+            key,
+            data
+        );
+        return new TextDecoder().decode(decrypted);
     }
 </script>
+
 </body>
 </html>
