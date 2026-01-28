@@ -2,166 +2,171 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHOENIX | 量子共鸣</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PHOENIX | 身份门户</title>
     <style>
-        body { background: #000; color: #333; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        .container { text-align: center; width: 100%; max-width: 600px; padding: 20px; z-index: 2; }
-        h1 { font-weight: 100; letter-spacing: 10px; color: #fff; margin-bottom: 50px; opacity: 0.8; }
+        :root { --bg: #000000; --text: #e0e0e0; --accent: #ff3b30; --panel: #1c1c1e; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
         
-        /* 呼吸灯效果模拟“共鸣” */
-        .core {
-            width: 100px; height: 100px; border-radius: 50%;
-            background: radial-gradient(circle, #fff 0%, #000 70%);
-            margin: 0 auto 40px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
-            transition: all 0.5s ease;
-            cursor: pointer;
-        }
-        .core:hover { box-shadow: 0 0 50px rgba(255,255,255,0.6); transform: scale(1.1); }
-        .core.active { animation: pulse 2s infinite; background: radial-gradient(circle, #00ffcc 0%, #000 70%); box-shadow: 0 0 60px #00ffcc; }
+        .container { background: var(--panel); width: 100%; max-width: 360px; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; border: 1px solid #333; }
         
-        textarea { background: transparent; border: 1px solid #333; color: #888; width: 100%; height: 100px; outline: none; padding: 10px; display: none; margin-bottom: 20px; }
-        .status { color: #555; font-size: 12px; margin-top: 20px; min-height: 20px; }
+        h1 { margin-bottom: 5px; font-weight: 700; letter-spacing: 1px; }
+        .subtitle { font-size: 12px; color: #666; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 2px; }
         
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        .input-group { margin-bottom: 15px; text-align: left; }
+        label { font-size: 12px; color: #888; margin-left: 10px; }
+        input { width: 100%; background: #2c2c2e; border: none; padding: 15px; color: #fff; border-radius: 12px; margin-top: 5px; font-size: 16px; outline: none; box-sizing: border-box; transition: 0.2s; }
+        input:focus { background: #3a3a3c; box-shadow: 0 0 0 2px var(--accent); }
         
-        .mode-switch { position: absolute; top: 20px; right: 20px; color: #444; cursor: pointer; font-size: 12px; }
-        .mode-switch:hover { color: #fff; }
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-secondary { background: #3a3a3c; color: var(--accent); margin-top: 15px; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+        .btn:active { transform: scale(0.98); }
+
+        .apple-warning { display: none; background: rgba(255, 59, 48, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 15px; border-radius: 12px; font-size: 13px; margin-bottom: 20px; line-height: 1.5; text-align: left; }
+        
+        .icon-faceid { width: 20px; height: 20px; fill: currentColor; }
     </style>
 </head>
 <body>
 
-<div class="mode-switch" onclick="toggleMode()">切换模式: [ 纠缠 / 共鸣 ]</div>
-
 <div class="container">
-    <h1 id="title">ENTANGLEMENT</h1>
-    
-    <textarea id="secretData" placeholder="在此输入需要融入虚空的信息..."></textarea>
-    
-    <div class="core" id="soulCore" onclick="activateResonance()"></div>
-    
-    <div class="status" id="statusText">等待观测者接触...</div>
-    
-    <div id="outputHash" style="color:#00ffcc; word-break:break-all; display:none; margin-top:20px; font-size:10px;"></div>
+    <div id="apple-check-msg" class="apple-warning">
+        ⚠️ <b>非受信任环境</b><br>凤凰协议仅支持搭载 Secure Enclave 芯片的 Apple 设备。<br>请使用 iPhone (Safari) 访问。
+    </div>
+
+    <h1>PHOENIX</h1>
+    <div class="subtitle">Protocol V1.0</div>
+
+    <div class="input-group">
+        <label>账户 ID</label>
+        <input type="text" id="username" placeholder="请输入您的代号" autocomplete="username">
+    </div>
+
+    <div class="input-group">
+        <label>安全密码</label>
+        <input type="password" id="password" placeholder="设置静态密码" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary" id="btn-register" onclick="handleRegister()">
+        <svg class="icon-faceid" viewBox="0 0 24 24"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.35.33 2.74.33 4.26 0 4.41-3.59 8-8 8z"/></svg>
+        注册并绑定 FaceID
+    </button>
+
+    <button class="btn btn-secondary" id="btn-login" onclick="handleLogin()">
+        已有账号？刷脸登录
+    </button>
 </div>
 
 <script>
-    let isEncryptMode = true;
+    // --- 1. 环境检测逻辑 ---
+    const isAppleDevice = /Mac|iPod|iPhone|iPad/.test(navigator.platform) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+    const isWebAuthnSupported = !!(window.PublicKeyCredential);
 
-    function toggleMode() {
-        isEncryptMode = !isEncryptMode;
-        document.getElementById('title').innerText = isEncryptMode ? "ENTANGLEMENT" : "RESONANCE";
-        document.getElementById('secretData').style.display = isEncryptMode ? "block" : "none";
-        document.getElementById('secretData').value = "";
-        document.getElementById('outputHash').style.display = "none";
-        document.getElementById('statusText').innerText = isEncryptMode ? "准备注入信息..." : "准备从虚空中召回...";
-        document.getElementById('soulCore').className = 'core';
+    // 强制检查：必须是苹果设备 且 支持 WebAuthn
+    if (!isAppleDevice || !isWebAuthnSupported) {
+        document.getElementById('apple-check-msg').style.display = 'block';
+        // 禁用所有操作
+        document.querySelectorAll('input, button').forEach(el => el.disabled = true);
     }
 
-    async function activateResonance() {
-        const core = document.getElementById('soulCore');
-        const status = document.getElementById('statusText');
-        const secretInput = document.getElementById('secretData');
-        
-        // 1. 模拟唤起生物识别 (WebAuthn)
-        status.innerText = "正在读取生物频率...";
-        core.classList.add('active');
+    // --- 2. 核心业务逻辑 ---
+
+    // [模拟] 注册流程
+    async function handleRegister() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+
+        if (!user || !pass) return alert("请输入完整的账户和密码");
+
+        // 步骤 A: 准备创建 Passkey (FaceID)
+        // 这里生成一个随机 Challenge (真实环境应由服务器生成)
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const userId = new Uint8Array(16);
+        window.crypto.getRandomValues(userId);
+
+        const publicKeyCredentialCreationOptions = {
+            challenge: challenge,
+            rp: { name: "Phoenix Protocol", id: location.hostname }, // 依赖当前域名
+            user: {
+                id: userId,
+                name: user,
+                displayName: user
+            },
+            pubKeyCredParams: [{ alg: -7, type: "public-key" }], // ES256 (Apple FaceID 标准)
+            authenticatorSelection: {
+                authenticatorAttachment: "platform", // 强制使用本机芯片 (FaceID/TouchID)
+                userVerification: "required"         // 强制生物识别，不能只输密码
+            },
+            timeout: 60000,
+            attestation: "direct"
+        };
 
         try {
-            // 这里在真实环境会调用 navigator.credentials.get({ ... prf: true ... })
-            // 我们用延迟和伪代码模拟这个过程
-            await new Promise(r => setTimeout(r, 2000));
+            // 步骤 B: 唤起 FaceID
+            // 这一步会弹出系统级弹窗：“是否允许使用 FaceID？”
+            const credential = await navigator.credentials.create({
+                publicKey: publicKeyCredentialCreationOptions
+            });
+
+            console.log("FaceID 凭证生成成功:", credential);
             
-            // 假设这是芯片计算出的“灵魂密钥” (由生物特征确定性生成)
-            // 在真实代码中，这个 key 是无法被 JS 伪造的，必须由硬件吐出
-            const derivedKey = await generateMockBioKey(); 
+            // 步骤 C: 模拟保存 (真实环境要把 credential 发给服务器存起来)
+            localStorage.setItem('phoenix_user', user);
+            localStorage.setItem('phoenix_pass', pass); // 仅演示，实际不要存明文密码
+            localStorage.setItem('phoenix_credential_id', btoa(String.fromCharCode(...new Uint8Array(credential.rawId))));
 
-            if (isEncryptMode) {
-                // 加密模式
-                const secret = secretInput.value;
-                if (!secret) throw new Error("虚空是空的");
-                
-                const encrypted = await encryptData(secret, derivedKey);
-                
-                status.innerText = "纠缠完成。信息已散布。";
-                document.getElementById('outputHash').style.display = 'block';
-                document.getElementById('outputHash').innerText = "IPFS_HASH: " + encrypted; // 模拟哈希
-                secretInput.value = ""; // 清空原文
-            } else {
-                // 解密模式
-                // 模拟从 IPFS 下载回来的乱码 (这里我们假设用户填入了刚才的 hash)
-                const inputHash = prompt("请输入虚空坐标 (Encrypted String):");
-                if (!inputHash) return;
-
-                const decrypted = await decryptData(inputHash, derivedKey);
-                
-                status.innerText = "共鸣成功。实体显现。";
-                alert("解密内容:\n\n" + decrypted);
-            }
-        } catch (e) {
-            status.innerText = "共鸣失败: " + e.message;
-            core.classList.remove('active');
+            alert(`✅ 注册成功！\n\n账户: ${user}\nFaceID: 已绑定\n设备: Apple Secure Enclave`);
+            
+        } catch (err) {
+            console.error(err);
+            alert("❌ 注册失败: 用户取消或 FaceID 验证未通过。");
         }
-        
-        setTimeout(() => core.classList.remove('active'), 1000);
     }
 
-    // --- 模拟底层密码学逻辑 ---
+    // [模拟] 登录流程
+    async function handleLogin() {
+        const user = document.getElementById('username').value;
+        if (!user) return alert("请输入账户 ID");
 
-    async function generateMockBioKey() {
-        // 真实场景：这里是 WebAuthn PRF 扩展
-        // 模拟：使用一个固定的种子模拟“指纹”
-        const enc = new TextEncoder();
-        const keyMaterial = await window.crypto.subtle.importKey(
-            "raw", 
-            enc.encode("USER_BIO_UNIQUE_SIGNAL_V1"), // 假设这是生物芯片的输出
-            { name: "PBKDF2" }, 
-            false, 
-            ["deriveKey"]
-        );
-        return window.crypto.subtle.deriveKey(
-            { name: "PBKDF2", salt: enc.encode("PHOENIX_SALT"), iterations: 100000, hash: "SHA-256" },
-            keyMaterial,
-            { name: "AES-GCM", length: 256 },
-            true,
-            ["encrypt", "decrypt"]
-        );
-    }
+        // 步骤 A: 准备验证 FaceID
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
 
-    async function encryptData(data, key) {
-        const enc = new TextEncoder();
-        const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const ciphertext = await window.crypto.subtle.encrypt(
-            { name: "AES-GCM", iv: iv },
-            key,
-            enc.encode(data)
-        );
-        // 拼接 IV 和 密文转 Base64
-        const buffer = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-        buffer.set(iv);
-        buffer.set(new Uint8Array(ciphertext), iv.byteLength);
-        return btoa(String.fromCharCode(...buffer));
-    }
+        // 查找本地是否有这个 Credential ID (真实环境从服务器查)
+        const storedCredId = localStorage.getItem('phoenix_credential_id');
+        if(!storedCredId) return alert("该设备未找到此账户的 FaceID 记录");
 
-    async function decryptData(base64Data, key) {
-        const binaryString = atob(base64Data);
-        const buffer = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) buffer[i] = binaryString.charCodeAt(i);
-        
-        const iv = buffer.slice(0, 12);
-        const data = buffer.slice(12);
-        
-        const decrypted = await window.crypto.subtle.decrypt(
-            { name: "AES-GCM", iv: iv },
-            key,
-            data
-        );
-        return new TextDecoder().decode(decrypted);
+        const allowCredentials = [{
+            type: "public-key",
+            id: Uint8Array.from(atob(storedCredId), c => c.charCodeAt(0)),
+            transports: ["internal"]
+        }];
+
+        const publicKeyCredentialRequestOptions = {
+            challenge: challenge,
+            allowCredentials: allowCredentials,
+            userVerification: "required" // 强制刷脸
+        };
+
+        try {
+            // 步骤 B: 唤起 FaceID 验证
+            const assertion = await navigator.credentials.get({
+                publicKey: publicKeyCredentialRequestOptions
+            });
+
+            console.log("FaceID 验证通过:", assertion);
+            alert(`🔓 登录成功\n\n欢迎回来, ${user}`);
+            
+            // TODO: 跳转到下一步
+            
+        } catch (err) {
+            console.error(err);
+            alert("❌ 验证失败: 请确保是本人操作。");
+        }
     }
 </script>
 
