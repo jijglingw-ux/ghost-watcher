@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V6 修复版</title>
+    <title>凤凰协议 | V7 强力解析版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -38,10 +38,8 @@
         
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        /* 🔥 立嘱人页面样式修复 */
+        /* 🔥 摄像头区域修复 */
         #page-owner { display: none; }
-        
-        /* 摄像头容器：强制黑色背景，防止透明框 */
         #reader { 
             width: 100%; height: 300px; 
             border-radius: 20px; overflow: hidden; 
@@ -49,10 +47,9 @@
             background: #000 !important; 
             position: relative; 
         }
-        /* 隐藏库自带的透明遮罩元素 */
-        #qr-shaded-region { opacity: 0.3 !important; border-color: var(--accent) !important; }
+        /* 隐藏掉库自带的透明遮罩 */
+        #qr-shaded-region { display: none !important; }
 
-        /* 加载中遮罩 */
         #loading-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); z-index: 999;
@@ -81,12 +78,12 @@
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p style="margin-top:15px; color:#fff;">正在解析图腾...</p>
+        <p id="loading-text" style="margin-top:15px; color:#fff;">正在解析图腾...</p>
     </div>
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V6.0 (FIXED)</p>
+        <p id="subtitle">PROTOCOL V7.0 (ROBUST)</p>
     </div>
 
     <div id="page-home" class="page-container">
@@ -108,7 +105,7 @@
 
             <div class="divider">或者</div>
 
-            <button class="btn-action btn-file" onclick="document.getElementById('qr-input-file').click()">
+            <button class="btn-action btn-file" onclick="triggerFileSelect()">
                 🖼️ 从相册选择二维码图片
             </button>
             <input type="file" id="qr-input-file" accept="image/*" style="display: none;" onchange="handleFileScan(this)">
@@ -140,7 +137,7 @@
 
 <script>
     // ============================================
-    // ⚠️ 配置区 (请填入你的真实配置)
+    // ⚠️ 配置区
     // ============================================
     const SUPABASE_URL = '你的URL';
     const SUPABASE_KEY = '你的KEY';
@@ -160,7 +157,7 @@
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-owner').style.display = 'none';
         document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V6.0";
+        document.getElementById('subtitle').innerText = "PROTOCOL V7.0";
     }
 
     function showOwnerPage() {
@@ -170,6 +167,8 @@
         document.getElementById('scan-stage').style.display = 'block';
         document.getElementById('secret-panel').style.display = 'none';
         document.getElementById('qr-input-file').value = '';
+        
+        // 自动启动摄像头
         startScanner();
     }
 
@@ -180,63 +179,95 @@
     }
 
     // ============================================
-    // 📷 修复核心: 全能扫描
+    // 📷 修复版核心: 冲突管理
     // ============================================
+    
+    // 启动摄像头
     function startScanner() {
         setTimeout(() => {
-            if (html5QrCode) { stopScanner(); }
-            html5QrCode = new Html5Qrcode("reader");
+            // 如果已存在实例，先不要销毁，尝试直接复用或重启
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
             
-            // 摄像头设置：不使用 qrbox，尝试全屏扫描以减少UI干扰
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(err => {
-                console.log("摄像头启动受限:", err);
-                document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头未就绪<br>请使用下方相册上传</div>";
-            });
+            // 只有当没在扫描时才启动
+            if (!html5QrCode.isScanning) {
+                html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess
+                ).catch(err => {
+                    console.log("摄像头启动受限:", err);
+                    document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头未就绪<br>请使用下方相册上传</div>";
+                });
+            }
         }, 300);
     }
 
-    function stopScanner() {
+    // 停止摄像头 (Promise)
+    async function stopScanner() {
         if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error(e));
+            try {
+                await html5QrCode.stop();
+                console.log("摄像头已暂停");
+            } catch (e) {
+                console.error("停止失败", e);
+            }
         }
     }
 
-    // 🔥 修复：图片扫描处理
-    function handleFileScan(input) {
+    // 触发文件选择前，先尝试暂停摄像头
+    function triggerFileSelect() {
+        // 点击选图按钮 -> 触发隐藏的input
+        document.getElementById('qr-input-file').click();
+    }
+
+    // 🔥 修复：处理文件上传扫描
+    async function handleFileScan(input) {
         if (input.files.length === 0) return;
-        
         const imageFile = input.files[0];
-        
-        // 1. 显示加载动画
+
+        // 1. 显式加载动画
         document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading-text').innerText = "正在暂停摄像头...";
 
-        // 2. 稍微延迟一下，给 UI 渲染时间
-        setTimeout(() => {
-            // 如果摄像头正在运行，先不要用同一个实例去扫文件，最好新建一个或暂停
-            // html5-qrcode 库在 scanFile 时如果摄像头开着可能会冲突
-            // 简单粗暴方案：直接用当前实例扫，如果失败则报错
+        try {
+            // 2. 关键修复：扫描文件前，必须先停止摄像头流！
+            // 否则库会报错 "Scan already in progress"
+            await stopScanner();
             
-            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            document.getElementById('loading-text').innerText = "正在解析图片...";
 
-            html5QrCode.scanFile(imageFile, true)
-                .then(decodedText => {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    onScanSuccess(decodedText);
-                })
-                .catch(err => {
-                    document.getElementById('loading-overlay').style.display = 'none';
-                    console.error(err);
-                    alert("❌ 无法识别二维码\n\n请确保：\n1. 图片清晰\n2. 二维码完整\n3. 图片不要太模糊");
-                });
-        }, 500);
+            // 3. 执行文件扫描
+            const decodedText = await html5QrCode.scanFile(imageFile, true);
+            
+            // 成功！
+            document.getElementById('loading-overlay').style.display = 'none';
+            onScanSuccess(decodedText);
+
+        } catch (err) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            console.error("文件扫描错误:", err);
+            
+            // 给出具体建议
+            let errorMsg = "❌ 无法解析二维码";
+            if (err.toString().includes("No QR code found")) {
+                errorMsg = "❌ 图片中未发现二维码\n请裁剪掉多余的背景黑边后再试。";
+            }
+            alert(errorMsg + "\n(" + err + ")");
+            
+            // 失败后，尝试重启摄像头，方便用户重试
+            // startScanner(); 
+        }
     }
 
     function onScanSuccess(decodedText) {
         console.log(`锁定: ${decodedText}`);
-        stopScanner();
+        // 彻底停止扫描
+        stopScanner().then(() => {
+             if(html5QrCode) html5QrCode.clear();
+        });
+
         document.getElementById('scan-stage').style.display = 'none';
         detectedHeirId = decodedText;
         document.getElementById('secret-panel').style.display = 'block';
@@ -264,7 +295,7 @@
     }
 
     // ============================================
-    // 🔑 受益人 (不变)
+    // 🔑 受益人 (二维码生成优化)
     // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
@@ -285,19 +316,32 @@
                 }
             });
             const credentialId = bufferToBase64url(credential.rawId);
-            document.getElementById('heir-step-1').style.display = 'none';
-            document.getElementById('heir-step-2').style.display = 'flex';
-            document.getElementById("qrcode-box").style.display = 'block';
             
+            // 写入DB
             if (db) {
                 db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" })
                   .then(({error}) => { if(error && error.code !== '23505') console.error(error); });
             }
+
+            // UI 更新
+            document.getElementById('heir-step-1').style.display = 'none';
+            document.getElementById('heir-step-2').style.display = 'flex';
+            document.getElementById("qrcode-box").style.display = 'block';
+
+            // 生成二维码 (使用 Level M，平衡密度和识别率)
             setTimeout(() => {
                 const qrEl = document.getElementById("qrcode");
                 qrEl.innerHTML = "";
-                new QRCode(qrEl, { text: credentialId, width: 180, height: 180, colorDark:"#000", colorLight:"#fff", correctLevel: QRCode.CorrectLevel.L });
+                new QRCode(qrEl, { 
+                    text: credentialId, 
+                    width: 200, 
+                    height: 200, 
+                    colorDark:"#000", 
+                    colorLight:"#fff", 
+                    correctLevel: QRCode.CorrectLevel.M 
+                });
             }, 100);
+
         } catch (err) { alert("操作中断: " + err.message); }
     }
 </script>
