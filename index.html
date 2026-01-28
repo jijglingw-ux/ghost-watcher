@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V7 强力解析版</title>
+    <title>凤凰协议 | V9 鹰眼版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; --error: #FF453A; }
         body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
 
         .header { margin-top: 30px; margin-bottom: 30px; }
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
+
+        /* 环境报错条 */
+        #env-warning {
+            display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid var(--error);
+            color: var(--error); padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left;
+        }
 
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
 
@@ -38,16 +44,16 @@
         
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        /* 🔥 摄像头区域修复 */
+        /* 摄像头区域 - 调整为全屏沉浸式 */
         #page-owner { display: none; }
         #reader { 
-            width: 100%; height: 300px; 
+            width: 100%; height: 320px; /* 加高一点 */
             border-radius: 20px; overflow: hidden; 
             border: 2px solid #333; margin-bottom: 10px; 
             background: #000 !important; 
             position: relative; 
         }
-        /* 隐藏掉库自带的透明遮罩 */
+        /* 强制隐藏默认的扫描框，只留画面 */
         #qr-shaded-region { display: none !important; }
 
         #loading-overlay {
@@ -61,9 +67,7 @@
         #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
-        textarea {
-            width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0;
-        }
+        textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
         textarea:focus { outline: 2px solid var(--accent); }
         .target-id { color: var(--accent); font-family: monospace; word-break: break-all; font-size: 10px; }
         .divider { display: flex; align-items: center; width: 100%; color: #444; font-size: 12px; margin: 15px 0; }
@@ -78,13 +82,15 @@
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p id="loading-text" style="margin-top:15px; color:#fff;">正在解析图腾...</p>
+        <p id="loading-text" style="margin-top:15px; color:#fff;">处理中...</p>
     </div>
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V7.0 (ROBUST)</p>
+        <p id="subtitle">PROTOCOL V9.0 (EAGLE EYE)</p>
     </div>
+
+    <div id="env-warning"></div>
 
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
@@ -99,15 +105,10 @@
 
     <div id="page-owner" class="page-container">
         <div id="scan-stage">
-            <p style="color:var(--accent); margin-bottom:15px;">扫描或上传受益人二维码</p>
-            
+            <p style="color:var(--accent); margin-bottom:15px; font-size:12px;">提示：如扫描无反应，请前后移动手机调整焦距</p>
             <div id="reader"></div>
-
             <div class="divider">或者</div>
-
-            <button class="btn-action btn-file" onclick="triggerFileSelect()">
-                🖼️ 从相册选择二维码图片
-            </button>
+            <button class="btn-action btn-file" onclick="triggerFileSelect()">🖼️ 从相册选择二维码图片</button>
             <input type="file" id="qr-input-file" accept="image/*" style="display: none;" onchange="handleFileScan(this)">
         </div>
 
@@ -124,13 +125,14 @@
     <div id="page-heir" class="page-container">
         <div id="heir-step-1" style="width:100%">
             <button class="btn-action btn-mint" onclick="mintIdentity()">
-                启动生物共鸣 (FaceID)
+                启动生物共鸣 (FaceID/指纹)
             </button>
             <p style="margin-top:20px; font-size:12px; color:#555;">生成唯一公钥图腾</p>
         </div>
         <div id="heir-step-2" style="display:none; width: 100%; flex-direction: column; align-items: center;">
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
+            <p style="font-size:10px; color:#555; margin-top:5px;">(已优化密度，易于扫描)</p>
         </div>
         <div class="back-btn" onclick="goHome()">返回首页</div>
     </div>
@@ -152,12 +154,26 @@
     let html5QrCode = null;
     let detectedHeirId = null;
 
+    window.onload = function() { checkEnvironment(); }
+
+    function checkEnvironment() {
+        const warning = document.getElementById('env-warning');
+        let msg = "";
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            msg += "⚠️ 严重错误：非 HTTPS 环境，功能将受限。<br>";
+        }
+        if (!window.PublicKeyCredential) {
+            msg += "⚠️ 设备不支持：请使用 Chrome 浏览器并开启屏幕锁。<br>";
+        }
+        if (msg) { warning.innerHTML = msg; warning.style.display = 'block'; }
+    }
+
     function goHome() {
         stopScanner();
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-owner').style.display = 'none';
         document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V7.0";
+        document.getElementById('subtitle').innerText = "PROTOCOL V9.0";
     }
 
     function showOwnerPage() {
@@ -167,8 +183,6 @@
         document.getElementById('scan-stage').style.display = 'block';
         document.getElementById('secret-panel').style.display = 'none';
         document.getElementById('qr-input-file').value = '';
-        
-        // 自动启动摄像头
         startScanner();
     }
 
@@ -179,95 +193,61 @@
     }
 
     // ============================================
-    // 📷 修复版核心: 冲突管理
+    // 📷 扫描器优化核心 (V9)
     // ============================================
-    
-    // 启动摄像头
     function startScanner() {
         setTimeout(() => {
-            // 如果已存在实例，先不要销毁，尝试直接复用或重启
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
-            
-            // 只有当没在扫描时才启动
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             if (!html5QrCode.isScanning) {
-                html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    onScanSuccess
-                ).catch(err => {
-                    console.log("摄像头启动受限:", err);
+                // 🔥 鹰眼配置 🔥
+                const config = { 
+                    fps: 20, // 提高帧率
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    // 🔥 开启实验性原生支持 (Hardware Acceleration)
+                    // 这会让手机调用系统底层的条码扫描器，速度极快
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                };
+
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .catch(err => {
+                    console.log("摄像头受限:", err);
                     document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头未就绪<br>请使用下方相册上传</div>";
                 });
             }
         }, 300);
     }
 
-    // 停止摄像头 (Promise)
     async function stopScanner() {
         if (html5QrCode && html5QrCode.isScanning) {
-            try {
-                await html5QrCode.stop();
-                console.log("摄像头已暂停");
-            } catch (e) {
-                console.error("停止失败", e);
-            }
+            await html5QrCode.stop().catch(e=>console.error(e));
         }
     }
 
-    // 触发文件选择前，先尝试暂停摄像头
-    function triggerFileSelect() {
-        // 点击选图按钮 -> 触发隐藏的input
-        document.getElementById('qr-input-file').click();
-    }
+    function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
 
-    // 🔥 修复：处理文件上传扫描
     async function handleFileScan(input) {
         if (input.files.length === 0) return;
         const imageFile = input.files[0];
-
-        // 1. 显式加载动画
         document.getElementById('loading-overlay').style.display = 'flex';
         document.getElementById('loading-text').innerText = "正在暂停摄像头...";
-
+        
         try {
-            // 2. 关键修复：扫描文件前，必须先停止摄像头流！
-            // 否则库会报错 "Scan already in progress"
             await stopScanner();
-            
             document.getElementById('loading-text').innerText = "正在解析图片...";
-
-            // 3. 执行文件扫描
             const decodedText = await html5QrCode.scanFile(imageFile, true);
-            
-            // 成功！
             document.getElementById('loading-overlay').style.display = 'none';
             onScanSuccess(decodedText);
-
         } catch (err) {
             document.getElementById('loading-overlay').style.display = 'none';
-            console.error("文件扫描错误:", err);
-            
-            // 给出具体建议
-            let errorMsg = "❌ 无法解析二维码";
-            if (err.toString().includes("No QR code found")) {
-                errorMsg = "❌ 图片中未发现二维码\n请裁剪掉多余的背景黑边后再试。";
-            }
-            alert(errorMsg + "\n(" + err + ")");
-            
-            // 失败后，尝试重启摄像头，方便用户重试
-            // startScanner(); 
+            alert("❌ 无法解析二维码: " + err);
         }
     }
 
     function onScanSuccess(decodedText) {
-        console.log(`锁定: ${decodedText}`);
-        // 彻底停止扫描
-        stopScanner().then(() => {
-             if(html5QrCode) html5QrCode.clear();
-        });
-
+        stopScanner().then(() => { if(html5QrCode) html5QrCode.clear(); });
         document.getElementById('scan-stage').style.display = 'none';
         detectedHeirId = decodedText;
         document.getElementById('secret-panel').style.display = 'block';
@@ -277,25 +257,19 @@
 
     async function sealLegacy() {
         const secret = document.getElementById('secret-input').value;
-        if (!secret) return alert("请输入要传承的信息");
-        if (!detectedHeirId) return alert("未检测到受益人ID");
+        if (!secret) return alert("请输入信息");
+        if (!detectedHeirId) return alert("无ID");
         if (!db) return alert("数据库未连接");
-
         try {
-            const { error } = await db.from('user_vault')
-                .update({ encrypted_data: secret, status: 'sealed' })
-                .eq('credential_id', detectedHeirId);
+            const { error } = await db.from('user_vault').update({ encrypted_data: secret, status: 'sealed' }).eq('credential_id', detectedHeirId);
             if (error) throw error;
-            alert("✅ 封存完毕！\n\n您的秘密已注入云端。");
+            alert("✅ 封存完毕！");
             goHome();
-        } catch (err) {
-            console.error(err);
-            alert("上传失败: " + err.message);
-        }
+        } catch (err) { alert("上传失败: " + err.message); }
     }
 
     // ============================================
-    // 🔑 受益人 (二维码生成优化)
+    // 🔑 受益人优化 (降低二维码密度)
     // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
@@ -306,43 +280,47 @@
         try {
             const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
             const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
+
             const credential = await navigator.credentials.create({
                 publicKey: {
-                    challenge: challenge, rp: { name: "Phoenix Protocol" },
+                    challenge: challenge,
+                    rp: { name: "Phoenix Protocol" },
                     user: { id: userId, name: "Heir", displayName: "Heir" },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", requireResidentKey: true, userVerification: "required" },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    authenticatorSelection: { userVerification: "required" },
                     timeout: 60000, attestation: "none"
                 }
             });
+
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 写入DB
             if (db) {
                 db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" })
                   .then(({error}) => { if(error && error.code !== '23505') console.error(error); });
             }
 
-            // UI 更新
             document.getElementById('heir-step-1').style.display = 'none';
             document.getElementById('heir-step-2').style.display = 'flex';
             document.getElementById("qrcode-box").style.display = 'block';
 
-            // 生成二维码 (使用 Level M，平衡密度和识别率)
             setTimeout(() => {
                 const qrEl = document.getElementById("qrcode");
                 qrEl.innerHTML = "";
                 new QRCode(qrEl, { 
                     text: credentialId, 
-                    width: 200, 
-                    height: 200, 
+                    width: 220, // 稍微大一点
+                    height: 220, 
                     colorDark:"#000", 
                     colorLight:"#fff", 
-                    correctLevel: QRCode.CorrectLevel.M 
+                    // 🔥 关键修改：降低容错率到 L (Low)
+                    // 这会让黑白块变大，更容易被低清摄像头扫到
+                    correctLevel: QRCode.CorrectLevel.L 
                 });
             }, 100);
 
-        } catch (err) { alert("操作中断: " + err.message); }
+        } catch (err) {
+            alert("操作失败: " + err.message);
+        }
     }
 </script>
 
