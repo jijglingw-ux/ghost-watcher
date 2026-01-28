@@ -3,218 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 零界</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>凤凰协议 | 离线核心</title>
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --error: #FF453A; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --success: #30D158; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
         
-        .scanner-container { position: relative; width: 140px; height: 140px; margin-bottom: 50px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-        
-        /* 核心动画 */
-        .scan-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333; box-sizing: border-box; transition: 0.5s; }
-        .scan-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; background: #222; border-radius: 25px; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-        
-        /* 激活状态 */
-        .active .scan-ring { border-color: var(--accent); animation: pulse 1.5s infinite; }
-        .active .scan-core { background: var(--accent); box-shadow: 0 0 40px var(--accent); transform: translate(-50%, -50%) scale(0.9); }
-        
-        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+        /* 核心扫描器样式 */
+        .scanner-container { position: relative; width: 150px; height: 150px; margin-bottom: 60px; cursor: pointer; transition: transform 0.2s; }
+        .scanner-container:active { transform: scale(0.95); }
 
-        h1 { font-weight: 300; letter-spacing: 8px; margin: 0; font-size: 26px; opacity: 0.9; text-indent: 8px; }
-        p { color: #666; font-size: 13px; margin-top: 15px; letter-spacing: 2px; }
-
-        .status-msg { margin-top: 40px; height: 20px; font-size: 14px; color: var(--accent); font-weight: 500; text-align: center; }
+        .scan-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333; box-sizing: border-box; }
+        .scan-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; background: #222; border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         
-        .action-btn { margin-top: 60px; background: rgba(255,255,255,0.05); border: 1px solid #333; color: #888; padding: 12px 24px; border-radius: 30px; font-size: 13px; cursor: pointer; transition: 0.3s; letter-spacing: 1px; }
-        .action-btn:hover { border-color: #666; color: #fff; background: rgba(255,255,255,0.1); }
+        /* 动画状态 */
+        .active .scan-ring { border-color: var(--accent); border-width: 4px; animation: pulse 1.5s infinite; }
+        .active .scan-core { background: var(--accent); box-shadow: 0 0 50px var(--accent); }
+        .success .scan-ring { border-color: var(--success); animation: none; }
+        .success .scan-core { background: var(--success); box-shadow: 0 0 50px var(--success); }
 
-        /* 错误提示框 */
-        .error-banner { display: none; position: fixed; top: 0; left: 0; width: 100%; background: rgba(255, 69, 58, 0.15); border-bottom: 1px solid var(--error); color: var(--error); padding: 15px; font-size: 12px; text-align: center; box-sizing: border-box; z-index: 100; backdrop-filter: blur(10px); }
+        @keyframes pulse { 0% { opacity: 0.5; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+
+        h1 { font-weight: 200; letter-spacing: 5px; font-size: 28px; margin: 0; opacity: 0.9; }
+        p { color: #666; font-size: 14px; margin-top: 10px; letter-spacing: 2px; }
+
+        .console-log { 
+            position: fixed; bottom: 30px; width: 90%; 
+            font-family: monospace; font-size: 10px; color: #444; 
+            text-align: center; line-height: 1.5; pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="error-box" class="error-banner"></div>
-
-    <div class="scanner-container" id="scanner" onclick="startAuth()">
+    <div class="scanner-container" id="scanner" onclick="triggerFaceID()">
         <div class="scan-ring"></div>
         <div class="scan-core">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="white" style="opacity: 0.9"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.35.33 2.74.33 4.26 0 4.41-3.59 8-8 8z"/></svg>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.35.33 2.74.33 4.26 0 4.41-3.59 8-8 8z"/></svg>
         </div>
     </div>
 
-    <h1>凤凰协议</h1>
-    <p>点击 · 开启共鸣</p>
-    
-    <div class="status-msg" id="msg"></div>
+    <h1 id="status-title">点击共鸣</h1>
+    <p id="status-sub">PHOENIX PROTOCOL</p>
 
-    <button class="action-btn" id="mode-btn" onclick="toggleMode(event)">当前模式: 身份验证</button>
+    <div class="console-log" id="log-area">等待唤醒...</div>
 
 <script>
-    // ============================================
-    // ⚠️ 必填：请填入你的 Supabase 配置
-    // ============================================
-    const SUPABASE_URL = '你的URL';
-    const SUPABASE_KEY = '你的KEY';
-    
-    // 初始化数据库
-    let supabase;
-    try {
-        if (!SUPABASE_URL.includes("你的")) {
-            supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        }
-    } catch (e) { console.error("Supabase 初始化失败", e); }
-
-    // 状态管理
-    let isRegisterMode = false; // false = 登录模式, true = 注册模式
-
-    // 工具函数
-    function bufferToBase64url(buffer) {
-        const str = String.fromCharCode(...new Uint8Array(buffer));
-        return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-    }
-    
-    function showMessage(text, isError = false) { 
-        const el = document.getElementById('msg');
-        el.innerText = text; 
-        el.style.color = isError ? "var(--error)" : "var(--accent)";
+    // 简单的日志工具
+    function log(text) {
+        document.getElementById('log-area').innerText = text;
+        console.log(text);
     }
 
-    // 错误检查：页面加载时立即检查环境
-    window.onload = function() {
-        const errorBox = document.getElementById('error-box');
-        let errorMsg = "";
-
-        // 1. 检查 HTTPS
-        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-            errorMsg = "⚠️ 安全警告：FaceID 必须在 HTTPS 环境下运行。<br>请勿直接打开文件，请将代码部署到 Vercel/GitHub Pages。";
-        }
-        // 2. 检查 Supabase 配置
-        else if (SUPABASE_URL.includes("你的")) {
-            errorMsg = "⚠️ 配置警告：后端未连接。<br>请在代码中填入真实的 Supabase URL 和 KEY。";
-        }
-        // 3. 检查浏览器兼容性
-        else if (!window.PublicKeyCredential) {
-            errorMsg = "⚠️ 设备不支持：此设备不支持 WebAuthn (FaceID/指纹)。<br>请使用 iPhone (Safari) 或最新 Chrome。";
-        }
-
-        if (errorMsg) {
-            errorBox.innerHTML = errorMsg;
-            errorBox.style.display = 'block';
-            // 禁用按钮，防止用户迷惑
-            document.getElementById('scanner').style.opacity = 0.5;
-            document.getElementById('scanner').style.pointerEvents = 'none';
-        }
-    }
-
-    // 切换模式
-    function toggleMode(e) {
-        if(e) e.stopPropagation(); // 防止触发上面的点击
-        isRegisterMode = !isRegisterMode;
-        document.getElementById('mode-btn').innerText = isRegisterMode ? "当前模式: 铸造新身份 (注册)" : "当前模式: 身份验证 (登录)";
-        showMessage(isRegisterMode ? "准备铸造..." : "准备共鸣...");
-    }
-
-    // 主交互入口
-    async function startAuth() {
-        if (!supabase) return showMessage("错误: 数据库未连接", true);
-
+    // 状态更新
+    function setStatus(title, sub, state) {
+        document.getElementById('status-title').innerText = title;
+        document.getElementById('status-sub').innerText = sub;
         const scanner = document.getElementById('scanner');
-        scanner.classList.add('active');
-        
-        if (isRegisterMode) {
-            await doRegister();
-        } else {
-            await doLogin();
-        }
-        
-        // 2秒后停止动画
-        setTimeout(() => scanner.classList.remove('active'), 2000);
+        scanner.className = 'scanner-container'; // reset
+        if(state) scanner.classList.add(state);
     }
 
-    // 🚀 注册逻辑
-    async function doRegister() {
+    // 核心函数：这就是 V19 能跑的原因
+    async function triggerFaceID() {
+        // 1. UI 动画
+        setStatus("正在扫描", "请求生物授权...", "active");
+        log("系统: 初始化 WebAuthn 请求...");
+
         try {
-            showMessage("正在请求生物授权...");
+            // 2. 准备参数 (模拟后端发来的挑战码)
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
             
             const userId = new Uint8Array(16);
             window.crypto.getRandomValues(userId);
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
 
+            log("系统: 正在唤起 Secure Enclave...");
+
+            // 3. 🔥 这里就是唤起苹果原生弹窗的关键代码 🔥
+            // 只要环境对，这行必弹！
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
-                    rp: { name: "Phoenix Protocol" },
+                    rp: { name: "Phoenix Demo" },
                     user: {
                         id: userId,
-                        name: "Survivor-" + Date.now().toString().slice(-4),
-                        displayName: "Phoenix User"
+                        name: "User",
+                        displayName: "User"
                     },
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
                     authenticatorSelection: {
-                        authenticatorAttachment: "platform", // 强制本机芯片
-                        requireResidentKey: true,            // 必须驻留
-                        userVerification: "required"
+                        authenticatorAttachment: "platform", // 强制本机 FaceID
+                        requireResidentKey: true,
+                        userVerification: "required"         // 强制验证
                     },
                     timeout: 60000,
                     attestation: "none"
                 }
             });
 
-            const credentialId = bufferToBase64url(credential.rawId);
-            showMessage("正在写入云端保险箱...");
+            // 4. 成功回调
+            console.log(credential); // 打印出来的就是密钥对象
+            
+            setStatus("共鸣成功", "身份已确认", "success");
+            log("成功: 收到硬件签名凭证 (Credential ID: " + credential.id.slice(0, 20) + "...)");
+            
+            // 震动反馈 (如果手机支持)
+            if(navigator.vibrate) navigator.vibrate(200);
 
-            const { error } = await supabase.from('user_vault').insert({
-                credential_id: credentialId,
-                public_key: "stored_in_secure_enclave"
-            });
-
-            if (error) throw error;
-
-            showMessage("✅ 身份铸造完成！");
-            setTimeout(() => { toggleMode(); }, 1500);
+            alert("🎉 成功！\nFaceID 验证通过。\n\n刚才这一瞬间，你的手机芯片生成了一把唯一的‘私钥’。\n（这是离线演示，未连接数据库）");
 
         } catch (err) {
+            // 失败处理
             console.error(err);
-            showMessage("❌ 注册中断: " + err.message, true);
+            setStatus("共鸣失败", "拒绝访问", "");
+            log("错误: " + err.message);
+            
+            if(err.name === 'NotAllowedError') {
+                alert("❌ 你取消了 FaceID，或者超时了。");
+            } else if (err.name === 'NotSupportedError') {
+                alert("❌ 当前环境不支持。\n请确认使用 HTTPS 协议，且设备有 FaceID/TouchID。");
+            } else {
+                alert("❌ 错误: " + err.message);
+            }
         }
     }
 
-    // 🔓 登录逻辑
-    async function doLogin() {
-        try {
-            showMessage("正在扫描生物场...");
-            
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            // 唤起 FaceID (不指定 ID，让系统自己去匹配)
-            const assertion = await navigator.credentials.get({
-                publicKey: {
-                    challenge: challenge,
-                    rpId: location.hostname,
-                    userVerification: "required"
-                }
-            });
-
-            const credentialId = bufferToBase64url(assertion.rawId);
-            showMessage("识别成功，正在核对云端...");
-
-            const { data, error } = await supabase
-                .from('user_vault')
-                .select('*')
-                .eq('credential_id', credentialId)
-                .single();
-
-            if (error || !data) throw new Error("云端未找到此身份 (请先注册)");
-
-            showMessage("🔓 共鸣确认。欢迎归来。");
-
-        } catch (err) {
-            console.error(err);
-            showMessage("❌ 拒绝访问: " + err.message, true);
+    // 自动环境自检
+    window.onload = function() {
+        if (!window.PublicKeyCredential) {
+            log("⚠️ 警告: 你的浏览器不支持 WebAuthn API");
+        } else {
+            log("✅ 环境就绪: 等待点击...");
         }
     }
 </script>
