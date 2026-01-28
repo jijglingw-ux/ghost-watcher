@@ -3,140 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 离线核心</title>
+    <title>凤凰协议 | 入口</title>
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --success: #30D158; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; user-select: none; -webkit-tap-highlight-color: transparent; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; user-select: none; }
         
-        /* 核心扫描器样式 */
-        .scanner-container { position: relative; width: 150px; height: 150px; margin-bottom: 60px; cursor: pointer; transition: transform 0.2s; }
-        .scanner-container:active { transform: scale(0.95); }
-
-        .scan-ring { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333; box-sizing: border-box; }
-        .scan-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; background: #222; border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        h1 { font-weight: 200; letter-spacing: 4px; margin-bottom: 60px; font-size: 24px; opacity: 0.8; text-transform: uppercase; }
         
-        /* 动画状态 */
-        .active .scan-ring { border-color: var(--accent); border-width: 4px; animation: pulse 1.5s infinite; }
-        .active .scan-core { background: var(--accent); box-shadow: 0 0 50px var(--accent); }
-        .success .scan-ring { border-color: var(--success); animation: none; }
-        .success .scan-core { background: var(--success); box-shadow: 0 0 50px var(--success); }
-
-        @keyframes pulse { 0% { opacity: 0.5; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
-
-        h1 { font-weight: 200; letter-spacing: 5px; font-size: 28px; margin: 0; opacity: 0.9; }
-        p { color: #666; font-size: 14px; margin-top: 10px; letter-spacing: 2px; }
-
-        .console-log { 
-            position: fixed; bottom: 30px; width: 90%; 
-            font-family: monospace; font-size: 10px; color: #444; 
-            text-align: center; line-height: 1.5; pointer-events: none;
+        /* 两个巨大的按钮卡片 */
+        .card {
+            width: 100%; max-width: 320px; height: 140px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            margin-bottom: 20px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; position: relative; overflow: hidden;
+            transition: 0.3s;
+            -webkit-tap-highlight-color: transparent;
         }
+        
+        .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
+        
+        .card-icon { font-size: 32px; margin-bottom: 10px; }
+        .card-title { font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+        .card-desc { font-size: 12px; color: #888; margin-top: 5px; }
+
+        /* 不同的颜色风格 */
+        .role-owner { border-color: rgba(10, 132, 255, 0.3); }
+        .role-owner .card-title { color: var(--accent); }
+        
+        .role-heir { border-color: rgba(48, 209, 88, 0.3); }
+        .role-heir .card-title { color: var(--secondary); }
+
+        /* 装饰背景光 */
+        .glow {
+            position: absolute; width: 100px; height: 100px; background: inherit;
+            filter: blur(40px); opacity: 0.2; z-index: 0;
+        }
+
     </style>
 </head>
 <body>
 
-    <div class="scanner-container" id="scanner" onclick="triggerFaceID()">
-        <div class="scan-ring"></div>
-        <div class="scan-core">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="white"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25-.56-1.25-1.25-1.25zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 14.05 10 17.42 10c.78 0 1.53-.09 2.25-.26.21 1.35.33 2.74.33 4.26 0 4.41-3.59 8-8 8z"/></svg>
-        </div>
+    <h1>PHOENIX PROTOCOL</h1>
+
+    <div class="card role-owner" onclick="selectRole('owner')">
+        <div class="glow" style="background: var(--accent); top: -20px; right: -20px;"></div>
+        <div class="card-icon">🔒</div>
+        <div class="card-title">我要封存</div>
+        <div class="card-desc">我是立嘱人 · 扫描对方密钥</div>
     </div>
 
-    <h1 id="status-title">点击共鸣</h1>
-    <p id="status-sub">PHOENIX PROTOCOL</p>
+    <div class="card role-heir" onclick="selectRole('heir')">
+        <div class="glow" style="background: var(--secondary); bottom: -20px; left: -20px;"></div>
+        <div class="card-icon">🔑</div>
+        <div class="card-title">我是继承人</div>
+        <div class="card-desc">我是受益人 · 生成密钥或提取</div>
+    </div>
 
-    <div class="console-log" id="log-area">等待唤醒...</div>
+    <script>
+        function selectRole(role) {
+            // 简单的震动反馈
+            if(navigator.vibrate) navigator.vibrate(10);
 
-<script>
-    // 简单的日志工具
-    function log(text) {
-        document.getElementById('log-area').innerText = text;
-        console.log(text);
-    }
-
-    // 状态更新
-    function setStatus(title, sub, state) {
-        document.getElementById('status-title').innerText = title;
-        document.getElementById('status-sub').innerText = sub;
-        const scanner = document.getElementById('scanner');
-        scanner.className = 'scanner-container'; // reset
-        if(state) scanner.classList.add(state);
-    }
-
-    // 核心函数：这就是 V19 能跑的原因
-    async function triggerFaceID() {
-        // 1. UI 动画
-        setStatus("正在扫描", "请求生物授权...", "active");
-        log("系统: 初始化 WebAuthn 请求...");
-
-        try {
-            // 2. 准备参数 (模拟后端发来的挑战码)
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-            
-            const userId = new Uint8Array(16);
-            window.crypto.getRandomValues(userId);
-
-            log("系统: 正在唤起 Secure Enclave...");
-
-            // 3. 🔥 这里就是唤起苹果原生弹窗的关键代码 🔥
-            // 只要环境对，这行必弹！
-            const credential = await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "Phoenix Demo" },
-                    user: {
-                        id: userId,
-                        name: "User",
-                        displayName: "User"
-                    },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: {
-                        authenticatorAttachment: "platform", // 强制本机 FaceID
-                        requireResidentKey: true,
-                        userVerification: "required"         // 强制验证
-                    },
-                    timeout: 60000,
-                    attestation: "none"
-                }
-            });
-
-            // 4. 成功回调
-            console.log(credential); // 打印出来的就是密钥对象
-            
-            setStatus("共鸣成功", "身份已确认", "success");
-            log("成功: 收到硬件签名凭证 (Credential ID: " + credential.id.slice(0, 20) + "...)");
-            
-            // 震动反馈 (如果手机支持)
-            if(navigator.vibrate) navigator.vibrate(200);
-
-            alert("🎉 成功！\nFaceID 验证通过。\n\n刚才这一瞬间，你的手机芯片生成了一把唯一的‘私钥’。\n（这是离线演示，未连接数据库）");
-
-        } catch (err) {
-            // 失败处理
-            console.error(err);
-            setStatus("共鸣失败", "拒绝访问", "");
-            log("错误: " + err.message);
-            
-            if(err.name === 'NotAllowedError') {
-                alert("❌ 你取消了 FaceID，或者超时了。");
-            } else if (err.name === 'NotSupportedError') {
-                alert("❌ 当前环境不支持。\n请确认使用 HTTPS 协议，且设备有 FaceID/TouchID。");
+            if (role === 'heir') {
+                // 继承人先操作：去生成公钥二维码
+                alert("流程指引：\n\n1. 请继承人（Android/iOS皆可）点击此按钮。\n2. 系统将唤起生物识别，铸造唯一密钥。\n3. 屏幕将显示‘公钥二维码’供立嘱人扫描。");
+                // window.location.href = 'heir.html'; // 下一步我们写这个页面
             } else {
-                alert("❌ 错误: " + err.message);
+                // 立嘱人后操作：去扫码
+                alert("流程指引：\n\n请先让继承人操作！\n\n1. 等待继承人生成二维码。\n2. 您点击此按钮，开启摄像头扫描。\n3. 获取他的公钥，加密您的遗嘱。");
+                // window.location.href = 'owner.html'; // 下一步我们写这个页面
             }
         }
-    }
-
-    // 自动环境自检
-    window.onload = function() {
-        if (!window.PublicKeyCredential) {
-            log("⚠️ 警告: 你的浏览器不支持 WebAuthn API");
-        } else {
-            log("✅ 环境就绪: 等待点击...");
-        }
-    }
-</script>
-
+    </script>
 </body>
 </html>
