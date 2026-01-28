@@ -3,18 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V11 完整版</title>
+    <title>凤凰协议 | V9 鹰眼版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; --gold: #FFD700; --error: #FF453A; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; --error: #FF453A; }
         body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
 
         .header { margin-top: 30px; margin-bottom: 30px; }
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
+
+        /* 环境报错条 */
+        #env-warning {
+            display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid var(--error);
+            color: var(--error); padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left;
+        }
 
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
 
@@ -35,33 +41,39 @@
         .btn-mint { background: rgba(48, 209, 88, 0.15); border: 1px solid var(--secondary); color: var(--secondary); }
         .btn-seal { background: var(--accent); color: white; }
         .btn-file { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #444; margin-top: 15px; font-size: 14px; }
+        
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        /* 环境报错条 */
-        #env-warning {
-            display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid var(--error);
-            color: var(--error); padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left;
-        }
-
+        /* 摄像头区域 - 调整为全屏沉浸式 */
         #page-owner { display: none; }
-        #reader { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000 !important; position: relative; }
+        #reader { 
+            width: 100%; height: 320px; /* 加高一点 */
+            border-radius: 20px; overflow: hidden; 
+            border: 2px solid #333; margin-bottom: 10px; 
+            background: #000 !important; 
+            position: relative; 
+        }
+        /* 强制隐藏默认的扫描框，只留画面 */
         #qr-shaded-region { display: none !important; }
 
-        #legacy-reveal-panel {
-            display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); 
-            padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold);
-            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 0 50px rgba(255, 215, 0, 0.1);
+        #loading-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); z-index: 999;
+            flex-direction: column; justify-content: center; align-items: center;
         }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .legacy-content { font-size: 18px; line-height: 1.6; color: #fff; white-space: pre-wrap; text-align: left; margin: 20px 0; font-family: "Songti SC", serif; }
-
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
+        
         #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
+        textarea:focus { outline: 2px solid var(--accent); }
+        .target-id { color: var(--accent); font-family: monospace; word-break: break-all; font-size: 10px; }
+        .divider { display: flex; align-items: center; width: 100%; color: #444; font-size: 12px; margin: 15px 0; }
+        .divider::before, .divider::after { content: ""; flex: 1; border-bottom: 1px solid #333; }
+        .divider::before { margin-right: 10px; } .divider::after { margin-left: 10px; }
+
         #page-heir { display: none; align-items: center; }
         #qrcode-box { display: none; background: #fff; padding: 20px; border-radius: 20px; margin-top: 20px; }
     </style>
@@ -70,12 +82,12 @@
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p id="loading-text" style="margin-top:15px; color:#fff;">正在连接云端...</p>
+        <p id="loading-text" style="margin-top:15px; color:#fff;">处理中...</p>
     </div>
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V11 (CONFIGURED)</p>
+        <p id="subtitle">PROTOCOL V9.0 (EAGLE EYE)</p>
     </div>
 
     <div id="env-warning"></div>
@@ -85,9 +97,9 @@
             <div class="card-title">我要封存</div>
             <div class="card-desc">我是立嘱人 · 扫码或上传</div>
         </div>
-        <div class="card role-heir" onclick="checkHeirStatus()">
+        <div class="card role-heir" onclick="showHeirPage()">
             <div class="card-title">我是继承人</div>
-            <div class="card-desc">我是受益人 · 生成或开启</div>
+            <div class="card-desc">我是受益人 · 生成图腾</div>
         </div>
     </div>
 
@@ -95,61 +107,54 @@
         <div id="scan-stage">
             <p style="color:var(--accent); margin-bottom:15px; font-size:12px;">提示：如扫描无反应，请前后移动手机调整焦距</p>
             <div id="reader"></div>
-            <div style="margin: 15px 0; font-size:12px; color:#444;">或者</div>
+            <div class="divider">或者</div>
             <button class="btn-action btn-file" onclick="triggerFileSelect()">🖼️ 从相册选择二维码图片</button>
             <input type="file" id="qr-input-file" accept="image/*" style="display: none;" onchange="handleFileScan(this)">
         </div>
 
         <div id="secret-panel">
             <div style="font-size:12px; color:#888;">已锁定信箱:</div>
-            <div style="color:var(--accent); font-family:monospace; font-size:10px; word-break:break-all;" id="target-id-display">...</div>
+            <div class="target-id" id="target-id-display">...</div>
             <textarea id="secret-input" placeholder="在此输入需要传承的信息...&#10;(例如: 银行卡密码、私钥助记词)"></textarea>
             <button class="btn-action btn-seal" onclick="sealLegacy()">执行封存 (上传)</button>
         </div>
+
         <div class="back-btn" onclick="goHome()">返回首页</div>
     </div>
 
     <div id="page-heir" class="page-container">
-        <div id="heir-wait-mode" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+        <div id="heir-step-1" style="width:100%">
+            <button class="btn-action btn-mint" onclick="mintIdentity()">
+                启动生物共鸣 (FaceID/指纹)
+            </button>
+            <p style="margin-top:20px; font-size:12px; color:#555;">生成唯一公钥图腾</p>
+        </div>
+        <div id="heir-step-2" style="display:none; width: 100%; flex-direction: column; align-items: center;">
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
-            <p style="font-size:12px; color:#555;">(云端保险箱已就绪，等待注入)</p>
+            <p style="font-size:10px; color:#555; margin-top:5px;">(已优化密度，易于扫描)</p>
         </div>
-
-        <div id="legacy-reveal-panel">
-            <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
-            <div class="legacy-content" id="legacy-text"></div>
-            <div style="margin-top:30px; border-top:1px solid #444; padding-top:15px; font-size:10px; color:#666;">
-                凤凰协议 · 永久保存
-            </div>
-        </div>
-
         <div class="back-btn" onclick="goHome()">返回首页</div>
     </div>
 
 <script>
     // ============================================
-    // ⚠️ 数据库配置已自动填入
+    // ⚠️ 配置区
     // ============================================
     const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
-    const SUPABASE_KEY = 'sb_secret_M9ITWn06RjFzpGhwlXqu1g_ehNozYPO'; 
-    
-    // 注意：如果 sb_secret_... 不是标准的 anon key (eyJ...)，连接可能会受限。
-    // 如果报错，请去 Supabase 后台 API 设置里复制那个 "anon public" 密钥。
+    const SUPABASE_KEY = 'sb_secret_M9ITWn06RjFzpGhwlXqu1g_ehNozYPO';
     
     let db = null; 
     try {
-        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("Database initialized");
-    } catch (e) { 
-        console.error("DB Init Error:", e);
-        alert("数据库初始化失败，请检查密钥格式");
-    }
+        if (!SUPABASE_URL.includes("你的")) {
+            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+    } catch (e) { console.error(e); }
 
-    // 启动时检查环境
-    window.onload = function() {
-        checkEnvironment();
-    }
+    let html5QrCode = null;
+    let detectedHeirId = null;
+
+    window.onload = function() { checkEnvironment(); }
 
     function checkEnvironment() {
         const warning = document.getElementById('env-warning');
@@ -163,121 +168,80 @@
         if (msg) { warning.innerHTML = msg; warning.style.display = 'block'; }
     }
 
-    // ============================================
-    // 🧠 受益人逻辑
-    // ============================================
-    async function checkHeirStatus() {
-        if (!db) { alert("数据库未连接"); return; }
-        showLoading("正在生物鉴权...");
-
-        try {
-            // 尝试读取密钥
-            const assertion = await navigator.credentials.get({
-                publicKey: {
-                    challenge: new Uint8Array(32),
-                    rpId: location.hostname,
-                    userVerification: "required"
-                }
-            });
-
-            if (assertion) {
-                const credentialId = bufferToBase64url(assertion.rawId);
-                console.log("识别到用户:", credentialId);
-                showLoading("正在查询云端...");
-                
-                const { data, error } = await db.from('user_vault').select('*').eq('credential_id', credentialId).single();
-                hideLoading();
-                showHeirPage();
-
-                if (data && data.status === 'sealed' && data.encrypted_data) {
-                    // 🎉 提取成功
-                    document.getElementById('heir-wait-mode').style.display = 'none';
-                    document.getElementById('legacy-reveal-panel').style.display = 'block';
-                    document.getElementById('legacy-text').innerText = data.encrypted_data;
-                    if(navigator.vibrate) navigator.vibrate([100,50,100,50,500]);
-                } else {
-                    // 📭 还是空的
-                    showWaitMode(credentialId);
-                }
-            }
-        } catch (err) {
-            console.log("转为注册模式:", err);
-            await mintIdentity();
-        }
+    function goHome() {
+        stopScanner();
+        document.getElementById('page-home').style.display = 'flex';
+        document.getElementById('page-owner').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'none';
+        document.getElementById('subtitle').innerText = "PROTOCOL V9.0";
     }
-
-    async function mintIdentity() {
-        try {
-            showLoading("正在铸造新图腾...");
-            const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
-            const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
-            const credential = await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge, rp: { name: "Phoenix Protocol" },
-                    user: { id: userId, name: "Heir", displayName: "Heir" },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                    authenticatorSelection: { userVerification: "required" },
-                    timeout: 60000, attestation: "none"
-                }
-            });
-            const credentialId = bufferToBase64url(credential.rawId);
-            if (db) await db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" });
-            hideLoading();
-            showHeirPage();
-            showWaitMode(credentialId);
-        } catch (err) {
-            hideLoading();
-            alert("操作中断: " + err.message);
-        }
-    }
-
-    function showWaitMode(id) {
-        document.getElementById('heir-wait-mode').style.display = 'flex';
-        document.getElementById('legacy-reveal-panel').style.display = 'none';
-        const qrEl = document.getElementById("qrcode");
-        qrEl.innerHTML = "";
-        new QRCode(qrEl, { text: id, width: 220, height: 220, colorDark:"#000", colorLight:"#fff", correctLevel: QRCode.CorrectLevel.L });
-    }
-
-    // ============================================
-    // 📷 立嘱人逻辑
-    // ============================================
-    let html5QrCode = null;
-    let detectedHeirId = null;
 
     function showOwnerPage() {
-        if (!db) { alert("数据库连接失败"); return; }
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
+        document.getElementById('subtitle').innerText = "OWNER MODE";
         document.getElementById('scan-stage').style.display = 'block';
         document.getElementById('secret-panel').style.display = 'none';
         document.getElementById('qr-input-file').value = '';
         startScanner();
     }
 
+    function showHeirPage() {
+        document.getElementById('page-home').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'flex';
+        document.getElementById('subtitle').innerText = "HEIR MODE";
+    }
+
+    // ============================================
+    // 📷 扫描器优化核心 (V9)
+    // ============================================
     function startScanner() {
         setTimeout(() => {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             if (!html5QrCode.isScanning) {
-                html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0, experimentalFeatures: { useBarCodeDetectorIfSupported: true } }, onScanSuccess)
-                .catch(err => { document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头未就绪<br>请使用下方相册上传</div>"; });
+                // 🔥 鹰眼配置 🔥
+                const config = { 
+                    fps: 20, // 提高帧率
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0,
+                    // 🔥 开启实验性原生支持 (Hardware Acceleration)
+                    // 这会让手机调用系统底层的条码扫描器，速度极快
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                };
+
+                html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+                .catch(err => {
+                    console.log("摄像头受限:", err);
+                    document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头未就绪<br>请使用下方相册上传</div>";
+                });
             }
         }, 300);
     }
-    async function stopScanner() { if (html5QrCode && html5QrCode.isScanning) await html5QrCode.stop().catch(e=>{}); }
-    
+
+    async function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            await html5QrCode.stop().catch(e=>console.error(e));
+        }
+    }
+
     function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
-    
+
     async function handleFileScan(input) {
         if (input.files.length === 0) return;
-        showLoading("正在解析图片...");
+        const imageFile = input.files[0];
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading-text').innerText = "正在暂停摄像头...";
+        
         try {
             await stopScanner();
-            const decodedText = await html5QrCode.scanFile(input.files[0], true);
-            hideLoading();
+            document.getElementById('loading-text').innerText = "正在解析图片...";
+            const decodedText = await html5QrCode.scanFile(imageFile, true);
+            document.getElementById('loading-overlay').style.display = 'none';
             onScanSuccess(decodedText);
         } catch (err) {
-            hideLoading();
+            document.getElementById('loading-overlay').style.display = 'none';
             alert("❌ 无法解析二维码: " + err);
         }
     }
@@ -294,34 +258,70 @@
     async function sealLegacy() {
         const secret = document.getElementById('secret-input').value;
         if (!secret) return alert("请输入信息");
-        showLoading("正在加密上传...");
+        if (!detectedHeirId) return alert("无ID");
+        if (!db) return alert("数据库未连接");
         try {
             const { error } = await db.from('user_vault').update({ encrypted_data: secret, status: 'sealed' }).eq('credential_id', detectedHeirId);
-            hideLoading();
             if (error) throw error;
-            alert("✅ 封存完毕！\n\n数据已送达云端。");
+            alert("✅ 封存完毕！");
             goHome();
-        } catch (err) { 
-            hideLoading();
-            alert("上传失败: " + err.message); 
-        }
+        } catch (err) { alert("上传失败: " + err.message); }
     }
 
-    // 辅助工具
+    // ============================================
+    // 🔑 受益人优化 (降低二维码密度)
+    // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
         return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
     }
-    function showLoading(text) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = text; }
-    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
-    function goHome() {
-        stopScanner();
-        document.getElementById('page-home').style.display = 'flex';
-        document.getElementById('page-owner').style.display = 'none';
-        document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V11";
+
+    async function mintIdentity() {
+        try {
+            const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
+            const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
+
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "Phoenix Protocol" },
+                    user: { id: userId, name: "Heir", displayName: "Heir" },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    authenticatorSelection: { userVerification: "required" },
+                    timeout: 60000, attestation: "none"
+                }
+            });
+
+            const credentialId = bufferToBase64url(credential.rawId);
+            
+            if (db) {
+                db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" })
+                  .then(({error}) => { if(error && error.code !== '23505') console.error(error); });
+            }
+
+            document.getElementById('heir-step-1').style.display = 'none';
+            document.getElementById('heir-step-2').style.display = 'flex';
+            document.getElementById("qrcode-box").style.display = 'block';
+
+            setTimeout(() => {
+                const qrEl = document.getElementById("qrcode");
+                qrEl.innerHTML = "";
+                new QRCode(qrEl, { 
+                    text: credentialId, 
+                    width: 220, // 稍微大一点
+                    height: 220, 
+                    colorDark:"#000", 
+                    colorLight:"#fff", 
+                    // 🔥 关键修改：降低容错率到 L (Low)
+                    // 这会让黑白块变大，更容易被低清摄像头扫到
+                    correctLevel: QRCode.CorrectLevel.L 
+                });
+            }, 100);
+
+        } catch (err) {
+            alert("操作失败: " + err.message);
+        }
     }
-    function showHeirPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-heir').style.display = 'flex'; }
 </script>
 
 </body>
