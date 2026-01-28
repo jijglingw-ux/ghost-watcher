@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V10 最终闭环</title>
+    <title>凤凰协议 | V11 完整版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; --gold: #FFD700; }
+        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; --gold: #FFD700; --error: #FF453A; }
         body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
 
         .header { margin-top: 30px; margin-bottom: 30px; }
@@ -35,14 +35,18 @@
         .btn-mint { background: rgba(48, 209, 88, 0.15); border: 1px solid var(--secondary); color: var(--secondary); }
         .btn-seal { background: var(--accent); color: white; }
         .btn-file { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #444; margin-top: 15px; font-size: 14px; }
-        
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
+
+        /* 环境报错条 */
+        #env-warning {
+            display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid var(--error);
+            color: var(--error); padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left;
+        }
 
         #page-owner { display: none; }
         #reader { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000 !important; position: relative; }
         #qr-shaded-region { display: none !important; }
 
-        /* 遗嘱展示面板 (金色传说) */
         #legacy-reveal-panel {
             display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); 
             padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold);
@@ -50,23 +54,14 @@
             box-shadow: 0 0 50px rgba(255, 215, 0, 0.1);
         }
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .legacy-content { font-size: 18px; line-height: 1.6; color: #fff; white-space: pre-wrap; text-align: left; margin: 20px 0; font-family: "Songti SC", serif; }
 
-        .legacy-content { 
-            font-size: 18px; line-height: 1.6; color: #fff; white-space: pre-wrap; text-align: left; margin: 20px 0; 
-            font-family: "Songti SC", serif; /* 宋体更有仪式感 */
-        }
-
-        #loading-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 999;
-            flex-direction: column; justify-content: center; align-items: center;
-        }
+        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
         textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
-        
         #page-heir { display: none; align-items: center; }
         #qrcode-box { display: none; background: #fff; padding: 20px; border-radius: 20px; margin-top: 20px; }
     </style>
@@ -80,8 +75,10 @@
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V10 (THE LOOP)</p>
+        <p id="subtitle">PROTOCOL V11 (CONFIGURED)</p>
     </div>
+
+    <div id="env-warning"></div>
 
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
@@ -113,7 +110,6 @@
     </div>
 
     <div id="page-heir" class="page-container">
-        
         <div id="heir-wait-mode" style="display:none; width: 100%; flex-direction: column; align-items: center;">
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
@@ -122,8 +118,7 @@
 
         <div id="legacy-reveal-panel">
             <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
-            <div class="legacy-content" id="legacy-text">
-                </div>
+            <div class="legacy-content" id="legacy-text"></div>
             <div style="margin-top:30px; border-top:1px solid #444; padding-top:15px; font-size:10px; color:#666;">
                 凤凰协议 · 永久保存
             </div>
@@ -134,173 +129,126 @@
 
 <script>
     // ============================================
-    // ⚠️⚠️⚠️ 必填：请填入你的 Supabase 配置 ⚠️⚠️⚠️
+    // ⚠️ 数据库配置已自动填入
     // ============================================
-    const SUPABASE_URL = 'https://YOUR_PROJECT_URL.supabase.co';
-    const SUPABASE_KEY = 'sb_secret_M9ITWn06RjFzpGhwlXqu1g_ehNozYPO';
+    const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
+    const SUPABASE_KEY = 'sb_secret_M9ITWn06RjFzpGhwlXqu1g_ehNozYPO'; 
     
-    // 初始化数据库
+    // 注意：如果 sb_secret_... 不是标准的 anon key (eyJ...)，连接可能会受限。
+    // 如果报错，请去 Supabase 后台 API 设置里复制那个 "anon public" 密钥。
+    
     let db = null; 
     try {
-        // 简单的检查，防止用户忘了填
-        if (SUPABASE_URL.includes("YOUR_PROJECT")) {
-            console.warn("⚠️ 数据库未配置！请修改代码第175行。");
-        } else {
-            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("Database initialized");
+    } catch (e) { 
+        console.error("DB Init Error:", e);
+        alert("数据库初始化失败，请检查密钥格式");
+    }
+
+    // 启动时检查环境
+    window.onload = function() {
+        checkEnvironment();
+    }
+
+    function checkEnvironment() {
+        const warning = document.getElementById('env-warning');
+        let msg = "";
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+            msg += "⚠️ 严重错误：非 HTTPS 环境，功能将受限。<br>";
         }
-    } catch (e) { console.error(e); }
+        if (!window.PublicKeyCredential) {
+            msg += "⚠️ 设备不支持：请使用 Chrome 浏览器并开启屏幕锁。<br>";
+        }
+        if (msg) { warning.innerHTML = msg; warning.style.display = 'block'; }
+    }
 
     // ============================================
-    // 🧠 核心逻辑：受益人智能判断
+    // 🧠 受益人逻辑
     // ============================================
     async function checkHeirStatus() {
-        // 如果没配数据库，提醒用户
-        if (!db) { alert("⚠️ 错误：数据库未连接。\n\n请用文本编辑器打开此网页，找到第175行，填入您的 Supabase URL 和 KEY。"); return; }
-
+        if (!db) { alert("数据库未连接"); return; }
         showLoading("正在生物鉴权...");
 
         try {
-            // 1. 尝试“登录/读取”模式 (navigator.credentials.get)
-            // 看手机里有没有存过密钥
+            // 尝试读取密钥
             const assertion = await navigator.credentials.get({
                 publicKey: {
-                    challenge: new Uint8Array(32), // 随机挑战
+                    challenge: new Uint8Array(32),
                     rpId: location.hostname,
                     userVerification: "required"
                 }
             });
 
             if (assertion) {
-                // A. 手机里有密钥 -> 说明是老用户 -> 去数据库查有没有遗嘱
                 const credentialId = bufferToBase64url(assertion.rawId);
-                console.log("识别到老用户:", credentialId);
+                console.log("识别到用户:", credentialId);
+                showLoading("正在查询云端...");
                 
-                showLoading("正在查询云端保险箱...");
-                
-                const { data, error } = await db
-                    .from('user_vault')
-                    .select('*')
-                    .eq('credential_id', credentialId)
-                    .single();
-
+                const { data, error } = await db.from('user_vault').select('*').eq('credential_id', credentialId).single();
                 hideLoading();
-                showHeirPage(); // 切换界面
+                showHeirPage();
 
                 if (data && data.status === 'sealed' && data.encrypted_data) {
-                    // 🎉 成功！发现遗嘱 -> 展示内容
+                    // 🎉 提取成功
                     document.getElementById('heir-wait-mode').style.display = 'none';
                     document.getElementById('legacy-reveal-panel').style.display = 'block';
                     document.getElementById('legacy-text').innerText = data.encrypted_data;
-                    
-                    // 播放一个神圣的震动
                     if(navigator.vibrate) navigator.vibrate([100,50,100,50,500]);
                 } else {
-                    // 😐 还是空的 -> 展示二维码
+                    // 📭 还是空的
                     showWaitMode(credentialId);
-                    alert("👋 身份验证成功。\n但立嘱人尚未封存信息。\n请出示二维码。");
                 }
-
-            } else {
-                // 这里的 else 其实很少触发，因为 get 失败通常会抛出异常
-                throw new Error("No credential");
             }
-
         } catch (err) {
-            // B. 手机里没密钥 (或者验证取消/失败) -> 说明是新用户 -> 走注册流程
-            console.log("未检测到密钥，转为注册模式:", err);
-            await mintIdentity(); // 自动转去铸造新密钥
+            console.log("转为注册模式:", err);
+            await mintIdentity();
         }
     }
 
-    // 铸造新身份 (注册)
     async function mintIdentity() {
         try {
             showLoading("正在铸造新图腾...");
-            
             const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
             const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
-
             const credential = await navigator.credentials.create({
                 publicKey: {
-                    challenge: challenge,
-                    rp: { name: "Phoenix Protocol" },
+                    challenge: challenge, rp: { name: "Phoenix Protocol" },
                     user: { id: userId, name: "Heir", displayName: "Heir" },
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
                     authenticatorSelection: { userVerification: "required" },
                     timeout: 60000, attestation: "none"
                 }
             });
-
             const credentialId = bufferToBase64url(credential.rawId);
-
-            // 存入 DB
-            if (db) {
-                await db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" });
-            }
-
+            if (db) await db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" });
             hideLoading();
             showHeirPage();
-            showWaitMode(credentialId); // 展示二维码
-
+            showWaitMode(credentialId);
         } catch (err) {
             hideLoading();
-            console.error(err);
-            // 只有不是用户取消时才弹窗
-            if (!err.message.includes("The operation was not allowed")) {
-               alert("操作中断: " + err.message);
-            }
+            alert("操作中断: " + err.message);
         }
     }
 
-    // 展示等待模式 (二维码)
     function showWaitMode(id) {
         document.getElementById('heir-wait-mode').style.display = 'flex';
         document.getElementById('legacy-reveal-panel').style.display = 'none';
-        
         const qrEl = document.getElementById("qrcode");
         qrEl.innerHTML = "";
         new QRCode(qrEl, { text: id, width: 220, height: 220, colorDark:"#000", colorLight:"#fff", correctLevel: QRCode.CorrectLevel.L });
     }
 
     // ============================================
-    // 🛠️ 辅助函数
-    // ============================================
-    function bufferToBase64url(buffer) {
-        const str = String.fromCharCode(...new Uint8Array(buffer));
-        return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-    }
-    
-    function showLoading(text) {
-        document.getElementById('loading-overlay').style.display = 'flex';
-        document.getElementById('loading-text').innerText = text;
-    }
-    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
-
-    function goHome() {
-        stopScanner();
-        document.getElementById('page-home').style.display = 'flex';
-        document.getElementById('page-owner').style.display = 'none';
-        document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V10";
-    }
-
-    function showHeirPage() {
-        document.getElementById('page-home').style.display = 'none';
-        document.getElementById('page-heir').style.display = 'flex';
-        document.getElementById('subtitle').innerText = "HEIR MODE";
-    }
-
-    // ============================================
-    // 🔵 Owner 逻辑 (保留之前的优化)
+    // 📷 立嘱人逻辑
     // ============================================
     let html5QrCode = null;
     let detectedHeirId = null;
 
     function showOwnerPage() {
-        if (!db) { alert("⚠️ 错误：数据库未连接 (请配置代码第175行)"); return; }
+        if (!db) { alert("数据库连接失败"); return; }
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
-        document.getElementById('subtitle').innerText = "OWNER MODE";
         document.getElementById('scan-stage').style.display = 'block';
         document.getElementById('secret-panel').style.display = 'none';
         document.getElementById('qr-input-file').value = '';
@@ -346,20 +294,34 @@
     async function sealLegacy() {
         const secret = document.getElementById('secret-input').value;
         if (!secret) return alert("请输入信息");
-        if (!db) return alert("数据库未配置");
-
         showLoading("正在加密上传...");
         try {
             const { error } = await db.from('user_vault').update({ encrypted_data: secret, status: 'sealed' }).eq('credential_id', detectedHeirId);
             hideLoading();
             if (error) throw error;
-            alert("✅ 封存完毕！\n\n现在，只有受益人手中的密钥能解开此信息。");
+            alert("✅ 封存完毕！\n\n数据已送达云端。");
             goHome();
         } catch (err) { 
             hideLoading();
             alert("上传失败: " + err.message); 
         }
     }
+
+    // 辅助工具
+    function bufferToBase64url(buffer) {
+        const str = String.fromCharCode(...new Uint8Array(buffer));
+        return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+    }
+    function showLoading(text) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = text; }
+    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+    function goHome() {
+        stopScanner();
+        document.getElementById('page-home').style.display = 'flex';
+        document.getElementById('page-owner').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'none';
+        document.getElementById('subtitle').innerText = "PROTOCOL V11";
+    }
+    function showHeirPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-heir').style.display = 'flex'; }
 </script>
 
 </body>
