@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 融合核心</title>
+    <title>凤凰协议 | 融合核心 V3</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <style>
         :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --secondary: #30D158; --panel: #1c1c1e; }
         body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
@@ -30,7 +30,7 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             cursor: pointer; position: relative; overflow: hidden;
             transition: 0.2s;
-            -webkit-tap-highlight-color: transparent; /* 移除点击高亮 */
+            -webkit-tap-highlight-color: transparent;
         }
         .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
         
@@ -54,9 +54,17 @@
         #qrcode-box {
             display: none; background: #fff; padding: 20px; border-radius: 20px;
             box-shadow: 0 0 50px rgba(48, 209, 88, 0.2); margin-top: 20px;
+            min-height: 200px; min-width: 200px; /* 强制给个高度防止塌陷 */
+            justify-content: center; align-items: center;
         }
 
         .back-btn { margin-top: 50px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        
+        /* 调试用的文本显示区 */
+        .debug-text {
+            word-break: break-all; font-family: monospace; font-size: 10px; color: #555; margin-top: 20px; 
+            background: #111; padding: 10px; border-radius: 8px; display: none;
+        }
 
     </style>
 </head>
@@ -64,7 +72,7 @@
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V1.0</p>
+        <p id="subtitle">PROTOCOL V3.0 (DEBUG)</p>
     </div>
 
     <div id="page-home" class="page-container">
@@ -72,7 +80,6 @@
             <div class="card-title">我要封存</div>
             <div class="card-desc">我是立嘱人 · 扫描密钥</div>
         </div>
-
         <div class="card role-heir" onclick="showHeirPage()">
             <div class="card-title">我是继承人</div>
             <div class="card-desc">我是受益人 · 生成图腾</div>
@@ -89,64 +96,56 @@
             <p style="margin-top:20px; font-size:12px; color:#555;">点击生成唯一公钥二维码</p>
         </div>
 
-        <div id="heir-step-2" style="display:none;">
+        <div id="heir-step-2" style="display:none; width: 100%; flex-direction: column; align-items: center;">
+            
             <div id="qrcode-box">
                 <div id="qrcode"></div>
             </div>
+            
             <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
+            
+            <div id="debug-area" class="debug-text"></div>
         </div>
 
         <div class="back-btn" onclick="goHome()">返回首页</div>
     </div>
 
 <script>
-    console.log("脚本开始加载...");
-
     // ============================================
-    // ⚠️ 配置区 (填这里)
+    // ⚠️ 配置区
     // ============================================
     const SUPABASE_URL = '你的URL';
     const SUPABASE_KEY = '你的KEY';
     
-    // 初始化数据库变量名为 db，避免和 supabase 库名冲突
+    // 初始化数据库
     let db = null; 
-    
     try {
         if (!SUPABASE_URL.includes("你的")) {
-            // 使用 window.supabase 确保调用的是库
             db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log("数据库连接已初始化");
-        } else {
-            console.log("运行在离线模式 (未配置数据库)");
         }
-    } catch (e) { 
-        console.error("初始化错误:", e); 
-    }
+    } catch (e) { console.error("初始化警告:", e); }
 
     // ============================================
-    // 🔄 页面切换逻辑
+    // 🔄 页面切换
     // ============================================
     function goHome() {
-        console.log("切换到首页");
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V1.0";
+        document.getElementById('subtitle').innerText = "PROTOCOL V3.0";
     }
 
     function showHeirPage() {
-        console.log("点击了受益人按钮"); // 调试用
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
         document.getElementById('subtitle').innerText = "HEIR MODE";
     }
 
     function showOwnerPage() {
-        console.log("点击了立嘱人按钮");
-        alert("【功能待接入】\n请先完成受益人测试，下一步我们将接入摄像头扫描功能。");
+        alert("【功能待接入】\n请先完成受益人测试。");
     }
 
     // ============================================
-    // 🔑 核心业务: 受益人铸造
+    // 🔑 核心业务: 受益人铸造 (带调试)
     // ============================================
     function bufferToBase64url(buffer) {
         const str = String.fromCharCode(...new Uint8Array(buffer));
@@ -154,72 +153,83 @@
     }
 
     async function mintIdentity() {
-        console.log("开始铸造...");
-        
-        if (!window.PublicKeyCredential) {
-            alert("错误：您的设备/浏览器不支持生物识别 (WebAuthn)。请使用 Safari 或 Chrome。");
-            return;
+        // 1. 检查二维码库是否加载
+        if (typeof QRCode === 'undefined') {
+            alert("⚠️ 网络警告：二维码生成库未加载成功。\n可能是网络拦截了 CDN。建议使用科学上网或更换网络。");
         }
 
         try {
-            // 1. 准备参数
+            // 2. 唤起 FaceID
             const userId = new Uint8Array(16);
             window.crypto.getRandomValues(userId);
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
-            // 2. 唤起 FaceID / 指纹
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge,
                     rp: { name: "Phoenix Protocol" },
-                    user: {
-                        id: userId,
-                        name: "Heir-" + Date.now(),
-                        displayName: "Phoenix Heir"
-                    },
+                    user: { id: userId, name: "Heir", displayName: "Heir" },
                     pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: {
-                        authenticatorAttachment: "platform", 
-                        requireResidentKey: true,
-                        userVerification: "required"
-                    },
+                    authenticatorSelection: { authenticatorAttachment: "platform", requireResidentKey: true, userVerification: "required" },
                     timeout: 60000,
                     attestation: "none"
                 }
             });
 
-            console.log("生物识别通过");
+            // 3. 共鸣成功
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 3. 尝试写入数据库 (如果有配置)
-            if (db) {
-                const { error } = await db.from('user_vault').insert({
-                    credential_id: credentialId,
-                    public_key: "active",
-                    sign_count: 0
-                });
-                if (error && error.code !== '23505') console.error("DB写入错误:", error);
-            }
+            // 弹个窗确认逻辑走到这里了
+            // alert("✅ 生物共鸣成功！\nID: " + credentialId.slice(0,10) + "...\n点击确定开始绘制图腾。");
 
-            // 4. 显示二维码
+            // 4. UI 切换
             document.getElementById('heir-step-1').style.display = 'none';
-            document.getElementById('heir-step-2').style.display = 'block';
+            
+            const step2 = document.getElementById('heir-step-2');
+            step2.style.display = 'flex'; // 显示容器
 
-            const qrBox = document.getElementById("qrcode");
-            qrBox.innerHTML = ""; // 清空
-            new QRCode(qrBox, {
-                text: credentialId,
-                width: 200,
-                height: 200,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
-            });
+            const qrBox = document.getElementById("qrcode-box");
+            qrBox.style.display = 'flex'; // 显示盒子
+
+            // 5. 显示文本备份 (即使二维码挂了，这里也能看到字)
+            const debugArea = document.getElementById('debug-area');
+            debugArea.innerText = "KEY: " + credentialId;
+            debugArea.style.display = 'block';
+
+            // 6. 延时渲染二维码 (关键修复)
+            // 给浏览器 100毫秒 时间去处理 display:flex 的布局，然后再画图
+            setTimeout(() => {
+                const qrContainer = document.getElementById("qrcode");
+                qrContainer.innerHTML = ""; // 清空
+                
+                try {
+                    new QRCode(qrContainer, {
+                        text: credentialId,
+                        width: 180,
+                        height: 180,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L // 降低容错率以提高渲染成功率
+                    });
+                } catch (qrErr) {
+                    alert("❌ 二维码绘制失败: " + qrErr.message + "\n但您的密钥已生成 (见下方文字)");
+                }
+            }, 100);
+
+            // 7. 尝试写入数据库
+            if (db) {
+                db.from('user_vault').insert({
+                    credential_id: credentialId,
+                    public_key: "active"
+                }).then(({ error }) => {
+                    if (error && error.code !== '23505') console.error("DB Error:", error);
+                });
+            }
 
         } catch (err) {
             console.error(err);
-            alert("操作中断: " + err.message);
+            alert("流程中断: " + err.message);
         }
     }
 </script>
