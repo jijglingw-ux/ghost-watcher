@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 最终融合 V4</title>
+    <title>凤凰协议 | 全能扫描 V5</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -16,7 +16,6 @@
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
 
-        /* 页面容器 */
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
 
         /* 卡片样式 */
@@ -37,13 +36,13 @@
         .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; box-sizing: border-box; border: none; font-weight: 600; margin-top: 20px; }
         .btn-mint { background: rgba(48, 209, 88, 0.15); border: 1px solid var(--secondary); color: var(--secondary); }
         .btn-seal { background: var(--accent); color: white; }
-        .btn-seal:disabled { background: #333; color: #888; }
-
+        .btn-file { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #444; margin-top: 15px; font-size: 14px; }
+        
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
         /* 🔥 立嘱人页面样式 */
         #page-owner { display: none; }
-        #reader { width: 100%; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 20px; background: #000; }
+        #reader { width: 100%; height: 250px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000; position: relative; }
         
         #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -58,19 +57,25 @@
         #page-heir { display: none; align-items: center; }
         #qrcode-box { display: none; background: #fff; padding: 20px; border-radius: 20px; margin-top: 20px; }
 
+        /* 分割线 */
+        .divider { display: flex; align-items: center; width: 100%; color: #444; font-size: 12px; margin: 15px 0; }
+        .divider::before, .divider::after { content: ""; flex: 1; border-bottom: 1px solid #333; }
+        .divider::before { margin-right: 10px; }
+        .divider::after { margin-left: 10px; }
+
     </style>
 </head>
 <body>
 
     <div class="header">
         <h1>PHOENIX</h1>
-        <p id="subtitle">PROTOCOL V4.0 (FINAL)</p>
+        <p id="subtitle">PROTOCOL V5.0 (SCAN+FILE)</p>
     </div>
 
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
             <div class="card-title">我要封存</div>
-            <div class="card-desc">我是立嘱人 · 扫描密钥</div>
+            <div class="card-desc">我是立嘱人 · 扫码或上传</div>
         </div>
         <div class="card role-heir" onclick="showHeirPage()">
             <div class="card-title">我是继承人</div>
@@ -80,8 +85,16 @@
 
     <div id="page-owner" class="page-container">
         <div id="scan-stage">
-            <p style="color:var(--accent); margin-bottom:15px;">请扫描受益人的二维码</p>
+            <p style="color:var(--accent); margin-bottom:15px;">扫描或上传受益人二维码</p>
+            
             <div id="reader"></div>
+
+            <div class="divider">或者</div>
+
+            <button class="btn-action btn-file" onclick="document.getElementById('qr-input-file').click()">
+                🖼️ 从相册选择二维码图片
+            </button>
+            <input type="file" id="qr-input-file" accept="image/*" style="display: none;" onchange="handleFileScan(this)">
         </div>
 
         <div id="secret-panel">
@@ -107,7 +120,6 @@
         <div id="heir-step-2" style="display:none; width: 100%; flex-direction: column; align-items: center;">
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <p style="margin-top:20px; color:#888;">请让立嘱人扫描此码</p>
-            <div id="debug-area" style="font-size:10px; color:#444; margin-top:10px; display:none;"></div>
         </div>
 
         <div class="back-btn" onclick="goHome()">返回首页</div>
@@ -128,7 +140,7 @@
     } catch (e) { console.error("DB Init Error", e); }
 
     // 全局变量
-    let html5QrcodeScanner = null;
+    let html5QrCode = null; // 使用更底层的类，控制力更强
     let detectedHeirId = null;
 
     // ============================================
@@ -136,17 +148,14 @@
     // ============================================
     function goHome() {
         // 停止扫描器防止后台耗电
-        if (html5QrcodeScanner) {
-            html5QrcodeScanner.clear().catch(e => console.log(e));
-        }
+        stopScanner();
         
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-owner').style.display = 'none';
         document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V4.0";
+        document.getElementById('subtitle').innerText = "PROTOCOL V5.0";
     }
 
-    // --- 切换到立嘱人页面 ---
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
@@ -155,12 +164,12 @@
         // 重置界面
         document.getElementById('scan-stage').style.display = 'block';
         document.getElementById('secret-panel').style.display = 'none';
+        document.getElementById('qr-input-file').value = ''; // 清空文件
 
         // 启动摄像头
         startScanner();
     }
 
-    // --- 切换到受益人页面 ---
     function showHeirPage() {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
@@ -168,24 +177,60 @@
     }
 
     // ============================================
-    // 📷 核心业务 1: 立嘱人扫码 & 封存
+    // 📷 核心业务 1: 全能扫描 (摄像头 + 文件)
     // ============================================
     function startScanner() {
         // 延时一点点确保 DOM 渲染完成
         setTimeout(() => {
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 10, qrbox: {width: 200, height: 200} }, false
-            );
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            // 如果已经实例存在，先清理
+            if (html5QrCode) { stopScanner(); }
+            
+            html5QrCode = new Html5Qrcode("reader");
+            
+            // 启动摄像头 (使用后置环境摄像头)
+            html5QrCode.start(
+                { facingMode: "environment" }, 
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                (errorMessage) => { /* 扫描中...忽略报错 */ }
+            ).catch(err => {
+                console.log("摄像头启动失败 (可能是权限拒绝或文件模式): ", err);
+                document.getElementById('reader').innerHTML = "<p style='padding:20px; color:#666;'>摄像头未启动<br>请使用下方相册上传</p>";
+            });
         }, 300);
     }
 
-    function onScanSuccess(decodedText, decodedResult) {
-        // 扫码成功！
-        console.log(`扫描结果: ${decodedText}`);
+    function stopScanner() {
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(() => { html5QrCode.clear(); }).catch(err => console.error(err));
+        }
+    }
+
+    // 🔥 新增：处理文件上传扫描
+    function handleFileScan(input) {
+        if (input.files.length === 0) return;
+        
+        const imageFile = input.files[0];
+        
+        // 使用同一个 html5QrCode 实例来解析文件
+        // 即使摄像头正在运行，这个 API 也是独立的
+        html5QrCode.scanFile(imageFile, true)
+            .then(decodedText => {
+                // 文件识别成功！
+                onScanSuccess(decodedText);
+            })
+            .catch(err => {
+                alert("❌ 图片识别失败：\n请确保图片中包含清晰的二维码");
+                console.error(err);
+            });
+    }
+
+    // 🎯 统一成功回调 (无论是摄像头扫的，还是图片传的，都走这里)
+    function onScanSuccess(decodedText) {
+        console.log(`扫描锁定: ${decodedText}`);
         
         // 停止扫描
-        html5QrcodeScanner.clear();
+        stopScanner();
         document.getElementById('scan-stage').style.display = 'none';
 
         // 锁定目标 ID
@@ -199,24 +244,18 @@
         if(navigator.vibrate) navigator.vibrate(200);
     }
 
-    function onScanFailure(error) {
-        // 扫描中...忽略报错
-    }
-
     async function sealLegacy() {
         const secret = document.getElementById('secret-input').value;
         if (!secret) return alert("请输入要传承的信息");
-        if (!detectedHeirId) return alert("未检测到受益人ID，请重新扫码");
+        if (!detectedHeirId) return alert("未检测到受益人ID");
 
-        if (!db) return alert("数据库未连接，无法上传。请在代码中填入 Supabase URL。");
+        if (!db) return alert("数据库未连接 (请配置 URL)");
 
         try {
-            // 更新数据库
-            // 我们找到那个 credential_id 的空箱子，把秘密放进去，状态改为 sealed
             const { error } = await db
                 .from('user_vault')
                 .update({ 
-                    encrypted_data: secret, // 注意：真实场景这里应该用公钥加密
+                    encrypted_data: secret, 
                     status: 'sealed' 
                 })
                 .eq('credential_id', detectedHeirId);
@@ -263,13 +302,11 @@
             step2.style.display = 'flex';
             document.getElementById("qrcode-box").style.display = 'block';
 
-            // 数据库占位
             if (db) {
                 db.from('user_vault').insert({ credential_id: credentialId, public_key: "active" })
                   .then(({error}) => { if(error && error.code !== '23505') console.error(error); });
             }
 
-            // 渲染二维码
             setTimeout(() => {
                 const qrEl = document.getElementById("qrcode");
                 qrEl.innerHTML = "";
