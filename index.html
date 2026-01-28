@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V16.5 | 终极视觉版</title>
+    <title>凤凰协议 V16.6 | 全球加速版</title>
     
-    <script src="https://lib.baomitu.com/sweetalert2/11.7.3/sweetalert2.all.min.js"></script>
-    <script src="https://lib.baomitu.com/crypto-js/4.1.1/crypto-js.min.js"></script>
-    <script src="https://lib.baomitu.com/jsencrypt/3.3.1/jsencrypt.min.js"></script>
-    <script src="https://lib.baomitu.com/moment.js/2.29.4/moment.min.js"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsencrypt@3.3.1/bin/jsencrypt.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root { 
@@ -34,8 +34,8 @@
         .panel-title { color: #fff; font-size: 0.8rem; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
         .secret-zone { background: rgba(0, 255, 65, 0.02); }
 
-        /* --- 核心布局 --- */
-        .monitor-row { display: flex; border-bottom: 1px solid var(--c-border); flex-direction: row; height: 240px; }
+        /* 核心布局 */
+        .monitor-row { display: flex; border-bottom: 1px solid var(--c-border); flex-direction: row; height: 220px; }
         .visual-col { flex: 1; padding: 30px 40px; border-right: 1px solid var(--c-border); position: relative; display: flex; flex-direction: column; justify-content: center; }
         .heartbeat-col { width: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.2); gap: 20px; }
 
@@ -52,8 +52,9 @@
 
         button { padding: 15px; background: transparent; border: 1px solid var(--c-green); color: var(--c-green); cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; width: 100%; border-radius: 0; letter-spacing: 1px; font-size: 0.9rem; }
         button:hover { background: var(--c-green); color: #000; box-shadow: 0 0 15px rgba(0,255,65,0.4); }
+        button:disabled { border-color: #333; color: #444; cursor: not-allowed; background: transparent !important; box-shadow: none !important; }
         
-        /* 心跳按钮 (大圆形) */
+        /* 心跳按钮 */
         .alive-btn { 
             width: 100px; height: 100px; border: 3px solid var(--c-yellow); border-radius: 50%; color: var(--c-yellow); background: rgba(255, 204, 0, 0.05);
             display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 0 20px rgba(255, 204, 0, 0.1);
@@ -63,30 +64,16 @@
         .alive-btn span.icon { font-size: 2rem; margin-bottom: 2px; }
         .alive-btn span.text { font-size: 0.8rem; font-weight: bold; letter-spacing: 2px; }
         
-        /* 倒计时数字 (位于心跳下方) */
-        #visual-timer-display { 
-            font-family: 'Courier New', monospace; font-size: 1.6rem; color: #fff; letter-spacing: 2px; font-weight: bold; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.2); 
-        }
+        #visual-timer-display { font-family: 'Courier New', monospace; font-size: 1.6rem; color: #fff; letter-spacing: 2px; font-weight: bold; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
 
         /* 视图组件 */
         .visualizer { position: relative; width: 100%; margin-bottom: 5px; }
         .visualizer.empty { color: #444; text-align: center; height: 60px; line-height: 60px; font-size: 0.8rem; font-style: italic; }
         
-        /* 进度条轨道 */
+        /* 进度条 */
         .timeline-container { position: relative; height: 6px; background: #222; width: 100%; margin-top: 40px; margin-bottom: 20px; border-radius: 3px; }
-        
-        /* 警示条：黑黄斜纹 CSS 实现 */
-        .range-warn { 
-            position: absolute; height: 100%; top: 0; left: 0; 
-            background: repeating-linear-gradient(45deg, var(--c-yellow), var(--c-yellow) 10px, #111 10px, #111 20px); 
-            z-index: 1; border-right: 2px solid var(--c-red); transition: width 0.3s; 
-        }
-        .range-safe { 
-            position: absolute; height: 100%; top: 0; right: 0; 
-            background: var(--c-green); 
-            box-shadow: 0 0 15px rgba(0,255,65,0.1); 
-            z-index: 0; transition: width 0.3s; 
-        }
+        .range-warn { position: absolute; height: 100%; top: 0; left: 0; background: repeating-linear-gradient(45deg, var(--c-yellow), var(--c-yellow) 10px, #111 10px, #111 20px); z-index: 1; border-right: 2px solid var(--c-red); transition: width 0.3s; }
+        .range-safe { position: absolute; height: 100%; top: 0; right: 0; background: var(--c-green); box-shadow: 0 0 15px rgba(0,255,65,0.1); z-index: 0; transition: width 0.3s; }
         
         .tick { position: absolute; transform: translateX(-50%); width: 2px; z-index: 2; transition: left 0.3s; }
         .tick.bottom { top: 0; height: 15px; }
@@ -100,7 +87,6 @@
         .tick.top.warn { background: var(--c-yellow); z-index: 5; }
         .tick.top.warn .tick-label { color: var(--c-yellow); }
         
-        /* 实时光标 (白色) */
         .tick.now { top: -10px; height: 26px; width: 2px; background: #fff; z-index: 20; box-shadow: 0 0 10px #fff; display: none; transition: left 1s linear; }
         .tick.now .tick-label { color: #000; top: -25px; font-weight: bold; font-size: 9px; background: #fff; padding: 2px 4px; border-radius: 2px; }
 
@@ -116,7 +102,7 @@
 
     <div class="container">
         <div id="auth-view">
-            <h2 style="margin-bottom:40px; letter-spacing:4px; color:var(--c-green); font-size:1.5rem;">凤凰协议 V16.5</h2>
+            <h2 style="margin-bottom:40px; letter-spacing:4px; color:var(--c-green); font-size:1.5rem;">凤凰协议 V16.6</h2>
             <div class="input-group"><div class="input-label">账号</div><input type="email" id="auth-email" placeholder="Email"></div>
             <div class="input-group"><div class="input-label">密钥</div><input type="password" id="auth-pass" placeholder="••••••••"></div>
             <button onclick="handleAuth('login')">进入系统</button>
@@ -197,6 +183,7 @@
     </div>
 
 <script>
+    // 配置 Supabase
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
     const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
@@ -215,6 +202,7 @@ pQIDAQAB
     let currentVaultId = null; 
     let isConfigValid = false;
 
+    // 初始化检查
     try {
         if (!window.supabase) throw new Error("Supabase 库加载失败");
         client = window.supabase.createClient(DB_URL, DB_KEY);
@@ -226,7 +214,7 @@ pQIDAQAB
     }
 
     async function handleAuth(type) {
-        if(!client) return alert("网络连接失败");
+        if(!client) return alert("网络连接失败，请刷新");
         const email = document.getElementById('auth-email').value;
         const password = document.getElementById('auth-pass').value;
         if(password.length < 6) return showSwal("密码过短", 'error');
@@ -381,7 +369,6 @@ pQIDAQAB
         if(!ben) { showSwal("受益邮箱必填", 'warning'); btn.innerText = "🚀 部署配置 / 更新协议"; return; }
 
         const totalSec = parseInt(document.getElementById('timeout-val').value) * parseInt(document.getElementById('timeout-unit').value);
-        
         const countInput = document.getElementById('warn-count').value;
         const intInput = document.getElementById('warn-int-val').value;
         let count = 0, intervalSec = 300; 
@@ -390,7 +377,6 @@ pQIDAQAB
             count = parseInt(countInput);
             intervalSec = parseInt(intInput) * parseInt(document.getElementById('warn-int-unit').value);
         }
-        
         const warnStartRemaining = count * intervalSec;
 
         const updates = {
@@ -412,7 +398,7 @@ pQIDAQAB
         else {
             if(data && data.length > 0) currentVaultId = data[0].id; 
             showSwal("配置已生效", 'success'); 
-            // 立即使用本地数据启动动画
+            // 立即启动本地倒计时
             renderVisual(totalSec); 
             startTimer(updates.last_checkin_at, totalSec);
         }
