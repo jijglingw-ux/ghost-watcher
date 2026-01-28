@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>凤凰协议 V10.0 | 零信任中枢</title>
+    <title>凤凰协议 V16.5 | 终极视觉版</title>
     
     <script src="https://lib.baomitu.com/sweetalert2/11.7.3/sweetalert2.all.min.js"></script>
     <script src="https://lib.baomitu.com/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -14,131 +14,184 @@
     <style>
         :root { 
             --c-green: #00ff41; --c-red: #ff3333; --c-yellow: #ffcc00; 
-            --c-bg: #050505; --c-panel: #111; --c-border: #333;
+            --c-bg: #0d1117; --c-panel: rgba(22, 27, 34, 0.95); --c-border: #30363d;
         }
         * { box-sizing: border-box; }
-        body { background: var(--c-bg); color: var(--c-green); font-family: 'Courier New', monospace; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; user-select: none; }
+        body { background: #000; color: var(--c-green); font-family: 'Courier New', monospace; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; user-select: none; }
         
-        .container { width: 100%; max-width: 900px; border: 1px solid var(--c-border); background: var(--c-panel); border-radius: 4px; overflow: hidden; position: relative; min-height: 600px; display:flex; flex-direction:column; }
+        .container { width: 100%; max-width: 900px; border: 1px solid var(--c-border); background: var(--c-panel); border-radius: 4px; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 30px rgba(0,255,65,0.05); }
         
-        /* 顶部导航 */
-        .nav-header { display: flex; border-bottom: 1px solid var(--c-border); background: #000; }
-        .nav-item { flex: 1; text-align: center; padding: 15px; cursor: pointer; color: #666; transition: 0.3s; border-bottom: 2px solid transparent; }
+        /* 导航栏 */
+        .nav-tabs { display: flex; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--c-border); }
+        .nav-item { flex: 1; text-align: center; padding: 20px; cursor: pointer; color: #666; transition: 0.3s; font-weight: bold; border-bottom: 2px solid transparent; letter-spacing: 2px; font-size: 0.9rem; }
         .nav-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .nav-item.active { color: var(--c-green); border-bottom-color: var(--c-green); font-weight: bold; background: rgba(0,255,65,0.05); }
-        
-        /* 内容区 */
-        .view-section { padding: 30px; display: none; flex: 1; flex-direction: column; }
-        .view-section.active { display: flex; }
-        
-        /* 通用组件 */
-        .input-group { margin-bottom: 15px; border: 1px solid var(--c-border); border-radius: 4px; background: #000; padding: 5px 10px; }
-        .input-label { font-size: 0.75rem; color: #666; margin-bottom: 2px; }
-        input, select { width: 100%; background: transparent; border: none; color: #fff; outline: none; font-family: inherit; font-size: 1rem; }
-        button { width: 100%; padding: 15px; background: var(--c-green); color: #000; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; border-radius: 2px; }
-        button:hover { filter: brightness(1.1); }
-        button.outline { background: transparent; border: 1px solid var(--c-border); color: #888; }
-        button.outline:hover { border-color: #fff; color: #fff; }
+        .nav-item.active { color: var(--c-green); border-bottom-color: var(--c-green); background: rgba(0,255,65,0.05); }
+        .tab-content { padding: 0; display: none; } 
+        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 登录页 */
-        #auth-view { text-align: center; max-width: 350px; margin: auto; padding-top: 100px; }
-        
-        /* 历史列表 */
-        .history-item { border: 1px solid var(--c-border); padding: 15px; margin-bottom: 10px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
-        .badge { padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; border: 1px solid #555; }
-        .badge.active { border-color: var(--c-green); color: var(--c-green); }
-        .badge.dispatched { border-color: var(--c-red); color: var(--c-red); }
+        .panel { padding: 25px 30px; border-bottom: 1px solid var(--c-border); }
+        .panel-title { color: #fff; font-size: 0.8rem; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+        .secret-zone { background: rgba(0, 255, 65, 0.02); }
 
-        /* 解密结果区 */
-        #decrypt-box { margin-top:20px; padding:20px; border:1px dashed var(--c-green); color:#fff; word-break:break-all; white-space:pre-wrap; display:none; }
+        /* --- 核心布局 --- */
+        .monitor-row { display: flex; border-bottom: 1px solid var(--c-border); flex-direction: row; height: 240px; }
+        .visual-col { flex: 1; padding: 30px 40px; border-right: 1px solid var(--c-border); position: relative; display: flex; flex-direction: column; justify-content: center; }
+        .heartbeat-col { width: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.2); gap: 20px; }
+
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--c-border); }
+        .config-panel { padding: 25px 30px; }
+        .config-panel:first-child { border-right: 1px solid var(--c-border); }
+
+        .input-group { display: flex; margin-bottom: 12px; border: 1px solid var(--c-border); border-radius: 3px; overflow: hidden; transition: border-color 0.3s; background: #000; height: 40px; }
+        .input-group:focus-within { border-color: var(--c-green); }
+        .input-label { background: rgba(255,255,255,0.05); padding: 0 15px; color: #888; font-size: 0.75rem; min-width: 80px; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--c-border); font-weight: bold; }
+        input, select { flex: 1; background: transparent; border: none; color: var(--c-green); padding: 0 15px; outline: none; font-family: inherit; font-size: 0.9rem; width: 100%; height: 100%; }
+        select { cursor: pointer; border-left: 1px solid var(--c-border); max-width: 70px; text-align: center; color: var(--c-green); }
+        option { background: #000; }
+
+        button { padding: 15px; background: transparent; border: 1px solid var(--c-green); color: var(--c-green); cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; width: 100%; border-radius: 0; letter-spacing: 1px; font-size: 0.9rem; }
+        button:hover { background: var(--c-green); color: #000; box-shadow: 0 0 15px rgba(0,255,65,0.4); }
         
+        /* 心跳按钮 (大圆形) */
+        .alive-btn { 
+            width: 100px; height: 100px; border: 3px solid var(--c-yellow); border-radius: 50%; color: var(--c-yellow); background: rgba(255, 204, 0, 0.05);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 0 20px rgba(255, 204, 0, 0.1);
+        }
+        .alive-btn:hover { background: var(--c-yellow); color: #000; box-shadow: 0 0 30px rgba(255, 204, 0, 0.6); transform: scale(1.05); }
+        .alive-btn:active { transform: scale(0.95); }
+        .alive-btn span.icon { font-size: 2rem; margin-bottom: 2px; }
+        .alive-btn span.text { font-size: 0.8rem; font-weight: bold; letter-spacing: 2px; }
+        
+        /* 倒计时数字 (位于心跳下方) */
+        #visual-timer-display { 
+            font-family: 'Courier New', monospace; font-size: 1.6rem; color: #fff; letter-spacing: 2px; font-weight: bold; text-align: center; text-shadow: 0 0 10px rgba(255,255,255,0.2); 
+        }
+
+        /* 视图组件 */
+        .visualizer { position: relative; width: 100%; margin-bottom: 5px; }
+        .visualizer.empty { color: #444; text-align: center; height: 60px; line-height: 60px; font-size: 0.8rem; font-style: italic; }
+        
+        /* 进度条轨道 */
+        .timeline-container { position: relative; height: 6px; background: #222; width: 100%; margin-top: 40px; margin-bottom: 20px; border-radius: 3px; }
+        
+        /* 警示条：黑黄斜纹 CSS 实现 */
+        .range-warn { 
+            position: absolute; height: 100%; top: 0; left: 0; 
+            background: repeating-linear-gradient(45deg, var(--c-yellow), var(--c-yellow) 10px, #111 10px, #111 20px); 
+            z-index: 1; border-right: 2px solid var(--c-red); transition: width 0.3s; 
+        }
+        .range-safe { 
+            position: absolute; height: 100%; top: 0; right: 0; 
+            background: var(--c-green); 
+            box-shadow: 0 0 15px rgba(0,255,65,0.1); 
+            z-index: 0; transition: width 0.3s; 
+        }
+        
+        .tick { position: absolute; transform: translateX(-50%); width: 2px; z-index: 2; transition: left 0.3s; }
+        .tick.bottom { top: 0; height: 15px; }
+        .tick.bottom .tick-label { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 10px; white-space: nowrap; color: #666; font-weight: bold; }
+        .tick.bottom.death { background: var(--c-red); height: 20px; z-index: 10; top: -7px; }
+        .tick.bottom.death .tick-label { color: var(--c-red); top: 25px; }
+        .tick.bottom.start { background: var(--c-green); z-index: 10; top: -7px; height: 20px; }
+        .tick.bottom.start .tick-label { color: var(--c-green); top: 25px; }
+        .tick.top { bottom: 0; height: 15px; }
+        .tick.top .tick-label { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 10px; white-space: nowrap; }
+        .tick.top.warn { background: var(--c-yellow); z-index: 5; }
+        .tick.top.warn .tick-label { color: var(--c-yellow); }
+        
+        /* 实时光标 (白色) */
+        .tick.now { top: -10px; height: 26px; width: 2px; background: #fff; z-index: 20; box-shadow: 0 0 10px #fff; display: none; transition: left 1s linear; }
+        .tick.now .tick-label { color: #000; top: -25px; font-weight: bold; font-size: 9px; background: #fff; padding: 2px 4px; border-radius: 2px; }
+
+        .error-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; align-items: center; justify-content: center; color: var(--c-red); z-index: 30; text-align: center; font-size: 0.9rem; }
+        .has-error .error-overlay { display: flex; }
+
+        #auth-view { text-align: center; max-width: 320px; margin: auto; padding: 60px 0; }
         .hidden { display: none !important; }
+        #decrypt-box { margin-top: 20px; padding: 20px; border: 1px dashed var(--c-green); color: #fff; word-break: break-all; white-space: pre-wrap; display: none; background: #000; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
-    <div class="container" id="app">
-        <div id="auth-view" class="">
-            <h2 style="margin-bottom:40px; letter-spacing:4px;">PHOENIX V10.0</h2>
-            <div class="input-group">
-                <div class="input-label">IDENTITY</div>
-                <input type="email" id="email" placeholder="name@example.com">
-            </div>
-            <div class="input-group">
-                <div class="input-label">PASSPHRASE</div>
-                <input type="password" id="password" placeholder="••••••••">
-            </div>
+    <div class="container">
+        <div id="auth-view">
+            <h2 style="margin-bottom:40px; letter-spacing:4px; color:var(--c-green); font-size:1.5rem;">凤凰协议 V16.5</h2>
+            <div class="input-group"><div class="input-label">账号</div><input type="email" id="auth-email" placeholder="Email"></div>
+            <div class="input-group"><div class="input-label">密钥</div><input type="password" id="auth-pass" placeholder="••••••••"></div>
             <button onclick="handleAuth('login')">进入系统</button>
-            <button class="outline" onclick="handleAuth('signup')">注册新身份</button>
+            <button class="outline" style="margin-top:10px; border-color:#333; color:#666;" onclick="handleAuth('signup')">注册新身份</button>
         </div>
 
         <div id="dashboard-view" class="hidden">
-            <div class="nav-header">
-                <div class="nav-item active" onclick="switchTab('send')">👻 寄存包裹</div>
-                <div class="nav-item" onclick="switchTab('receive')">📦 提取包裹</div>
-                <div class="nav-item" onclick="switchTab('manage')">📜 档案管理</div>
-                <div class="nav-item" style="flex:0; min-width:60px; color:#444;" onclick="logout()">退出</div>
+            <div class="nav-tabs">
+                <div class="nav-item active" onclick="switchTab('send')">👻 寄包裹</div>
+                <div class="nav-item" onclick="switchTab('receive')">📦 拆包裹</div>
             </div>
 
-            <div id="tab-send" class="view-section active">
-                <div class="input-group">
-                    <div class="input-label">绝密内容 (加密存入数据库，无人可见)</div>
-                    <input type="text" id="secret" placeholder="输入银行密码 / 助记词 / 遗言...">
+            <div id="tab-send" class="tab-content active">
+                <div class="panel secret-zone">
+                    <div class="panel-title">1. 绝密信封</div>
+                    <div class="input-group"><div class="input-label">遗言</div><input type="text" id="secret" placeholder="在此输入核心机密（发送后加密存储）"></div>
+                    <div class="input-group" style="margin-bottom:0;"><div class="input-label">受益人</div><input type="email" id="ben" placeholder="接收通知的邮箱地址"></div>
                 </div>
-                <div class="input-group">
-                    <div class="input-label">受益人邮箱</div>
-                    <input type="email" id="ben" placeholder="receiver@example.com">
-                </div>
-                
-                <div style="display:flex; gap:10px; margin-top:20px;">
-                    <div class="input-group" style="flex:1">
-                        <div class="input-label">静默周期</div>
-                        <input type="number" id="timeout-val" value="30">
+
+                <div class="monitor-row">
+                    <div class="visual-col" id="visual-wrapper">
+                        <div class="panel-title" style="margin-bottom:5px;">2. 策略推演</div>
+                        <div class="error-overlay" id="visual-error">⚠️ 逻辑错误：唤醒 > 总时长</div>
+                        <div id="visual-content" class="visualizer empty">等待配置参数...</div>
                     </div>
-                    <div class="input-group" style="flex:1">
-                        <div class="input-label">单位</div>
-                        <select id="timeout-unit">
-                            <option value="86400">天</option>
-                            <option value="3600">小时</option>
-                            <option value="60" selected>分钟</option>
-                        </select>
+                    
+                    <div class="heartbeat-col">
+                        <div class="alive-btn" onclick="heartbeat()" title="点击重置倒计时">
+                            <span class="icon">❤️</span>
+                            <span class="text">签到</span>
+                        </div>
+                        <div id="visual-timer-display">--:--:--</div>
                     </div>
                 </div>
 
-                <div style="margin-top:auto; text-align:center;">
-                    <h1 id="live-countdown" style="font-size:3rem; margin:20px 0;">--:--:--</h1>
-                    <button class="outline" style="border-color:var(--c-yellow); color:var(--c-yellow); margin-bottom:10px;" onclick="sendHeartbeat()">❤️ 签到保活</button>
-                    <button onclick="deploy()">🚀 同步/更新死手配置</button>
+                <div class="config-grid">
+                    <div class="config-panel">
+                        <div class="panel-title">3. 触发设定 (必填)</div>
+                        <div class="input-group" style="margin-bottom:0;">
+                            <div class="input-label">总时长</div>
+                            <input type="number" id="timeout-val" placeholder="例如: 30" min="1" oninput="renderVisual()">
+                            <select id="timeout-unit" onchange="renderVisual()">
+                                <option value="60">分</option>
+                                <option value="3600">时</option>
+                                <option value="86400">天</option>
+                                <option value="2592000">月</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-panel">
+                        <div class="panel-title">4. 唤醒策略 (选填，连体)</div>
+                        <div class="input-group"><div class="input-label">唤醒次数</div><input type="number" id="warn-count" placeholder="例如: 3" min="0" oninput="renderVisual()"></div>
+                        <div class="input-group" style="margin-bottom:0;">
+                            <div class="input-label">间隔</div>
+                            <input type="number" id="warn-int-val" placeholder="例如: 1" min="1" oninput="renderVisual()">
+                            <select id="warn-int-unit" onchange="renderVisual()">
+                                <option value="60">分</option>
+                                <option value="3600">时</option>
+                                <option value="86400">天</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
+                <button onclick="deploy()" id="deploy-btn" style="border:none; border-top:1px solid var(--c-green); background:rgba(0,255,65,0.05); padding:20px;">🚀 部署配置 / 更新协议</button>
             </div>
 
-            <div id="tab-receive" class="view-section">
-                <div style="text-align:center; margin-bottom:30px; color:#666; font-size:0.8rem;">
-                    请输入邮件中收到的凭证。<br>解密过程在本地完成，服务器仅记录“取件”行为。
+            <div id="tab-receive" class="tab-content">
+                <div style="padding:40px 60px;">
+                    <div style="text-align: center; color: #666; margin-bottom: 40px; font-size: 0.8rem;">本地解密终端 // 纯离线运算</div>
+                    <div class="input-group"><div class="input-label">信托 ID</div><input type="text" id="recv-id" placeholder="输入邮件中的 Vault ID"></div>
+                    <div class="input-group"><div class="input-label">提取密钥</div><input type="text" id="recv-key" placeholder="输入邮件中的 AES Key"></div>
+                    <button onclick="handleRetrieve()">验证并解密</button>
+                    <div id="decrypt-box"></div>
+                    <button class="outline" onclick="logout()" style="margin-top: 50px;">安全退出</button>
                 </div>
-                <div class="input-group">
-                    <div class="input-label">VAULT ID</div>
-                    <input type="text" id="recv-id" placeholder="邮件中的 ID">
-                </div>
-                <div class="input-group">
-                    <div class="input-label">AES KEY</div>
-                    <input type="text" id="recv-key" placeholder="邮件中的 Key">
-                </div>
-                <button onclick="handleRetrieve()">验证并解密</button>
-                
-                <div id="decrypt-box"></div>
-            </div>
-
-            <div id="tab-manage" class="view-section">
-                <h4 style="border-bottom:1px solid #333; padding-bottom:10px; margin-top:0;">我的寄出 (Sent)</h4>
-                <div id="list-sent" style="margin-bottom:30px; min-height:100px; color:#666; font-size:0.8rem;">加载中...</div>
-
-                <h4 style="border-bottom:1px solid #333; padding-bottom:10px;">我的取件 (Received)</h4>
-                <div id="list-received" style="min-height:100px; color:#666; font-size:0.8rem;">加载中...</div>
-                
-                <p style="font-size:0.7rem; color:#444; margin-top:auto; text-align:center;">
-                    * 安全提示：取件记录仅包含元数据。绝密内容从未明文保存。
-                </p>
             </div>
         </div>
     </div>
@@ -156,206 +209,269 @@ RYytkgByTOHBmtFqUVa1jIAJGdAZ8g1jMhZOOte5NfjJ4fJQhmqzdHBlH2xU/14A
 pQIDAQAB
 -----END PUBLIC KEY-----`;
 
-    const client = supabase.createClient(DB_URL, DB_KEY);
+    let client = null;
     let currentUser = null;
     let timerInterval = null;
+    let currentVaultId = null; 
+    let isConfigValid = false;
 
-    // --- 认证逻辑 ---
+    try {
+        if (!window.supabase) throw new Error("Supabase 库加载失败");
+        client = window.supabase.createClient(DB_URL, DB_KEY);
+    } catch (e) { console.error(e); }
+
+    function showSwal(msg, type = 'success', callback) {
+        if(typeof Swal === 'undefined') { alert(msg); if(callback) callback(); return; }
+        Swal.fire({ text: msg, icon: type, background: '#0d1117', color: '#fff', confirmButtonText: '确定', confirmButtonColor: '#00ff41', allowOutsideClick: false }).then(() => { if(callback) callback(); });
+    }
+
     async function handleAuth(type) {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if(password.length < 6) return alert("密码过短");
+        if(!client) return alert("网络连接失败");
+        const email = document.getElementById('auth-email').value;
+        const password = document.getElementById('auth-pass').value;
+        if(password.length < 6) return showSwal("密码过短", 'error');
         
-        const { data, error } = type === 'login' 
-            ? await client.auth.signInWithPassword({ email, password })
-            : await client.auth.signUp({ email, password });
-
-        if(error) alert(error.message);
-        else if(data.user) {
-            currentUser = data.user;
-            document.getElementById('auth-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
-            loadMyVault(); // 加载我的死手配置
-            loadHistory(); // 加载历史记录
+        let result = type === 'login' ? await client.auth.signInWithPassword({ email, password }) : await client.auth.signUp({ email, password });
+        if(result.error) {
+            let msg = result.error.message;
+            if(msg.includes("User already registered")) msg = "该账号已注册，请登录";
+            showSwal(msg, 'error');
         } else {
-            alert("注册成功，请查收邮件确认或直接登录");
+            if(type === 'signup') {
+                showSwal("注册成功！请点击登录", 'success');
+                await client.auth.signOut();
+            } else if(result.data.user) {
+                currentUser = result.data.user;
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('dashboard-view').classList.remove('hidden');
+                loadLatestVault(); 
+            }
         }
     }
 
-    async function logout() {
-        await client.auth.signOut();
-        location.reload();
-    }
+    async function logout() { await client.auth.signOut(); location.reload(); }
 
-    // --- 界面切换 ---
     function switchTab(tabName) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        event.target.classList.add('active');
-        document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-'+tabName).classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+        if(tabName === 'send') renderVisual();
     }
 
-    // --- 功能1: 寄存 (Send / Deploy) ---
-    async function deploy() {
-        if(!currentUser) return;
-        const btn = event.target; btn.innerText = "加密上传中...";
+    // --- 核心渲染 ---
+    function renderVisual(forceTime = null) {
+        const totalInput = document.getElementById('timeout-val').value;
+        const countInput = document.getElementById('warn-count').value;
+        const intInput = document.getElementById('warn-int-val').value;
+        const deployBtn = document.getElementById('deploy-btn');
+        const wrapper = document.getElementById('visual-wrapper');
+        const content = document.getElementById('visual-content');
+
+        if (!totalInput) {
+            isConfigValid = false; wrapper.classList.remove('has-error');
+            content.innerHTML = "请输入时长..."; 
+            deployBtn.disabled = true; deployBtn.style.opacity = 0.3; return;
+        }
+
+        const totalSec = parseInt(totalInput) * parseInt(document.getElementById('timeout-unit').value);
+        let count = 0, intervalSec = 0;
+
+        const hasCount = countInput && parseInt(countInput) > 0;
+        const hasInt = intInput && parseInt(intInput) > 0;
+
+        if (hasCount !== hasInt) {
+            isConfigValid = false; wrapper.classList.add('has-error');
+            document.querySelector('#visual-error').innerText = "⚠️ 策略错误：唤醒次数和间隔必须同时填写";
+            content.innerHTML = "";
+            deployBtn.disabled = true; deployBtn.style.opacity = 0.5; return;
+        }
+
+        if (hasCount && hasInt) {
+            count = parseInt(countInput);
+            intervalSec = parseInt(intInput) * parseInt(document.getElementById('warn-int-unit').value);
+        }
         
+        const startWarnRemaining = count * intervalSec;
+
+        if (startWarnRemaining >= totalSec) {
+            isConfigValid = false; wrapper.classList.add('has-error');
+            document.querySelector('#visual-error').innerText = "⚠️ 逻辑错误：唤醒总时长 > 总时长";
+            content.innerHTML = "";
+            deployBtn.disabled = true; deployBtn.style.opacity = 0.5; return;
+        }
+
+        isConfigValid = true; wrapper.classList.remove('has-error');
+        deployBtn.disabled = false; deployBtn.style.opacity = 1;
+
+        const warnStartPercent = (startWarnRemaining / totalSec) * 100;
+        
+        let html = `
+            <div class="timeline-container">
+                <div class="range-warn" style="width:${warnStartPercent}%; left:0;"></div>
+                <div class="range-safe" style="width:${100-warnStartPercent}%; left:${warnStartPercent}%;"></div>
+                
+                <div id="tick-now" class="tick now" style="left:100%;"><div class="tick-label">NOW</div></div>
+
+                <div class="tick bottom death" style="left:0%"><div class="tick-label">触发</div></div>
+                ${hasCount ? `<div class="tick top warn" style="left:${warnStartPercent}%"><div class="tick-label" style="color:var(--c-yellow);">预警</div></div>` : ''}
+                <div class="tick bottom start" style="left:100%"><div class="tick-label">签到</div></div>
+                ${renderTicksSmart(totalSec, intervalSec, count)}
+            </div>`;
+        content.innerHTML = html;
+
+        if(forceTime !== null && totalSec > 0) {
+            updateCursor(forceTime, totalSec);
+        }
+    }
+
+    function updateCursor(remaining, total) {
+        const tickNow = document.getElementById('tick-now');
+        if(tickNow) {
+            const percent = Math.max(0, Math.min(100, (remaining / total) * 100));
+            tickNow.style.display = 'block';
+            tickNow.style.left = percent + '%';
+        }
+    }
+
+    function renderTicksSmart(totalSec, intervalSec, count) {
+        if (count <= 0) return ''; 
+        let html = ''; const isDense = count > 5; 
+        for (let i = 1; i < count; i++) {
+            const remaining = (count - i) * intervalSec; const percent = (remaining / totalSec) * 100;
+            if (count > 20 && i % 5 !== 0) continue; 
+            html += `<div class="tick top ${isDense ? 'minor' : 'warn'}" style="left:${percent}%; opacity:${isDense?0.5:0.8}"></div>`;
+        } return html;
+    }
+
+    function formatDuration(seconds) {
+        const d = Math.floor(seconds / 86400);
+        const h = Math.floor((seconds % 86400) / 3600).toString().padStart(2,'0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2,'0');
+        const s = Math.floor(seconds % 60).toString().padStart(2,'0');
+        if(d > 0) return `${d}天 ${h}:${m}:${s}`;
+        return `${h}:${m}:${s}`;
+    }
+
+    async function loadLatestVault() {
+        if(!currentUser) return;
+        const { data } = await client.from('vaults').select('*').eq('user_id', currentUser.id).eq('status', 'active').order('created_at', { ascending: false }).limit(1).single();
+        if (data) {
+            currentVaultId = data.id; 
+            document.getElementById('ben').value = data.owner_email || ''; 
+            if(data.timeout_seconds) {
+                document.getElementById('timeout-val').value = Math.floor(data.timeout_seconds / 60);
+                document.getElementById('timeout-unit').value = 60;
+            }
+            if(data.warn_max_count > 0) {
+                document.getElementById('warn-count').value = data.warn_max_count;
+                document.getElementById('warn-int-val').value = Math.floor(data.warn_interval_seconds / 60);
+                document.getElementById('warn-int-unit').value = 60;
+            }
+            renderVisual(); 
+            startTimer(data.last_checkin_at, data.timeout_seconds);
+        } else { document.getElementById('visual-timer-display').innerText = "--:--:--"; }
+    }
+
+    async function deploy() {
+        if(!currentUser || !isConfigValid) return showSwal("请检查配置是否完整", 'error');
+        const btn = document.getElementById('deploy-btn'); btn.innerText = "处理中...";
         const secret = document.getElementById('secret').value;
         const ben = document.getElementById('ben').value;
-        const timeout = parseInt(document.getElementById('timeout-val').value) * parseInt(document.getElementById('timeout-unit').value);
+        if(!ben) { showSwal("受益邮箱必填", 'warning'); btn.innerText = "🚀 部署配置 / 更新协议"; return; }
+
+        const totalSec = parseInt(document.getElementById('timeout-val').value) * parseInt(document.getElementById('timeout-unit').value);
+        
+        const countInput = document.getElementById('warn-count').value;
+        const intInput = document.getElementById('warn-int-val').value;
+        let count = 0, intervalSec = 300; 
+        
+        if (countInput && intInput) {
+            count = parseInt(countInput);
+            intervalSec = parseInt(intInput) * parseInt(document.getElementById('warn-int-unit').value);
+        }
+        
+        const warnStartRemaining = count * intervalSec;
 
         const updates = {
-            id: currentUser.id,
-            owner_email: currentUser.email,
-            timeout_seconds: timeout,
-            last_checkin_at: new Date().toISOString(),
-            status: 'active'
+            user_id: currentUser.id, package_name: "默认信托", owner_email: ben, timeout_seconds: totalSec,
+            warn_start_seconds: warnStartRemaining, warn_interval_seconds: intervalSec, warn_max_count: count, warn_sent_count: 0,
+            last_checkin_at: new Date().toISOString(), status: 'active'
         };
-
-        if(secret && ben) {
-            // 只有输入了新秘密才更新加密数据
+        if(currentVaultId) updates.id = currentVaultId;
+        if(secret) {
             const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
             const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
             const payload = JSON.stringify({ k: aesKey, t: ben });
-            const encryptor = new JSEncrypt(); 
-            encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
-            
-            updates.encrypted_data = encryptedData;
-            updates.key_storage = encryptor.encrypt(payload);
-        }
+            const encryptor = new JSEncrypt(); encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
+            updates.encrypted_data = encryptedData; updates.key_storage = encryptor.encrypt(payload);
+        } else if (!currentVaultId) { showSwal("首次需填写绝密内容", 'warning'); btn.innerText = "🚀 部署配置 / 更新协议"; return; }
 
-        const { error } = await client.from('vaults').upsert(updates);
-        btn.innerText = "🚀 同步/更新死手配置";
-        if(error) alert("同步失败: " + error.message);
+        const { data, error } = await client.from('vaults').upsert(updates).select();
+        if(error) showSwal(translateError(error.message), 'error');
         else {
-            alert("配置已同步！倒计时重置。");
-            loadMyVault();
+            if(data && data.length > 0) currentVaultId = data[0].id; 
+            showSwal("配置已生效", 'success'); 
+            // 立即使用本地数据启动动画
+            renderVisual(totalSec); 
+            startTimer(updates.last_checkin_at, totalSec);
+        }
+        btn.innerText = "🚀 部署配置 / 更新协议";
+    }
+
+    async function heartbeat() {
+        if(!currentVaultId) return showSwal("未部署配置", 'error');
+        
+        // 乐观更新
+        const totalSec = parseInt(document.getElementById('timeout-val').value) * parseInt(document.getElementById('timeout-unit').value);
+        startTimer(new Date().toISOString(), totalSec);
+        
+        const { error } = await client.from('vaults').update({ last_checkin_at: new Date().toISOString(), status: 'active', warn_sent_count: 0 }).eq('id', currentVaultId);
+        if(!error) { 
+            const btn = document.querySelector('.alive-btn');
+            btn.style.transform = "scale(0.9)"; setTimeout(()=>btn.style.transform = "scale(1)", 150);
+            Swal.fire({ title: '已签到', icon: 'success', toast: true, position: 'top', timer: 1000, showConfirmButton: false, background:'#0d1117', color:'#fff' });
         }
     }
 
-    async function sendHeartbeat() {
-        if(!currentUser) return;
-        await client.from('vaults').update({ 
-            last_checkin_at: new Date().toISOString(),
-            status: 'active',
-            warn_sent_count: 0
-        }).eq('id', currentUser.id);
-        alert("签到成功");
-        loadMyVault();
-    }
-
-    async function loadMyVault() {
-        const { data } = await client.from('vaults').select('*').eq('id', currentUser.id).single();
-        if(data) {
-            startTimer(data.last_checkin_at, data.timeout_seconds);
-        }
-    }
-
-    function startTimer(lastCheckin, duration) {
+    function startTimer(lastCheckin, totalDuration) {
         if(timerInterval) clearInterval(timerInterval);
-        const end = moment(lastCheckin).add(duration, 'seconds');
-        timerInterval = setInterval(() => {
+        const end = moment(lastCheckin).add(totalDuration, 'seconds');
+        const display = document.getElementById('visual-timer-display');
+
+        const tick = () => {
             const diff = end.diff(moment());
+            const remainingSec = Math.max(0, diff / 1000);
+            
+            // 驱动光标
+            updateCursor(remainingSec, totalDuration);
+
             if(diff <= 0) {
-                document.getElementById('live-countdown').innerText = "00:00:00";
-                document.getElementById('live-countdown').style.color = "red";
+                clearInterval(timerInterval);
+                display.innerText = "00:00:00"; display.style.color = "var(--c-red)";
+                showSwal("死手开关已触发\n邮件已发送\n系统即将关闭", 'error', () => { logout(); });
             } else {
-                const d = moment.duration(diff);
-                document.getElementById('live-countdown').innerText = 
-                    `${Math.floor(d.asHours()).toString().padStart(2,'0')}:${d.minutes().toString().padStart(2,'0')}:${d.seconds().toString().padStart(2,'0')}`;
-                document.getElementById('live-countdown').style.color = "#fff";
+                display.innerText = formatDuration(remainingSec); display.style.color = "#fff";
             }
-        }, 1000);
+        };
+        tick();
+        timerInterval = setInterval(tick, 1000);
     }
 
-    // --- 功能2: 提取 (Receive / Retrieve) ---
     async function handleRetrieve() {
         const id = document.getElementById('recv-id').value.trim();
         const key = document.getElementById('recv-key').value.trim();
-        if(!id || !key) return alert("请输入完整信息");
-
-        // 1. 获取密文
+        if(!id || !key) return showSwal("信息不完整", 'warning');
         const { data, error } = await client.from('vaults').select('encrypted_data').eq('id', id).single();
-        
-        if(error || !data || data.encrypted_data === 'BURNED_METADATA') {
-            return alert("提取失败：数据不存在或已被物理销毁");
-        }
-
+        if(error || !data) return showSwal("数据不存在", 'error');
         try {
-            // 2. 本地解密
             const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
             const originalText = bytes.toString(CryptoJS.enc.Utf8);
-            if(!originalText) throw new Error("Key 错误");
-
-            // 3. 显示结果
-            const box = document.getElementById('decrypt-box');
-            box.style.display = 'block';
-            box.innerText = "【解密成功】\n----------------------\n" + originalText;
-
-            // 4. 写入历史记录 (审计日志)
-            await client.from('retrievals').insert({
-                user_id: currentUser.id,
-                vault_id: id
-            });
-            loadHistory(); // 刷新列表
-
-        } catch(e) {
-            alert("解密失败: 密钥无效");
-        }
+            if(!originalText) throw new Error();
+            document.getElementById('decrypt-box').style.display = 'block';
+            document.getElementById('decrypt-box').innerText = "【解密成功】\n" + originalText;
+        } catch(e) { showSwal("密钥错误", 'error'); }
     }
-
-    // --- 功能3: 档案 (Manage / History) ---
-    async function loadHistory() {
-        if(!currentUser) return;
-
-        // A. 我发出的
-        const { data: myVault } = await client.from('vaults').select('*').eq('id', currentUser.id).single();
-        const sentDiv = document.getElementById('list-sent');
-        if(myVault) {
-            let statusColor = myVault.status === 'active' ? 'active' : 'dispatched';
-            sentDiv.innerHTML = `
-                <div class="history-item">
-                    <div>
-                        <div style="font-weight:bold;">当前死手开关</div>
-                        <div style="font-size:0.75rem; color:#666;">上次签到: ${new Date(myVault.last_checkin_at).toLocaleString()}</div>
-                    </div>
-                    <div class="badge ${statusColor}">${myVault.status.toUpperCase()}</div>
-                </div>
-            `;
-        } else {
-            sentDiv.innerHTML = "无配置";
-        }
-
-        // B. 我收到的 (查询 retrievals 表)
-        const { data: records } = await client.from('retrievals').select('*, vaults(id, status)').eq('user_id', currentUser.id).order('retrieved_at', {ascending: false});
-        const recvDiv = document.getElementById('list-received');
-        
-        if(records && records.length > 0) {
-            recvDiv.innerHTML = records.map(r => `
-                <div class="history-item">
-                    <div>
-                        <div style="color:#aaa;">Vault: ...${r.vault_id.slice(-8)}</div>
-                        <div style="font-size:0.75rem; color:#444;">提取时间: ${new Date(r.retrieved_at).toLocaleString()}</div>
-                    </div>
-                    <div class="badge active">OPENED</div>
-                </div>
-            `).join('');
-        } else {
-            recvDiv.innerHTML = "暂无取件记录";
-        }
-    }
-
-    // 自动登录检查
-    client.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-            currentUser = session.user;
-            document.getElementById('auth-view').classList.add('hidden');
-            document.getElementById('dashboard-view').classList.remove('hidden');
-            loadMyVault();
-            loadHistory();
-        }
-    });
-
 </script>
 </body>
 </html>
