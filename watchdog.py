@@ -1,7 +1,7 @@
 import os
 import smtplib
 import json
-from email.message import EmailMessage  # ✅ 换用现代库，彻底解决编码问题
+from email.message import EmailMessage
 from datetime import datetime, timezone, timedelta
 from supabase import create_client, Client
 from cryptography.hazmat.primitives import serialization
@@ -46,18 +46,25 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
         return None
 
 def send_email(to_email, subject, html_content):
-    if not to_email or "None" in str(to_email): return False
+    # 1. 安全检查：确保发件人配置存在
+    if not SENDER_EMAIL or not SENDER_PASSWORD:
+        print("❌ 配置错误: GitHub Secrets 中缺少 EMAIL_USER 或 EMAIL_PASS")
+        return False
+        
+    if not to_email or "None" in str(to_email): 
+        return False
     
-    # ✅ 使用 EmailMessage，原生支持中文，无需手动 Header 编码
+    # 2. 构建邮件对象
     msg = EmailMessage()
-    msg['Subject'] = subject
+    msg['Subject'] = str(subject) # 强制转字符串，防患未然
     msg['From'] = SENDER_EMAIL
     msg['To'] = to_email
     
-    # 设置 HTML 内容
-    msg.set_content(html_content, subtype='html')
+    # 设置 HTML 内容 (UTF-8)
+    msg.set_content(html_content, subtype='html', charset='utf-8')
     
     try:
+        # 3. 智能连接服务器
         server_host = "smtp.qq.com" if "qq.com" in SENDER_EMAIL else "smtp.gmail.com"
         port = 465 if "qq.com" in SENDER_EMAIL else 587
         
@@ -68,39 +75,45 @@ def send_email(to_email, subject, html_content):
             server.starttls()
             
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
+        
+        # ⭐ 核心修复：使用 send_message 而不是 sendmail
+        # 这会自动处理所有的编码和字节流转换，彻底解决 "str vs bytes" 报错
+        server.send_message(msg)
+        
         server.quit()
         return True
     except Exception as e:
-        print(f"❌ 发信失败: {e}")
+        print(f"❌ 发信失败 (详细报错): {e}")
         return False
 
 def send_warning(to_email, remaining_sec):
-    """ 发送唤醒邮件 """
     print(f"⏰ 发送唤醒 -> {to_email}")
     time_str = str(timedelta(seconds=int(remaining_sec)))
     html = f"""
-    <div style="border:2px solid #ffcc00; padding:20px; color:#333;">
+    <div style="border:2px solid #ffcc00; padding:20px; color:#333; font-family:sans-serif;">
         <h2 style="color:#e6b800;">⚠ 凤凰协议：心跳即将停止</h2>
         <p>您的死手开关倒计时仅剩：<strong>{time_str}</strong></p>
         <p>如果您还安全，请立即点击下方按钮重置系统：</p>
-        <a href="{BASE_URL}" style="background:#ffcc00; color:#000; padding:15px 30px; text-decoration:none; font-weight:bold; display:inline-block; margin-top:10px;">我是本人，立即签到</a>
+        <a href="{BASE_URL}" style="background:#ffcc00; color:#000; padding:15px 30px; text-decoration:none; font-weight:bold; display:inline-block; margin-top:10px; border-radius:5px;">我是本人，立即签到</a>
         <p style="font-size:12px; color:#666; margin-top:20px;">(若不操作，系统将按计划发送遗嘱)</p>
     </div>
     """
     return send_email(to_email, "【警报】请确认您的安全状态", html)
 
 def send_final(to_email, key, uid):
-    """ 发送最终遗嘱 """
     print(f"🚀 发送遗嘱 -> {to_email}")
+    # 强制将关键信息转为字符串，防止隐形类型错误
+    safe_uid = str(uid)
+    safe_key = str(key)
+    
     html = f"""
-    <div style="border-left:5px solid #ff3333; padding:20px;">
-        <h2>凤凰协议 | 资产提取通知</h2>
+    <div style="border-left:5px solid #ff3333; padding:20px; font-family:sans-serif;">
+        <h2 style="color:#ff3333;">凤凰协议 | 资产提取通知</h2>
         <p>委托人设定的信托已激活。请在电脑端访问：<br>
         <a href="{BASE_URL}">{BASE_URL}</a></p>
-        <div style="background:#f4f4f4; padding:15px; margin:15px 0; font-family:monospace;">
-            <strong>Vault ID:</strong> {uid}<br>
-            <strong>AES Key:</strong> {key}
+        <div style="background:#f4f4f4; padding:15px; margin:15px 0; font-family:monospace; border-radius:5px;">
+            <strong>Vault ID:</strong> {safe_uid}<br>
+            <strong>AES Key:</strong> {safe_key}
         </div>
         <p style="color:red; font-size:12px;">数据将在解密后24小时销毁。</p>
     </div>
@@ -108,7 +121,7 @@ def send_final(to_email, key, uid):
     return send_email(to_email, "【绝密】数字资产提取通知", html)
 
 def watchdog():
-    print("🐕 凤凰看门狗 V7.2 (EmailMessage稳定版) 启动...")
+    print("🐕 凤凰看门狗 V7.3 (终极传输版) 启动...")
     db = get_db()
     
     try:
@@ -146,11 +159,13 @@ def watchdog():
             print("⚡ 倒计时归零，执行发射...")
             payload = rsa_decrypt(row['key_storage'], RSA_PRIVATE_KEY_PEM)
             if payload and payload.get('t'):
+                # 尝试发送
                 if send_final(payload['t'], payload['k'], uid):
+                    # 发送成功后才更新数据库
                     db.table("vaults").update({"status": "dispatched", "key_storage": "BURNED"}).eq("id", uid).execute()
-                    print("🔥 发射完成")
+                    print("🔥 发射完成！状态已更新。")
                 else:
-                    print("❌ 邮件发送失败，等待下一次重试")
+                    print("❌ 邮件发送失败，保留状态等待下一次重试")
             else:
                 print("❌ 解密失败，私钥可能不匹配")
 
