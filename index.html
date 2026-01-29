@@ -3,106 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHOENIX | 寻踪者中心</title>
+    <title>PHOENIX | V20 铭刻空间</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root { --bg: #000000; --text: #e0e0e0; --accent: #0A84FF; --gold: #D4AF37; --panel: #121214; --dim: #444; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
+        :root { --bg: #000000; --text: #e0e0e0; --accent: #0A84FF; --gold: #D4AF37; --panel: #121214; --dim: #222; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; overflow: hidden; }
         
-        .header { margin-top: 40px; margin-bottom: 30px; }
-        h1 { font-weight: 200; letter-spacing: 6px; margin: 0; font-size: 24px; opacity: 0.9; }
+        .header { margin-top: 10px; margin-bottom: 20px; flex-shrink: 0; }
+        h1 { font-weight: 200; letter-spacing: 6px; margin: 0; font-size: 22px; opacity: 0.8; }
 
-        .page-container { width: 100%; max-width: 340px; display: none; flex-direction: column; animation: fadeIn 0.6s ease; }
-        #page-home { display: flex; }
+        .page-container { width: 100%; max-width: 380px; display: none; flex-direction: column; height: 100%; animation: fadeIn 0.5s ease; }
+        #page-home { display: flex; justify-content: center; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 入口卡片样式 */
-        .card-entry { width: 100%; padding: 35px 20px; background: var(--panel); border: 1px solid #222; border-radius: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
-        .card-entry:active { transform: scale(0.97); background: #1a1a1c; }
-        .card-entry .title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-        .card-entry .desc { font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+        /* 入口卡片 */
+        .card-entry { width: 100%; padding: 30px; background: var(--panel); border: 1px solid #1a1a1c; border-radius: 28px; margin-bottom: 20px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
+        .card-entry:active { transform: scale(0.97); }
 
-        /* 受益人中心 - 状态容器 */
-        .status-vault { background: var(--panel); padding: 40px 20px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.03); width: 100%; box-sizing: border-box; position: relative; }
+        /* --- 受益人展示区 --- */
+        .vault-core { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; width: 100%; margin-bottom: 20px; }
+        .key-relic { cursor: pointer; transition: 0.4s; display: flex; flex-direction: column; align-items: center; }
+        .key-relic.hidden { opacity: 0; transform: scale(0.8); pointer-events: none; position: absolute; }
+        .envelope-icon { font-size: 70px; filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.3)); animation: breathe 3s infinite ease-in-out; }
+        @keyframes breathe { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(-10px); opacity: 1; } }
+
+        /* 受益人阅读区 */
+        .echo-view { width: 100%; height: 100%; background: linear-gradient(180deg, #0a0a0a 0%, #121214 100%); border: 1px solid #1a1a1c; border-radius: 32px; padding: 30px; box-sizing: border-box; text-align: left; display: none; cursor: pointer; overflow-y: auto; }
+        .echo-view.visible { display: block; animation: popIn 0.6s cubic-bezier(0.2, 1, 0.3, 1); }
+        .echo-text { font-size: 19px; line-height: 1.8; color: var(--gold); white-space: pre-wrap; word-break: break-all; }
+
+        /* --- 立嘱人书写画布 --- */
+        .writing-canvas { flex: 1; display: flex; flex-direction: column; width: 100%; background: #080808; border: 1px solid #1a1a1c; border-radius: 32px; padding: 5px; box-sizing: border-box; overflow: hidden; position: relative; }
+        textarea { width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 25px; box-sizing: border-box; outline: none; font-size: 18px; line-height: 1.7; resize: none; font-family: inherit; }
+        textarea::placeholder { color: #333; }
         
-        /* 信封视觉逻辑 */
-        .envelope-zone { margin: 20px auto; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
-        .envelope-svg { font-size: 80px; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .envelope-active { filter: drop-shadow(0 0 15px rgba(212, 175, 55, 0.4)); animation: float 3s infinite ease-in-out; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        
-        .status-label { font-size: 14px; letter-spacing: 2px; margin-top: 15px; color: #888; }
+        /* 操作按钮组 */
+        .action-bar { padding: 15px 0; flex-shrink: 0; width: 100%; }
+        .btn-main { width: 100%; padding: 18px; border-radius: 35px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; letter-spacing: 2px; }
+        .btn-gold { background: var(--gold); color: #000; box-shadow: 0 10px 20px rgba(212, 175, 55, 0.15); }
+        .btn-blue { background: var(--accent); color: #fff; }
 
-        /* 遗嘱展开面板 */
-        #legacy-reveal { display: none; background: rgba(212, 175, 55, 0.05); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 20px; padding: 25px; margin-top: 20px; text-align: left; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .legacy-text { font-size: 18px; line-height: 1.8; color: var(--gold); white-space: pre-wrap; word-break: break-all; }
+        /* 底部固定区 */
+        .footer-fixed { padding: 15px 0; border-top: 1px solid #111; width: 100%; flex-shrink: 0; }
+        .id-box { background: #050505; padding: 12px; border-radius: 14px; border: 1px solid #151515; font-family: monospace; font-size: 10px; color: #333; cursor: pointer; word-break: break-all; }
+        .btn-back-text { margin-top: 15px; font-size: 12px; color: #444; cursor: pointer; display: inline-block; }
 
-        /* 身份 ID 区域 */
-        .id-section { margin-top: 40px; padding: 20px; border-top: 1px solid #1a1a1c; width: 100%; }
-        .id-title { font-size: 10px; color: var(--dim); letter-spacing: 2px; margin-bottom: 10px; text-transform: uppercase; }
-        .id-box { background: #000; padding: 12px; border-radius: 12px; border: 1px solid #222; font-family: monospace; font-size: 10px; color: var(--dim); word-break: break-all; line-height: 1.4; cursor: pointer; transition: 0.2s; }
-        .id-box:active { color: var(--gold); border-color: var(--gold); }
-
-        .btn-back { margin-top: 40px; padding: 10px 20px; font-size: 12px; color: var(--dim); cursor: pointer; border-bottom: 1px solid #222; transition: 0.3s; }
-        .btn-back:hover { color: #fff; border-color: #fff; }
-
-        /* 加载中 */
-        #loading { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
+        /* 加载层 */
+        #ritual-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 2000; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 30px; height: 30px; border: 2px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes popIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-    <div id="loading"><div class="spinner"></div><p id="loading-text" style="margin-top:20px; font-size:12px; color:var(--dim);"></p></div>
+    <div id="ritual-overlay"><div class="spinner"></div><p id="ritual-msg" style="margin-top:20px; font-size:12px; color:var(--gold); letter-spacing:1px;"></p></div>
 
     <div class="header"><h1>PHOENIX</h1></div>
 
     <div id="page-home" class="page-container">
         <div class="card-entry" onclick="showOwnerPage()">
-            <div class="title" style="color:var(--accent)">我要封存</div>
-            <div class="desc">通过对方 ID 建立跨时空连接</div>
+            <div style="color:var(--accent); font-size:19px; font-weight:600; letter-spacing:1px;">我要铭刻</div>
+            <div style="color:#444; font-size:11px; margin-top:8px;">为特定 ID 留下永恒回响</div>
         </div>
         <div class="card-entry" onclick="checkHeirStatus()">
-            <div class="title" style="color:var(--gold)">我是继承人</div>
-            <div class="desc">刷脸核验身份并开启信箱</div>
+            <div style="color:var(--gold); font-size:19px; font-weight:600; letter-spacing:1px;">我是寻踪者</div>
+            <div style="color:#444; font-size:11px; margin-top:8px;">刷脸开启您的密闭信箱</div>
         </div>
     </div>
 
     <div id="page-heir" class="page-container">
-        <div class="status-vault">
-            <div class="envelope-zone" id="envelope-trigger" onclick="toggleLegacy()">
-                <div id="envelope-icon" class="envelope-svg"></div>
+        <div class="vault-core">
+            <div id="key-ui" class="key-relic" onclick="openEcho()">
+                <div class="envelope-icon" id="vault-icon">📭</div>
+                <div id="vault-status-desc" style="color:#555; font-size:13px; margin-top:20px; letter-spacing:1px;">同步中...</div>
             </div>
-            <div id="status-desc" class="status-label">正在同步回响...</div>
 
-            <div id="legacy-reveal">
-                <div style="font-size:10px; color:var(--gold); margin-bottom:15px; opacity:0.5; letter-spacing:2px;">—— 密闭回响 ——</div>
-                <div class="legacy-text" id="legacy-content"></div>
+            <div id="echo-ui" class="echo-view" onclick="closeEcho()">
+                <div style="color:var(--gold); font-size:10px; margin-bottom:20px; opacity:0.4; letter-spacing:3px; text-align:center;">—— 密闭回响 · 点击收起 ——</div>
+                <div class="echo-text" id="echo-body"></div>
             </div>
         </div>
 
-        <div class="id-section">
-            <div class="id-title">您的唯一身份标识 (ID)</div>
-            <div class="id-box" id="my-id-string" onclick="copyID()">点击复制 ID</div>
+        <div class="footer-fixed">
+            <div style="font-size:10px; color:#555; margin-bottom:8px; letter-spacing:1px;">唯一身份凭证 (ID)</div>
+            <div class="id-box" id="my-id-display" onclick="copyId()">点击复制 ID</div>
+            <div class="btn-back-text" onclick="location.reload()">断开连接</div>
         </div>
-
-        <div class="btn-back" onclick="location.reload()">返回协议首页</div>
     </div>
 
     <div id="page-owner" class="page-container">
-        <div class="status-vault" id="owner-pairing">
-            <h3 style="font-weight:300; margin-bottom:30px;">建立连接</h3>
-            <input type="text" id="target-id-input" placeholder="输入受益人 ID" style="width:100%; background:#000; border:1px solid #333; padding:15px; border-radius:12px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:13px;">
-            <button onclick="handlePairing()" style="margin-top:20px; padding:15px; width:100%; border-radius:30px; border:none; background:var(--accent); color:#fff; font-weight:600; cursor:pointer;">开始配对</button>
+        <div id="pairing-stage" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
+            <div class="card-entry" style="cursor:default; border:none; background:transparent;">
+                <h2 style="font-weight:200; letter-spacing:3px;">锚点配对</h2>
+                <p style="color:#555; font-size:12px; margin-bottom:30px;">输入寻踪者提供的唯一身份 ID</p>
+                <input type="text" id="target-id" placeholder="粘贴 ID 字符串" style="width:100%; background:#0a0a0a; border:1px solid #222; padding:20px; border-radius:18px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:14px;">
+                <button class="btn-main btn-blue" style="margin-top:30px;" onclick="handlePairing()">建立连接</button>
+            </div>
         </div>
-        <div id="owner-editor" style="display:none; width:100%;">
-            <textarea id="msg-input" placeholder="写下您的传承信息..."></textarea>
-            <button onclick="sealLegacy()" style="padding:15px; width:100%; border-radius:30px; border:none; background:var(--gold); color:#000; font-weight:600; cursor:pointer;">确认封存回响</button>
+
+        <div id="writing-stage" style="display:none; flex:1; flex-direction:column;">
+            <div style="font-size:11px; color:#444; margin-bottom:10px; text-align:left; padding-left:10px;">铭刻空间：正在跨时空连接...</div>
+            <div class="writing-canvas">
+                <textarea id="msg-input" placeholder="在此留下您想传承的信息..."></textarea>
+            </div>
+            <div class="action-bar">
+                <button class="btn-main btn-gold" onclick="sealAction()">确认封存铭刻</button>
+            </div>
         </div>
-        <div class="btn-back" onclick="location.reload()">取消并返回</div>
+
+        <div class="btn-back-text" onclick="location.reload()" style="margin-bottom:20px;">放弃并返回</div>
     </div>
 
 <script>
@@ -110,31 +121,30 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let _selfId, _cachedMsg, _targetId;
-    let isOpened = false;
+    let _myId, _myEcho, _targetId;
 
-    // --- 受益人逻辑 ---
+    // --- 核心逻辑 ---
     async function checkHeirStatus() {
-        showLoading("唤醒生物识别...");
+        showLoading("唤醒生物识别密钥...");
         try {
             const auth = await navigator.credentials.get({
                 publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" }
             });
-            _selfId = b64url(auth.rawId);
+            _myId = b64url(auth.rawId);
             
-            showLoading("同步云端状态...");
-            const { data } = await db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
+            showLoading("同步时空回响...");
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
             
-            if (!data) await initUser(_selfId);
-            else renderHeirDashboard(data);
+            if (!data) await registerVessel(_myId);
+            else initHeirUI(data, _myId);
         } catch (e) {
-            if (e.name !== "NotAllowedError") await initUser();
+            if (e.name !== "NotAllowedError") await registerVessel();
             else hideLoading();
         }
     }
 
-    async function initUser(existingId = null) {
-        showLoading("构建加密环境...");
+    async function registerVessel(existingId = null) {
+        showLoading("正在开辟专属信箱...");
         try {
             let id = existingId;
             if (!id) {
@@ -153,85 +163,78 @@
         } catch (e) { hideLoading(); }
     }
 
-    function renderHeirDashboard(data) {
+    function initHeirUI(data, id) {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
-        document.getElementById('my-id-string').innerText = _selfId;
+        document.getElementById('my-id-display').innerText = id;
         
-        const icon = document.getElementById('envelope-icon');
-        const desc = document.getElementById('status-desc');
+        const icon = document.getElementById('vault-icon');
+        const desc = document.getElementById('vault-status-desc');
 
         if (data.status === 'sealed') {
             icon.innerText = "✉️";
-            icon.className = "envelope-svg envelope-active";
-            desc.innerHTML = `<span style="color:var(--gold)">● 您有一份封存回响</span>`;
-            _cachedMsg = data.encrypted_data;
+            icon.style.opacity = "1";
+            desc.innerHTML = `<span style="color:var(--gold)">发现封存回响 · 点击唤醒</span>`;
+            _myEcho = data.encrypted_data;
         } else {
             icon.innerText = "📭";
             icon.style.opacity = "0.1";
-            desc.innerText = "信箱静默中";
+            desc.innerText = "虚空静默中";
         }
         hideLoading();
     }
 
-    function toggleLegacy() {
-        if (!_cachedMsg) return;
-        const panel = document.getElementById('legacy-reveal');
-        const icon = document.getElementById('envelope-icon');
-        isOpened = !isOpened;
-
-        if (isOpened) {
-            panel.style.display = 'block';
-            document.getElementById('legacy-content').innerText = _cachedMsg;
-            icon.innerText = "📖";
-            icon.style.transform = "scale(0.8)";
-        } else {
-            panel.style.display = 'none';
-            icon.innerText = "✉️";
-            icon.style.transform = "scale(1)";
-        }
+    function openEcho() {
+        if (!_myEcho) return;
+        document.getElementById('key-ui').classList.add('hidden');
+        const echoUI = document.getElementById('echo-ui');
+        echoUI.classList.add('visible');
+        document.getElementById('echo-body').innerText = _myEcho;
+        if(navigator.vibrate) navigator.vibrate(50);
     }
 
-    function copyID() {
-        navigator.clipboard.writeText(_selfId).then(() => {
-            const box = document.getElementById('my-id-string');
-            const originalText = box.innerText;
-            box.innerText = "已成功复制 ID";
-            box.style.color = "var(--gold)";
-            setTimeout(() => {
-                box.innerText = originalText;
-                box.style.color = "var(--dim)";
-            }, 2000);
-        });
+    function closeEcho() {
+        document.getElementById('echo-ui').classList.remove('visible');
+        document.getElementById('key-ui').classList.remove('hidden');
     }
 
-    // --- 立嘱人逻辑 ---
+    // --- 立嘱人逻辑优化 ---
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
     }
 
     function handlePairing() {
-        const id = document.getElementById('target-id-input').value.trim();
-        if (id.length < 10) return alert("请输入正确的 ID");
+        const id = document.getElementById('target-id').value.trim();
+        if (id.length < 10) return alert("身份锚点无效");
         _targetId = id;
-        document.getElementById('owner-pairing').style.display = 'none';
-        document.getElementById('owner-editor').style.display = 'block';
+        document.getElementById('pairing-stage').style.display = 'none';
+        document.getElementById('writing-stage').style.display = 'flex';
+        setTimeout(() => document.getElementById('msg-input').focus(), 300);
     }
 
-    async function sealLegacy() {
+    async function sealAction() {
         const msg = document.getElementById('msg-input').value;
-        if (!msg) return;
-        showLoading("正在封存铭刻...");
+        if (!msg) return alert("内容不可为空");
+        showLoading("正在铭刻永恒回响...");
         const { error } = await db.from('user_vault').update({ encrypted_data: msg, status: 'sealed' }).eq('credential_id', _targetId);
-        if (!error) { alert("铭刻完毕"); location.reload(); }
-        else { alert("ID 不匹配，请检查"); hideLoading(); }
+        if (!error) { alert("✅ 铭刻成功。"); location.reload(); }
+        else { alert("配对失败，请检查 ID"); hideLoading(); }
     }
 
-    // --- 工具 ---
+    // 工具函数
     function b64url(b) { return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
-    function showLoading(t) { document.getElementById('loading').style.display = 'flex'; document.getElementById('loading-text').innerText = t; }
-    function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+    function showLoading(t) { document.getElementById('ritual-overlay').style.display = 'flex'; document.getElementById('ritual-msg').innerText = t; }
+    function hideLoading() { document.getElementById('ritual-overlay').style.display = 'none'; }
+    function copyId() {
+        const text = document.getElementById('my-id-display').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const el = document.getElementById('my-id-display');
+            el.innerText = "已记录至剪贴板";
+            el.style.color = "var(--gold)";
+            setTimeout(() => { el.innerText = _myId; el.style.color = "#333"; }, 2000);
+        });
+    }
 </script>
 </body>
 </html>
