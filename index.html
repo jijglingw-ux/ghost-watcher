@@ -2,230 +2,345 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 极简信使</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>凤凰协议 V6.0 | 生物识别终端</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
     <style>
-        :root { --bg: #000; --text: #fff; --accent: #0A84FF; --gold: #FFD700; --panel: #1c1c1e; --grey: #888; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; overflow: hidden; }
-        .header { margin-top: 10px; margin-bottom: 20px; flex-shrink: 0; }
-        h1 { font-weight: 300; letter-spacing: 4px; margin: 0; font-size: 24px; }
-        .page-container { width: 100%; max-width: 400px; display: none; flex-direction: column; height: 100%; animation: fadeIn 0.4s ease; }
-        #page-home { display: flex; justify-content: center; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .main-card { width: 100%; padding: 35px 25px; background: var(--panel); border: 1px solid #333; border-radius: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
-        .main-card:active { transform: scale(0.98); }
-        .mail-center { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; position: relative; }
-        .mail-icon-box { cursor: pointer; transition: 0.3s; }
-        .mail-icon-box.hidden { opacity: 0; transform: scale(0.5); pointer-events: none; position: absolute; }
-        .big-icon { font-size: 80px; filter: drop-shadow(0 0 15px rgba(255,215,0,0.2)); animation: bounce 3s infinite ease-in-out; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        .content-paper { width: 100%; height: 90%; background: #111; border: 1px solid #333; border-radius: 28px; padding: 25px; box-sizing: border-box; text-align: left; display: none; overflow-y: auto; cursor: pointer; }
-        .content-paper.visible { display: block; animation: slideUp 0.5s ease; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .paper-text { font-size: 18px; line-height: 1.7; color: var(--gold); white-space: pre-wrap; word-break: break-all; }
-        .write-area { flex: 1; display: flex; flex-direction: column; width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; margin-bottom: 15px; }
-        textarea { width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 20px; box-sizing: border-box; outline: none; font-size: 17px; line-height: 1.6; resize: none; }
-        .bottom-bar { padding: 15px 0; border-top: 1px solid #222; width: 100%; flex-shrink: 0; }
-        .id-display-box { background: #080808; padding: 16px; border-radius: 16px; border: 1px solid #222; font-family: monospace; font-size: 11px; color: var(--grey); cursor: pointer; word-break: break-all; transition: 0.2s; }
-        .btn-full { width: 100%; padding: 16px; border-radius: 30px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
-        #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
-        .spinner { width: 30px; height: 30px; border: 3px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        :root { --matrix-green: #00ff41; --danger-red: #ff3333; --panel-bg: rgba(13, 17, 23, 0.95); --glow: 0 0 10px rgba(0, 255, 65, 0.3); }
+        * { box-sizing: border-box; }
+        body { background-color: #000; color: var(--matrix-green); font-family: 'Courier New', monospace; margin: 0; height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; background-image: radial-gradient(circle, #1a1a1a 0%, #000 100%); transition: background 2s; }
+        .scanlines { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 999; }
+        .container { width: 90%; max-width: 500px; padding: 30px; border: 1px solid var(--matrix-green); box-shadow: var(--glow); background: var(--panel-bg); position: relative; z-index: 10; max-height: 90vh; overflow-y: auto; }
+        
+        #timer-bar { position: fixed; top: 0; left: 0; width: 100%; height: 5px; background: #333; z-index: 1000; display: none; }
+        #timer-progress { height: 100%; background: var(--danger-red); width: 100%; transition: width 1s linear; }
+        #countdown-display { position: absolute; top: 10px; right: 20px; color: var(--danger-red); font-weight: bold; font-size: 1.2rem; display: none; text-shadow: 0 0 5px var(--danger-red); z-index: 1000; }
+
+        h2 { text-align: center; letter-spacing: 3px; border-bottom: 1px solid var(--matrix-green); padding-bottom: 15px; margin-bottom: 25px; font-size: 1.5rem; }
+        
+        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--matrix-green); padding: 15px; margin-bottom: 15px; font-family: inherit; outline: none; }
+        input:focus { border-color: var(--matrix-green); box-shadow: var(--glow); }
+        
+        .btn-group { display: flex; gap: 10px; margin-bottom: 10px; }
+        button { flex: 1; padding: 15px; background: transparent; border: 1px solid var(--matrix-green); color: var(--matrix-green); font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        button:hover { background: var(--matrix-green); color: #000; box-shadow: 0 0 20px var(--matrix-green); }
+        button.secondary { border-color: #666; color: #888; }
+        button.copy-btn { border-color: #00aaff; color: #00aaff; margin-top: 10px; }
+        button.copy-btn:hover { background: #00aaff; color: #fff; box-shadow: 0 0 15px #00aaff; }
+
+        .divider { border-top: 1px dashed #333; margin: 25px 0; position: relative; }
+        .divider span { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: var(--panel-bg); padding: 0 10px; color: #555; font-size: 0.8rem; }
+        .status-badge { display: inline-block; padding: 5px 10px; border: 1px solid var(--matrix-green); font-size: 0.8rem; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+        
+        #decrypt-result { margin-top: 20px; padding: 15px; border: 1px dashed var(--matrix-green); background: rgba(0, 50, 0, 0.2); line-height: 1.6; word-break: break-all; white-space: pre-wrap; font-size: 0.9rem; }
+        .manual-link { text-align: center; margin-top: 15px; font-size: 0.9rem; cursor: pointer; text-decoration: underline; color: #666; }
+        
+        /* 销毁后的样式 */
+        body.destroyed { background: #000 !important; }
+        body.destroyed .container, body.destroyed .scanlines { display: none; }
+        .destroy-msg { display: none; color: red; font-size: 2rem; text-align: center; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        body.destroyed .destroy-msg { display: block; }
     </style>
 </head>
 <body>
+    <div id="timer-bar"><div id="timer-progress"></div></div>
+    <div id="countdown-display">24:00:00</div>
+    
+    <div class="scanlines"></div>
+    
+    <div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>
 
-    <div id="loader"><div class="spinner"></div><p id="loader-msg" style="margin-top:15px; font-size:13px; color:#fff;"></p></div>
-
-    <div class="header"><h1>凤凰协议</h1></div>
-
-    <div id="page-home" class="page-container">
-        <div class="main-card" onclick="showOwnerPage()">
-            <div style="color:var(--accent); font-size:20px; font-weight:600;">我要写信</div>
-            <div style="color:var(--grey); font-size:13px; margin-top:10px;">通过 ID 存入一段加密信息</div>
-        </div>
-        <div class="main-card" onclick="checkHeirStatus()">
-            <div style="color:var(--gold); font-size:20px; font-weight:600;">我是收信人</div>
-            <div style="color:var(--grey); font-size:13px; margin-top:10px;">刷脸提取私钥并开启信箱</div>
-        </div>
-    </div>
-
-    <div id="page-heir" class="page-container">
-        <div class="mail-center">
-            <div id="mail-closed" class="mail-icon-box" onclick="openMail()">
-                <div class="big-icon" id="mail-icon">📭</div>
-                <div id="mail-tip" style="color:var(--grey); font-size:14px; margin-top:20px;">正在检查状态...</div>
+    <div class="container">
+        <h2 id="page-title">凤凰协议 V6.0</h2>
+        
+        <div id="login-section">
+            <div class="status-badge">[ 终端状态: 等待生物授权 ]</div>
+            <input type="email" id="email" placeholder="账号 (Email)">
+            <input type="password" id="password" placeholder="密码">
+            <div class="btn-group">
+                <button onclick="login()">登录</button>
+                <button class="secondary" onclick="registerWithBiometrics()">生物注册</button>
             </div>
-            <div id="mail-opened" class="content-paper" onclick="closeMail()">
-                <div style="color:var(--gold); font-size:10px; margin-bottom:15px; opacity:0.5; text-align:center;">—— 密函内容 (点击关闭) ——</div>
-                <div class="paper-text" id="mail-body"></div>
-            </div>
+            <div class="divider"><span>或</span></div>
+            <button class="secondary" style="width: 100%; border-style: dashed;" onclick="toggleView('manual')">我是受益人 (手动提取)</button>
         </div>
-        <div class="bottom-bar">
-            <div style="font-size:11px; color:#444; margin-bottom:10px;">我的身份代码 (点击复制给写信人)</div>
-            <div class="id-display-box" id="my-id-val" onclick="copyId()">获取中...</div>
-            <div style="margin-top:15px; font-size:13px; color:#444; text-decoration:underline;" onclick="location.reload()">安全退出</div>
-        </div>
-    </div>
 
-    <div id="page-owner" class="page-container">
-        <div id="step-id" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
-            <div class="main-card" style="cursor:default; border:none; background:transparent;">
-                <h2 style="font-weight:400;">输入收信人 ID 代码</h2>
-                <input type="text" id="input-target-id" placeholder="在此粘贴 ID 代码" style="width:100%; background:#111; border:1px solid #333; padding:18px; border-radius:15px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:12px;">
-                <button class="btn-full" style="background:var(--accent); color:#fff; margin-top:25px;" onclick="goToWrite()">确认 ID 并写信</button>
+        <div id="manual-section" class="hidden">
+            <div class="status-badge" style="color: #00ff41;">[ 安全提取通道 ]</div>
+            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">请输入邮件中的双重验证信息。</p>
+            <input type="text" id="manual-id" placeholder="保险箱 ID (Vault ID)">
+            <input type="text" id="manual-key" placeholder="提取密钥 (AES Key)">
+            <button onclick="handleManualDecrypt()">验证身份</button>
+            <div class="manual-link" onclick="toggleView('login')">&lt; 返回</div>
+        </div>
+
+        <div id="dash" class="hidden">
+            <div class="status-badge" style="color:#00ff41">[ 隐形信道 ]</div>
+            <textarea id="secret" rows="5" placeholder="输入绝密内容..."></textarea>
+            <input type="email" id="ben" placeholder="受益人邮箱">
+            
+            <div style="display: flex; gap: 10px;">
+                <div style="flex:1">
+                    <label style="font-size:0.8rem; opacity:0.7;">静默触发 (分钟)</label>
+                    <input type="number" id="time" value="60" min="1">
+                </div>
+                <div style="flex:1">
+                    <label style="font-size:0.8rem; opacity:0.7;">预警线 (秒)</label>
+                    <input type="number" id="warn_sec" value="300" placeholder="倒数多少秒发预警">
+                </div>
+            </div>
+
+            <button onclick="deploy()">部署协议</button>
+        </div>
+
+        <div id="decrypt-view" class="hidden">
+            <div class="status-badge" style="border-color: var(--danger-red); color: var(--danger-red);">[ 警告: 自毁程序已启动 ]</div>
+            <div id="decrypt-result"></div>
+            
+            <button class="copy-btn" onclick="copyContent()">📄 复制内容并保存</button>
+            
+            <div style="margin-top:20px; font-size: 12px; color: #666; text-align: center;">
+                数据将在倒计时结束后自动清除。
             </div>
         </div>
-        <div id="step-write" style="display:none; flex:1; flex-direction:column;">
-            <div style="font-size:12px; color:var(--grey); margin-bottom:10px; text-align:left;">端到端加密模式：已开启</div>
-            <div class="write-area">
-                <textarea id="input-msg" placeholder="在此写下您想留给对方的话..."></textarea>
-            </div>
-            <button class="btn-full" style="background:var(--gold); color:#000;" onclick="sendMail()">写好了，封存投递</button>
-        </div>
-        <div style="margin-top:20px; font-size:13px; color:#444;" onclick="location.reload()">取消返回</div>
     </div>
 
 <script>
-    const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // ================= 配置区 =================
+    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
+    
+    // 你的 Python 脚本使用的公钥
+    const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
+x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
+trELXELa5khEOwWHj2EbOnhPdbk7aJ3Du/RmkZAu/gSVKHiWAeVPdmZuEDRP8wV1
+gIYQsnXW+gNTt0SPKdheSkWTiksSImiJlzV3HC9AS/ucx/GfAhxnLLQ67ZhRE+Ub
+ytBiBV+RfQX9P0oWbsESOD+FtiJfvKO74jA9naWsmG7hMmhotH1O1oC3YWFYvpNi
+RYytkgByTOHBmtFqUVa1jIAJGdAZ8g1jMhZOOte5NfjJ4fJQhmqzdHBlH2xU/14A
+pQIDAQAB
+-----END PUBLIC KEY-----`;
 
-    let _selfId, _cachedCipher, _targetCredId, _targetPubKey;
+    const client = window.supabase.createClient(DB_URL, DB_KEY);
+    const DESTROY_TIME_MS = 24 * 60 * 60 * 1000; 
+    let countdownInterval;
 
-    // --- 加密算法库 ---
-    async function createKeys(id) {
-        const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
-        const pubB64 = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey))));
-        const r = indexedDB.open("PHX_STABLE", 1);
-        r.onupgradeneeded = e => e.target.result.createObjectStore("k");
-        await new Promise(res => r.onsuccess = e => { e.target.result.transaction("k", "readwrite").objectStore("k").put(kp.privateKey, id); res(); });
-        return pubB64;
+    function toggleView(viewName) {
+        ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        if (viewName === 'login') document.getElementById('login-section').classList.remove('hidden');
+        if (viewName === 'manual') document.getElementById('manual-section').classList.remove('hidden');
+        if (viewName === 'dash') document.getElementById('dash').classList.remove('hidden');
+        if (viewName === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
     }
 
-    async function getLocalKey(id) {
-        return new Promise(res => {
-            const r = indexedDB.open("PHX_STABLE", 1);
-            r.onsuccess = e => {
-                const req = e.target.result.transaction("k").objectStore("k").get(id);
-                req.onsuccess = () => res(req.result);
-                req.onerror = () => res(null);
-            };
-            r.onerror = () => res(null);
-        });
-    }
+    // --- 新增：生物识别注册逻辑 ---
+    async function registerWithBiometrics() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
 
-    // --- 核心修复函数：带超时的信箱同步 ---
-    async function checkHeirStatus() {
-        showLoading("正在生物识别...");
+        if(!email || password.length < 6) {
+            return Swal.fire({text:'请输入邮箱和至少6位密码', background:'#000', color:'#f00'});
+        }
+
+        // 1. 检查浏览器支持
+        if (!window.PublicKeyCredential) {
+            return Swal.fire({text:'您的设备不支持或未开启生物识别(FaceID/指纹)', background:'#000', color:'#f00'});
+        }
+
+        // 2. 唤起生物识别
         try {
-            const auth = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" } });
-            _selfId = b64(auth.rawId);
+            Swal.fire({
+                title: '身份核验',
+                text: '请验证 FaceID 或 指纹以继续注册',
+                background: '#000',
+                color: '#0f0',
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // 生成随机 Challenge
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const publicKey = {
+                challenge: challenge,
+                rp: { name: "Phoenix Protocol" },
+                user: {
+                    id: Uint8Array.from(email, c => c.charCodeAt(0)), // 简单将邮箱转为ID
+                    name: email,
+                    displayName: email.split('@')[0]
+                },
+                pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                authenticatorSelection: { userVerification: "required" }, // 强制验证
+                timeout: 60000
+            };
+
+            // 浏览器原生调用
+            await navigator.credentials.create({ publicKey });
+
+            // 3. 验证通过，执行 Supabase 注册
+            const { error } = await client.auth.signUp({email, password});
             
-            showLoading("正在同步信箱...");
+            if(error) throw error;
 
-            // 修复点：设置 8 秒超时竞争，防止数据库连接静默挂起
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("同步超时，请检查网络或刷新页面")), 8000));
-            const dbPromise = db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
+            Swal.fire({icon:'success', title:'生物验证通过', text:'注册成功，请查收确认邮件', background:'#000', color:'#0f0'});
 
-            const { data, error } = await Promise.race([dbPromise, timeoutPromise]);
-
-            if (error) throw error;
-
-            const priv = await getLocalKey(_selfId);
-
-            if (!data || !priv) {
-                showLoading("正在生成加密钥匙...");
-                const pub = await createKeys(_selfId);
-                await db.from('user_vault').upsert({ credential_id: _selfId, public_key: pub, status: 'empty' });
-                await new Promise(r => setTimeout(r, 400));
-                initUI({ status: 'empty', public_key: pub }, _selfId);
-            } else {
-                initUI(data, _selfId);
-            }
         } catch (e) {
             console.error(e);
-            alert(e.message || "同步失败，请检查网络连接");
-            hideLoading();
+            let msg = '生物识别验证失败或已取消';
+            if (e.message && e.message.includes('User')) msg = e.message; 
+            Swal.fire({icon:'error', title:'拒绝访问', text: msg, background:'#000', color:'#f00'});
         }
     }
 
-    function initUI(data, id) {
-        document.getElementById('page-home').style.display = 'none';
-        document.getElementById('page-heir').style.display = 'flex';
-        document.getElementById('my-id-val').innerText = id + "|" + data.public_key;
+    // --- 委托人逻辑 ---
+    async function login() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const {error} = await client.auth.signInWithPassword({email, password});
+        if(error) return Swal.fire({text:'账号或密码错误', background:'#000', color:'#f00'});
+        toggleView('dash');
+    }
+
+    async function deploy() {
+        const secret = document.getElementById("secret").value;
+        const ben = document.getElementById("ben").value;
+        const timeMin = document.getElementById("time").value;
+        const warnSec = document.getElementById("warn_sec").value;
+
+        if(!secret || !ben) return Swal.fire({text:'信息不全', background:'#000', color:'#f00'});
+
+        // 生成 AES 密钥
+        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
+        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
         
-        const icon = document.getElementById('mail-icon');
-        const tip = document.getElementById('mail-tip');
+        // RSA 加密 Payload (密钥+收件人)
+        const payload = JSON.stringify({ k: aesKey, t: ben });
+        const encryptor = new JSEncrypt();
+        encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
+        const wrappedPayload = encryptor.encrypt(payload);
 
-        if (data.status === 'sealed') {
-            icon.innerText = "✉️"; icon.style.opacity = "1";
-            tip.innerHTML = `<span style="color:var(--gold)">● 收到一份加密信件 · 点击解密</span>`;
-            _cachedCipher = data.encrypted_data;
-        } else {
-            icon.innerText = "📭"; icon.style.opacity = "0.2";
-            tip.innerText = "信箱暂时为空";
-        }
-        hideLoading();
+        if(!wrappedPayload) return Swal.fire({text:'加密错误', background:'#000', color:'#f00'});
+        
+        const user = (await client.auth.getUser()).data.user;
+        
+        // 计算秒数传给后端
+        const timeoutSeconds = parseInt(timeMin) * 60;
+        const warnStartSeconds = parseInt(warnSec);
+
+        // 写入 Supabase，包含 Python 脚本需要的 owner_email 和时间参数
+        const {error} = await client.from("vaults").upsert({
+            id: user.id, 
+            encrypted_data: encryptedData, 
+            key_storage: wrappedPayload,
+            timeout_seconds: timeoutSeconds, // 存秒
+            warn_start_seconds: warnStartSeconds,
+            owner_email: user.email, // 存入拥有者邮箱以便唤醒
+            status: 'active', 
+            last_checkin_at: new Date(),
+            warn_sent_count: 0,
+            warn_max_count: 3 
+        });
+
+        if(error) Swal.fire({text: error.message, background:'#000', color:'#f00'});
+        else Swal.fire({icon:'success', title:'部署完成', background:'#000', color:'#0f0'}).then(() => location.reload());
     }
 
-    async function openMail() {
-        if (!_cachedCipher) return;
-        showLoading("调用私钥解密...");
+    // --- 提取与自毁逻辑 ---
+    async function handleManualDecrypt() {
+        const id = document.getElementById('manual-id').value.trim();
+        const key = document.getElementById('manual-key').value.trim();
+        if(!id || !key) return Swal.fire({text:'请输入完整信息', background:'#000', color:'#f00'});
+        
+        Swal.fire({ title: '正在校验身份...', background: '#000', color: '#0f0', didOpen: () => Swal.showLoading() });
+        
         try {
-            const priv = await getLocalKey(_selfId);
-            if (!priv) throw new Error("本地私钥丢失，无法解密。");
-            const dec = new TextDecoder().decode(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, priv, Uint8Array.from(atob(_cachedCipher), c => c.charCodeAt(0))));
-            document.getElementById('mail-closed').classList.add('hidden');
-            document.getElementById('mail-opened').classList.add('visible');
-            document.getElementById('mail-body').innerText = dec;
-        } catch (e) { 
-            alert("解密失败：此信件并非由此设备加密或私钥已失效。"); 
+            const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
+            if(error || !data) throw new Error("记录不存在或已销毁");
+
+            const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
+            const text = bytes.toString(CryptoJS.enc.Utf8);
+            if(!text) throw new Error("密钥错误");
+
+            Swal.close();
+            
+            await Swal.fire({
+                title: '身份验证通过',
+                html: '<span style="color:#ff3333">⚠️ 警告：数据将在 24 小时后永久销毁</span><br><br>确认查看后，倒计时将立即开始。',
+                icon: 'warning',
+                background: '#000',
+                color: '#fff',
+                showCancelButton: true,
+                confirmButtonColor: '#ff3333',
+                cancelButtonColor: '#333',
+                confirmButtonText: '立即查看'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showContentAndStartTimer(text);
+                }
+            });
+
+        } catch(e) {
+            Swal.fire({icon:'error', title:'提取失败', text: e.message, background:'#000', color:'#f00'});
         }
-        hideLoading();
     }
 
-    // --- 写信逻辑 ---
-    function goToWrite() {
-        const fullCode = document.getElementById('input-target-id').value.trim();
-        const parts = fullCode.split('|');
-        if (parts.length < 2) return alert("无效的代码，请完整复制对方的 ID");
-        _targetCredId = parts[0];
-        _targetPubKey = parts[1];
-        document.getElementById('step-id').style.display = 'none';
-        document.getElementById('step-write').style.display = 'flex';
+    function showContentAndStartTimer(text) {
+        toggleView('result');
+        document.getElementById("decrypt-result").innerText = text;
+        startSelfDestruct(); 
     }
 
-    async function sendMail() {
-        const msg = document.getElementById('input-msg').value;
-        if (!msg) return;
-        showLoading("正在硬件加密...");
-        try {
-            const pubKeyBuf = Uint8Array.from(atob(_targetPubKey), c => c.charCodeAt(0));
-            const pubKey = await crypto.subtle.importKey("spki", pubKeyBuf, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
-            const encrypted = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, pubKey, new TextEncoder().encode(msg)))));
-            await db.from('user_vault').update({ encrypted_data: encrypted, status: 'sealed' }).eq('credential_id', _targetCredId);
-            alert("信件已成功存入对方信箱。");
-            location.reload();
-        } catch (e) { alert("投递失败，请核对 ID"); hideLoading(); }
+    function startSelfDestruct() {
+        document.getElementById('timer-bar').style.display = 'block';
+        document.getElementById('countdown-display').style.display = 'block';
+        
+        let remaining = DESTROY_TIME_MS;
+        const endTime = Date.now() + remaining;
+
+        countdownInterval = setInterval(() => {
+            remaining = endTime - Date.now();
+            updateTimerDisplay(remaining);
+
+            if (remaining <= 0) {
+                clearInterval(countdownInterval);
+                triggerDestruction();
+            }
+        }, 1000);
     }
 
-    // --- 通用工具 ---
-    function copyId() {
-        navigator.clipboard.writeText(document.getElementById('my-id-val').innerText).then(() => {
-            const el = document.getElementById('my-id-val');
-            const oldText = el.innerText;
-            el.innerText = "代码已成功复制"; el.style.color = "var(--gold)";
-            setTimeout(() => { el.innerText = oldText; el.style.color = "var(--grey)"; }, 1500);
+    function updateTimerDisplay(ms) {
+        if(ms < 0) ms = 0;
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600).toString().padStart(2, '0');
+        const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
+        const s = (totalSec % 60).toString().padStart(2, '0');
+        
+        document.getElementById('countdown-display').innerText = `${h}:${m}:${s}`;
+        
+        const percent = (ms / DESTROY_TIME_MS) * 100;
+        document.getElementById('timer-progress').style.width = percent + '%';
+    }
+
+    function triggerDestruction() {
+        document.body.classList.add('destroyed');
+        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>数据已永久销毁</div>';
+    }
+
+    function copyContent() {
+        const text = document.getElementById("decrypt-result").innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            Swal.fire({
+                icon: 'success', title: '已复制到剪贴板', 
+                toast: true, position: 'top', showConfirmButton: false, timer: 1500,
+                background: '#000', color: '#0f0'
+            });
         });
     }
-    function showOwnerPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-owner').style.display = 'flex'; }
-    function closeMail() { document.getElementById('mail-opened').classList.remove('visible'); document.getElementById('mail-closed').classList.remove('hidden'); }
-    function b64(b) { return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
-    function showLoading(t) { document.getElementById('loader').style.display = 'flex'; document.getElementById('loader-msg').innerText = t; }
-    function hideLoading() { document.getElementById('loader').style.display = 'none'; }
 </script>
 </body>
 </html>
