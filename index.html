@@ -17,7 +17,7 @@
             background-color: var(--bg-black); color: var(--matrix-green); 
             font-family: 'Courier New', monospace; margin: 0; height: 100vh; 
             display: flex; flex-direction: column; overflow: hidden;
-            user-select: none; /* 基础防复制，解密区单独开启 */
+            user-select: none; 
         }
 
         /* 干扰扫描线 */
@@ -78,7 +78,7 @@
             background: rgba(50, 0, 0, 0.1); 
             color: #fff; text-align: left;
             white-space: pre-wrap; word-break: break-all;
-            user-select: text; /* 允许选择复制 */
+            user-select: text; 
             max-height: 50vh; overflow-y: auto;
             font-size: 0.9rem;
         }
@@ -153,19 +153,16 @@
 
 <script>
     // ================== 反调试防护 ==================
-    // 简单的反调试：如果检测到 DevTools 打开，可能会影响执行速度或冻结
     setInterval(function(){
         const start = performance.now();
-        debugger; // 陷阱
-        if (performance.now() - start > 100) {
-            console.log("DevTools detected."); 
-            // 可选择在此处清空页面
-        }
+        debugger; 
+        if (performance.now() - start > 100) console.log("DevTools detected."); 
     }, 2000);
 
-    // ================== 配置 ==================
+    // ================== 配置区 ==================
+    // ⚠️ 请替换为您自己的 KEY
     const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
-    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; // 替换为你的 Key
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
     const WATCHDOG_PUB_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
 x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
@@ -177,12 +174,10 @@ pQIDAQAB
 -----END PUBLIC KEY-----`;
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
-    // 缩短暴露窗口至 30 分钟
-    const DESTROY_TIME_MS = 30 * 60 * 1000; 
+    const DESTROY_TIME_MS = 30 * 60 * 1000; // 30分钟
     let countdownInterval;
-    let memoryCleaner = null; // 用于存储明文的引用，方便清理
+    let memoryCleaner = null; 
 
-    // 视图切换
     function toggleView(view) {
         ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
         if(view === 'login') document.getElementById('login-section').classList.remove('hidden');
@@ -191,7 +186,6 @@ pQIDAQAB
         if(view === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
     }
 
-    // SweetAlert 样式
     const swalStyle = { background: '#111', color: '#fff', confirmButtonColor: '#00ff41', cancelButtonColor: '#333' };
 
     // --- 核心逻辑: 一次性解密 (Burn-on-Read) ---
@@ -200,21 +194,16 @@ pQIDAQAB
         const key = document.getElementById('manual-key').value.trim();
         if(!id || !key) return Swal.fire({...swalStyle, text:'请输入完整参数', icon:'warning'});
 
-        // 1. 环境检测 (简单的 UserAgent 检查，实际上更严格的检测需要后端配合)
-        if (navigator.userAgent.includes('Headless')) {
-            return Swal.fire({...swalStyle, icon:'error', title:'环境不安全', text:'检测到自动化工具'});
-        }
-
         Swal.fire({ ...swalStyle, title: '正在连接安全信道...', didOpen: () => Swal.showLoading() });
 
         try {
-            // 2. 获取数据 (检查 status)
+            // 1. 获取数据 (检查 status)
             const { data, error } = await client.from("vaults").select("encrypted_data, status").eq("id", id).single();
             
             if (error || !data) throw new Error("凭证不存在或已被物理销毁");
             if (data.status === 'burned') throw new Error("该凭证已失效 (一次性提取已完成)");
 
-            // 3. 本地试解密 (验证 Key 是否正确)
+            // 2. 本地试解密 (验证 Key 是否正确)
             const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
             memoryCleaner = bytes.toString(CryptoJS.enc.Utf8);
             
@@ -222,7 +211,7 @@ pQIDAQAB
 
             Swal.close();
 
-            // 4. 最终警告 & 物理销毁触发
+            // 3. 最终警告 & 物理销毁触发
             await Swal.fire({
                 ...swalStyle,
                 title: '身份验证通过',
@@ -233,28 +222,18 @@ pQIDAQAB
                 confirmButtonText: '提取并销毁云端备份'
             }).then(async (result) => {
                 if (result.isConfirmed) {
-                    // 5. 执行云端销毁 (Burn)
-                    // 将数据覆写为 "VOID"，状态改为 burned
+                    // 4. 执行云端销毁 (Burn)
                     const { error: burnErr } = await client
                         .from("vaults")
-                        .update({ 
-                            status: 'burned', 
-                            encrypted_data: 'VOID', 
-                            key_storage: 'BURNED_BY_USER' 
-                        })
+                        .update({ status: 'burned', encrypted_data: 'VOID', key_storage: 'BURNED' })
                         .eq("id", id);
                     
-                    if(burnErr) {
-                        console.error(burnErr);
-                        // 即使更新失败，也可能显示，但最好提示风险。这里选择继续显示但报错。
-                        Swal.fire({...swalStyle, icon:'error', title:'云端销毁失败', text:'无法抹除痕迹，建议手动停止'});
-                        return;
-                    }
+                    if(burnErr) throw new Error("云端销毁失败，提取终止");
 
-                    // 6. 显示内容并启动自毁
+                    // 5. 显示内容并启动自毁
                     showContent(memoryCleaner);
                 } else {
-                    memoryCleaner = null; // 清理内存
+                    memoryCleaner = null; 
                 }
             });
 
@@ -273,7 +252,6 @@ pQIDAQAB
     function startSelfDestruct() {
         document.getElementById('timer-bar').style.display = 'block';
         document.getElementById('countdown-display').style.display = 'block';
-        
         let remaining = DESTROY_TIME_MS;
         const endTime = Date.now() + remaining;
 
@@ -297,18 +275,11 @@ pQIDAQAB
     }
 
     function triggerDestruction() {
-        // 1. 停止计时器
         clearInterval(countdownInterval);
-        
-        // 2. 清理内存变量
         memoryCleaner = null;
         document.getElementById("decrypt-result").innerText = "";
-        
-        // 3. UI 销毁
         document.body.classList.add('destroyed');
-        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>内存已清零<br>会话已结束</div>';
-        
-        // 4. 强制刷新防止后退查看 (可选)
+        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>内存已清零</div>';
         setTimeout(() => window.location.replace("about:blank"), 3000);
     }
 
@@ -319,21 +290,72 @@ pQIDAQAB
         });
     }
 
-    // --- 常规逻辑 ---
+    // --- 用户逻辑 ---
     async function login() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         const { error } = await client.auth.signInWithPassword({email, password});
         if(error) return Swal.fire({...swalStyle, icon:'error', text:'认证失败'});
+        // 登录成功后更新心跳
+        const user = (await client.auth.getUser()).data.user;
+        if(user) await client.from("vaults").update({last_checkin_at: new Date()}).eq("id", user.id);
         toggleView('dash');
     }
 
+    // --- 注册逻辑 (已集成生物识别) ---
     async function signup() {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+
+        if(!email || password.length < 6) return Swal.fire({...swalStyle, icon:'warning', text:'格式错误'});
+
+        Swal.fire({ ...swalStyle, title: '创建账户...', didOpen: () => Swal.showLoading() });
         const { error } = await client.auth.signUp({email, password});
-        if(error) return Swal.fire({...swalStyle, icon:'error', text:error.message});
-        Swal.fire({...swalStyle, icon:'success', text:'请查收确认邮件'});
+        
+        if(error) return Swal.fire({...swalStyle, icon:'error', text: error.message});
+
+        Swal.close();
+        await Swal.fire({
+            ...swalStyle,
+            title: '注册成功',
+            html: '是否立即绑定 <b>FaceID / 指纹</b>？<br><span style="font-size:12px;color:#888">这是您的生存证明</span>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '立即绑定',
+            cancelButtonText: '稍后'
+        }).then(async (result) => {
+            if (result.isConfirmed) await bindBiometrics(email);
+            else Swal.fire({...swalStyle, icon:'success', text:'请查收确认邮件'});
+        });
+    }
+
+    async function bindBiometrics(userEmail) {
+        if (!window.PublicKeyCredential) return Swal.fire({...swalStyle, icon:'error', text:'设备不支持生物识别'});
+        
+        try {
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+            
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "Phoenix Protocol", id: window.location.hostname },
+                    user: {
+                        id: Uint8Array.from(userEmail, c => c.charCodeAt(0)),
+                        name: userEmail,
+                        displayName: userEmail.split('@')[0]
+                    },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+                    timeout: 60000,
+                    attestation: "none"
+                }
+            });
+            console.log("Bio Credential:", credential);
+            Swal.fire({...swalStyle, icon:'success', title:'硬件绑定完成', text:'您的生物特征已写入芯片'});
+        } catch (e) {
+            Swal.fire({...swalStyle, icon:'error', title:'绑定中断', text: e.message || '用户取消'});
+        }
     }
 
     async function deploy() {
@@ -343,13 +365,11 @@ pQIDAQAB
         
         if(!secret || !ben) return Swal.fire({...swalStyle, icon:'warning', text:'信息不全'});
 
-        Swal.fire({...swalStyle, title:'加密上传中...', didOpen:()=>Swal.showLoading()});
+        Swal.fire({...swalStyle, title:'加密部署中...', didOpen:()=>Swal.showLoading()});
 
-        // 本地加密
         const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
         const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
         
-        // 密钥信封
         const payload = JSON.stringify({ k: aesKey, t: ben });
         const encryptor = new JSEncrypt();
         encryptor.setPublicKey(WATCHDOG_PUB_KEY);
