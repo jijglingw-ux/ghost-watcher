@@ -15,7 +15,7 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 RSA_PRIVATE_KEY_PEM = os.environ.get("RSA_PRIVATE_KEY")
 SENDER_EMAIL = os.environ.get("EMAIL_USER")
 SENDER_PASSWORD = os.environ.get("EMAIL_PASS")
-BASE_URL = "https://your-username.github.io/phoenix/" # 请替换为实际地址
+BASE_URL = "https://jijglingw-ux.github.io/ghost-watcher/"
 
 def get_db(): return create_client(SUPABASE_URL, SUPABASE_KEY)
 
