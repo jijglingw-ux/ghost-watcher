@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V16.1 ID配对</title>
+    <title>凤凰协议 | V17 密态信使</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --gold: #FFD700; --panel: #1c1c1e; --success: #30D158; }
@@ -16,101 +14,94 @@
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
 
-        .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
+        .page-container { width: 100%; max-width: 340px; display: none; flex-direction: column; }
+        #page-home { display: flex; }
         
+        /* 首页卡片 */
         .card { width: 100%; height: 120px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
         .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
-        .role-owner { border-color: rgba(10, 132, 255, 0.3); } .role-owner .title { color: var(--accent); font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-        .role-heir { border-color: rgba(48, 209, 88, 0.3); } .role-heir .title { color: #30D158; font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-        .desc { font-size: 12px; color: #888; }
+        .role-owner { border-color: rgba(10, 132, 255, 0.3); } 
+        .role-heir { border-color: rgba(48, 209, 88, 0.3); }
+        .card .title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
 
+        /* 按钮 */
         .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 20px; }
         .btn-seal { background: var(--accent); color: white; }
-        .btn-file { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #444; margin-top: 15px; font-size: 14px; }
         .btn-open { background: var(--gold); color: #000; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
 
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        .status-icon { font-size: 40px; margin-bottom: 15px; }
         .status-box { background: var(--panel); padding: 30px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
 
-        #page-owner, #page-heir { display: none; }
-        #reader { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000; position: relative; }
-        
+        /* 信封视觉 */
+        .envelope-container { margin: 20px auto; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; position: relative; }
+        .envelope-icon { font-size: 60px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
+        .seal-wax { position: absolute; font-size: 24px; bottom: 30px; }
+
+        /* ID 凭证展示 */
+        .id-label { font-size: 12px; color: #555; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px; }
+        .id-string-box { background: #000; padding: 12px; border-radius: 12px; border: 1px solid #333; word-break: break-all; font-family: monospace; font-size: 11px; color: var(--gold); margin: 10px 0; line-height: 1.4; user-select: text; -webkit-user-select: text; }
+        .btn-copy-id { color: var(--gold); font-size: 12px; background: transparent; border: none; cursor: pointer; text-decoration: underline; opacity: 0.8; }
+
+        /* 立嘱人输入 */
         #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
+        textarea { width: 100%; height: 120px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
         
+        /* 揭示面板 */
         #legacy-reveal-panel { display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold); box-shadow: 0 0 50px rgba(255, 215, 0, 0.1); animation: popIn 0.6s; margin-top: 20px;}
         .legacy-content { font-size: 20px; line-height: 1.6; color: #fff; white-space: pre-wrap; margin: 20px 0; font-weight: bold; }
 
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #env-warning { display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid #FF453A; color: #FF453A; padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left; }
-        
-        /* 新增：ID 字符展示框 */
-        .id-string-box { background: #000; padding: 15px; border-radius: 12px; border: 1px solid #444; word-break: break-all; font-family: monospace; font-size: 11px; color: var(--gold); margin: 15px 0; line-height: 1.4; user-select: text; -webkit-user-select: text; }
-        .btn-copy-id { background: rgba(255, 215, 0, 0.1); color: var(--gold); border: 1px solid var(--gold); padding: 10px; border-radius: 10px; font-size: 12px; cursor: pointer; width: 100%; }
-        .manual-input-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; margin-top: 15px; border: 1px solid #333; }
-        .will-status-badge { display: inline-block; padding: 5px 15px; border-radius: 15px; font-size: 12px; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff;">连接中...</p></div>
+    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff; font-size:12px;"></p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V16.1 (ID PAIRING)</p></div>
-    <div id="env-warning"></div>
+    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V17</p></div>
 
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
-            <div class="title">我要封存</div><div class="desc">输入 ID / 扫码 · 存入保险箱</div>
+            <div class="title" style="color:var(--accent);">我要封存</div><div style="color:#555; font-size:11px;">输入受益人ID进行配对</div>
         </div>
         <div class="card role-heir" onclick="checkHeirStatus()">
-            <div class="title">我是继承人</div><div class="desc">刷脸 · 查看我的 ID 凭证</div>
+            <div class="title" style="color:var(--success);">我是继承人</div><div style="color:#555; font-size:11px;">刷脸开启我的加密信箱</div>
         </div>
     </div>
 
     <div id="page-owner" class="page-container">
-        <div id="scan-stage">
-            <p style="color:var(--accent); margin-bottom:15px; font-size:12px;">扫码或在下方粘贴受益人 ID</p>
-            <div id="reader"></div>
-            
-            <div class="manual-input-box">
-                <input type="text" id="manual-id-input" placeholder="在此粘贴对方提供的 ID 字符" style="width:100%; background:transparent; border:none; border-bottom:1px solid #444; color:#fff; padding:10px 0; font-size:12px; outline:none;">
-                <button class="btn-action btn-seal" style="margin-top:15px; padding:10px; font-size:13px;" onclick="handleManualPairing()">使用该 ID 配对</button>
-            </div>
-
-            <div style="margin: 15px 0; font-size:12px; color:#444;">或者</div>
-            <button class="btn-action btn-file" onclick="triggerFileSelect()">🖼️ 从相册选择二维码</button>
-            <input type="file" id="qr-input-file" accept="image/*" style="display: none;" onchange="handleFileScan(this)">
+        <div id="id-input-stage" class="status-box">
+            <h3 style="margin-top:0; font-weight:400;">锁定受益人</h3>
+            <p style="color:#666; font-size:12px; margin-bottom:25px;">请在下方输入或粘贴对方提供的唯一 ID 凭证</p>
+            <input type="text" id="manual-id-input" placeholder="在此粘贴 ID 字符" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid #444; border-radius:12px; color:#fff; padding:15px; font-size:13px; box-sizing:border-box; outline:none; text-align:center; font-family:monospace;">
+            <button class="btn-action btn-seal" onclick="handlePairing()">开始配对</button>
         </div>
 
         <div id="secret-panel">
-            <div style="font-size:12px; color:#888;">已锁定信箱 ID:</div>
-            <div style="color:var(--accent); font-family:monospace; font-size:10px; word-break:break-all;" id="target-id-display">...</div>
-            <textarea id="secret-input" placeholder="输入要传承的信息..."></textarea>
-            <button class="btn-action btn-seal" onclick="sealLegacy()">确认封存 (上传)</button>
+            <div style="font-size:11px; color:#555; text-transform:uppercase;">已配对目标 ID:</div>
+            <div style="color:var(--accent); font-family:monospace; font-size:10px; word-break:break-all; margin-top:5px;" id="target-id-display">...</div>
+            <textarea id="secret-input" placeholder="输入你想传承给对方的信息..."></textarea>
+            <button class="btn-action btn-seal" onclick="sealLegacy()">确认封存并上传</button>
         </div>
-        <div class="back-btn" onclick="goHome()">返回首页</div>
+        <div class="back-btn" onclick="location.reload()">返回首页</div>
     </div>
 
     <div id="page-heir" class="page-container">
         <div class="status-box">
-            <div id="heir-will-indicator"></div>
-            
-            <div style="font-size: 13px; color: #aaa; margin-bottom: 5px;">我的唯一身份凭证 (ID)</div>
-            <div class="id-string-box" id="heir-id-string">正在获取...</div>
-            <button class="btn-copy-id" onclick="copyHeirID()">点击复制 ID 发给对方</button>
-            
-            <p style="font-size:11px; color:#555; margin-top:20px;">立嘱的对象需要这一串 ID 字符<br>来与您的生物身份进行配对留言</p>
+            <div class="envelope-container" id="heir-visual-box">
+                </div>
+            <div id="heir-status-text" style="font-size:14px; margin-bottom:10px;"></div>
+
+            <div class="id-label">我的唯一身份凭证</div>
+            <div class="id-string-box" id="heir-id-string">...</div>
+            <button class="btn-copy-id" onclick="copyHeirID()">点击复制ID</button>
         </div>
 
         <div id="heir-legacy-toggle-area" style="display: none; margin-top: 20px;">
-            <button class="btn-action btn-open" id="toggle-btn" onclick="toggleLegacyView()">🔑 开启封存遗嘱</button>
+            <button class="btn-action btn-open" id="toggle-btn" onclick="toggleLegacyView()">🔑 开启封存密函</button>
             <div id="legacy-reveal-panel">
                 <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
                 <div class="legacy-content" id="legacy-text"></div>
@@ -118,7 +109,7 @@
             </div>
         </div>
 
-        <div class="back-btn" onclick="goHome()">返回首页</div>
+        <div class="back-btn" onclick="location.reload()">退出信箱</div>
     </div>
 
 <script>
@@ -126,65 +117,81 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let currentEncryptedData = null; 
+    let _myId, _myCipher, _targetId;
     let isLegacyVisible = false;
-    let html5QrCode = null;
-    let detectedHeirId = null;
 
-    // ============================================
-    // 🧠 受益人逻辑 (改为显示 ID 字符)
-    // ============================================
+    // --- 受益人核心逻辑 ---
     async function checkHeirStatus() {
-        showLoading("正在生物识别验证...");
+        showLoading("核验生物信息...");
         try {
-            const assertion = await navigator.credentials.get({
+            const auth = await navigator.credentials.get({
                 publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" }
             });
-
-            if (assertion) {
-                const credentialId = bufferToBase64url(assertion.rawId);
-                showLoading("同步状态...");
-                const { data } = await db.from('user_vault').select('*').eq('credential_id', credentialId).maybeSingle();
-                
-                hideLoading();
-                renderHeirUI(data, credentialId);
-                showHeirPage();
+            _myId = bufferToBase64url(auth.rawId);
+            
+            showLoading("正在同步云端状态...");
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
+            
+            if (!data) {
+                await mintNewIdentity(_myId);
+            } else {
+                renderHeirUI(data, _myId);
             }
-        } catch (err) {
-            if (err.name !== "NotAllowedError") await mintIdentity();
+        } catch (e) {
+            if (e.name !== "NotAllowedError") await mintNewIdentity();
+            else hideLoading();
         }
     }
 
-    function renderHeirUI(data, id) {
-        document.getElementById('heir-id-string').innerText = id;
+    async function mintNewIdentity(existingId = null) {
+        showLoading("正在为您开辟数字信箱...");
+        try {
+            let id = existingId;
+            if (!id) {
+                const cred = await navigator.credentials.create({
+                    publicKey: {
+                        challenge: new Uint8Array(32), rp: { name: "Phoenix" },
+                        user: { id: new Uint8Array(16), name: "User", displayName: "User" },
+                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+                        authenticatorSelection: { userVerification: "required" }
+                    }
+                });
+                id = bufferToBase64url(cred.rawId);
+            }
+            await db.from('user_vault').insert({ credential_id: id, status: 'empty' });
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', id).single();
+            renderHeirUI(data, id);
+        } catch (e) { hideLoading(); }
+    }
 
-        const indicator = document.getElementById('heir-will-indicator');
-        const toggleArea = document.getElementById('heir-legacy-toggle-area');
+    function renderHeirUI(data, id) {
+        document.getElementById('page-home').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'flex';
+        document.getElementById('heir-id-string').innerText = id;
         
+        const visualBox = document.getElementById('heir-visual-box');
+        const statusText = document.getElementById('heir-status-text');
+        const toggleArea = document.getElementById('heir-legacy-toggle-area');
+
         if (data && data.status === 'sealed') {
-            indicator.innerHTML = `<div class="will-status-badge" style="background:rgba(255,215,0,0.2); color:var(--gold); border:1px solid var(--gold);">● 发现封存遗嘱</div>`;
-            currentEncryptedData = data.encrypted_data;
-            document.getElementById('legacy-text').innerText = currentEncryptedData;
+            visualBox.innerHTML = `<div class="envelope-icon">✉️</div><div class="seal-wax">🧧</div>`;
+            statusText.innerHTML = `<span style="color:var(--gold)">发现封存密函</span>`;
+            _myCipher = data.encrypted_data;
             toggleArea.style.display = 'block';
         } else {
-            indicator.innerHTML = `<div class="will-status-badge" style="background:rgba(255,255,255,0.1); color:#666;">暂无封存遗嘱</div>`;
+            visualBox.innerHTML = `<div class="envelope-icon" style="opacity:0.2;">📭</div>`;
+            statusText.innerHTML = `<span style="color:#666">信箱目前为空</span>`;
             toggleArea.style.display = 'none';
-            if(!data) db.from('user_vault').insert({ credential_id: id });
         }
+        hideLoading();
     }
 
     function copyHeirID() {
         const idText = document.getElementById('heir-id-string').innerText;
         navigator.clipboard.writeText(idText).then(() => {
-            alert("ID 已复制");
-        }).catch(() => {
-            const input = document.createElement('input');
-            input.value = idText;
-            document.body.appendChild(input);
-            input.select();
-            document.execCommand('copy');
-            document.body.removeChild(input);
-            alert("ID 已复制");
+            const btn = document.querySelector('.btn-copy-id');
+            btn.innerText = "已复制";
+            setTimeout(() => btn.innerText = "点击复制ID", 2000);
         });
     }
 
@@ -194,96 +201,48 @@
         isLegacyVisible = !isLegacyVisible;
         if (isLegacyVisible) {
             panel.style.display = 'block';
-            btn.innerText = "✖ 关闭遗嘱显示";
+            document.getElementById('legacy-text').innerText = _myCipher; // V17暂存为明文
+            btn.innerText = "✖ 关闭显示";
             btn.style.background = "#333";
             btn.style.color = "#888";
         } else {
             panel.style.display = 'none';
-            btn.innerText = "🔑 开启封存遗嘱";
+            btn.innerText = "🔑 开启封存密函";
             btn.style.background = "var(--gold)";
             btn.style.color = "#000";
         }
     }
 
-    async function mintIdentity() {
-        try {
-            const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
-            const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
-            const credential = await navigator.credentials.create({
-                publicKey: {
-                    challenge, rp: { name: "Phoenix" },
-                    user: { id: userId, name: "Heir", displayName: "Heir" },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                    authenticatorSelection: { userVerification: "required" }
-                }
-            });
-            const credentialId = bufferToBase64url(credential.rawId);
-            await db.from('user_vault').insert({ credential_id: credentialId });
-            hideLoading();
-            renderHeirUI(null, credentialId);
-            showHeirPage();
-        } catch (err) { hideLoading(); }
-    }
-
-    // ============================================
-    // 📷 立嘱人逻辑 (增加手动输入 ID)
-    // ============================================
+    // --- 立嘱人核心逻辑 ---
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
-        document.getElementById('scan-stage').style.display = 'block';
-        document.getElementById('secret-panel').style.display = 'none';
-        startScanner();
     }
 
-    function startScanner() {
-        setTimeout(() => {
-            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-            html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, onScanSuccess)
-            .catch(err => { document.getElementById('reader').innerHTML = "<div style='display:flex;height:100%;align-items:center;justify-content:center;color:#666;'>摄像头不可用</div>"; });
-        }, 300);
-    }
-
-    function handleManualPairing() {
+    function handlePairing() {
         const inputId = document.getElementById('manual-id-input').value.trim();
-        if (inputId.length < 10) return alert("请输入正确的 ID 字符");
-        onScanSuccess(inputId);
-    }
-
-    function onScanSuccess(decodedText) {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => html5QrCode.clear());
-        }
-        document.getElementById('scan-stage').style.display = 'none';
-        detectedHeirId = decodedText;
+        if (inputId.length < 10) return alert("请输入有效的 ID 凭证");
+        
+        _targetId = inputId;
+        document.getElementById('id-input-stage').style.display = 'none';
         document.getElementById('secret-panel').style.display = 'block';
-        document.getElementById('target-id-display').innerText = detectedHeirId;
-        if(navigator.vibrate) navigator.vibrate(200);
+        document.getElementById('target-id-display').innerText = _targetId;
     }
 
     async function sealLegacy() {
-        const secret = document.getElementById('secret-input').value;
-        if (!secret) return alert("请输入信息");
-        showLoading("正在封存...");
-        const { error } = await db.from('user_vault').update({ encrypted_data: secret, status: 'sealed' }).eq('credential_id', detectedHeirId);
+        const msg = document.getElementById('secret-input').value;
+        if (!msg) return alert("请输入内容");
+        showLoading("正在安全封存...");
+        const { error } = await db.from('user_vault').update({ encrypted_data: msg, status: 'sealed' }).eq('credential_id', _targetId);
         hideLoading();
-        if (!error) { alert("✅ 封存完毕！"); goHome(); }
+        if (!error) { alert("✅ 封存完毕！"); location.reload(); }
+        else { alert("投递失败：请核对 ID 是否正确"); }
     }
 
-    // ============================================
-    // 🛠️ 工具函数
-    // ============================================
+    // --- 工具 ---
     function bufferToBase64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
-    function showLoading(text) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = text; }
+    function showLoading(t) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = t; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
-    function goHome() { location.reload(); }
-    function showHeirPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-heir').style.display = 'flex'; }
-    function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
-    async function handleFileScan(input) {
-        if (input.files.length === 0) return;
-        const decoded = await new Html5Qrcode("reader").scanFile(input.files[0], true);
-        onScanSuccess(decoded);
-    }
 </script>
 </body>
 </html>
