@@ -57,7 +57,7 @@
 
     <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff;">连接中...</p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V13 (MINIMALIST)</p></div>
+    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V13 (CONFIGURED)</p></div>
     <div id="env-warning"></div>
 
     <div id="page-home" class="page-container">
@@ -102,17 +102,16 @@
 
 <script>
     // ============================================
-    // ⚠️ 数据库配置 (填入你的最新配置)
+    // ⚠️ 数据库配置 (已自动填充)
     // ============================================
-    const SUPABASE_URL = '你的URL'; 
-    const SUPABASE_KEY = '你的ANON_KEY'; 
+    const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
 
     let db = null;
     try {
-        if (!SUPABASE_URL.includes("你的")) {
-            db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } else { console.error("请填入配置"); }
-    } catch (e) { console.error(e); }
+        db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        console.log("Supabase initialized");
+    } catch (e) { console.error("DB Error:", e); }
 
     window.onload = function() {
         // 环境检查
@@ -120,13 +119,19 @@
             document.getElementById('env-warning').innerHTML = "⚠️ 必须使用 HTTPS 访问";
             document.getElementById('env-warning').style.display = 'block';
         }
+        // 安卓微信/QQ检查
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.match(/MicroMessenger/i) || ua.match(/QQ/i)) {
+             document.getElementById('env-warning').innerHTML = "⚠️ 请点击右上角 -> 在浏览器打开 (Chrome/Edge)";
+             document.getElementById('env-warning').style.display = 'block';
+        }
     }
 
     // ============================================
-    // 🧠 受益人逻辑 (自动判断：是新用户? 是老用户? 箱子空? 箱子满?)
+    // 🧠 受益人逻辑
     // ============================================
     async function checkHeirStatus() {
-        if (!db) { alert("数据库未连接"); return; }
+        if (!db) { alert("数据库连接异常"); return; }
         showLoading("生物鉴权中...");
 
         try {
@@ -140,7 +145,7 @@
             });
 
             if (assertion) {
-                // 2. 也是老用户，查询数据库
+                // 2. 老用户，查询数据库
                 const credentialId = bufferToBase64url(assertion.rawId);
                 console.log("用户ID:", credentialId);
                 
@@ -183,7 +188,7 @@
             });
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 🔥 V13 修改：只插入 credential_id，不插 public_key
+            // 🔥 适配极简数据库结构
             if (db) await db.from('user_vault').insert({ credential_id: credentialId });
             
             hideLoading();
