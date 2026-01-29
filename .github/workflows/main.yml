@@ -2,8 +2,8 @@ name: Phoenix Watchdog
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # 每5分钟运行一次
-  workflow_dispatch:      # 允许手动触发
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   run-watchdog:
@@ -25,10 +25,12 @@ jobs:
 
       - name: Run Watchdog Script
         env:
-          # 👇 关键修复：必须在这里把 GitHub 的密钥传给 Python，否则脚本读不到！
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}  # 之前漏了这行
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}  # 之前漏了这行
+          
+          # 👇 关键修改：左边是Python要的名字，右边是您GitHub后台实际的名字
+          EMAIL_USER: ${{ secrets.SENDER_EMAIL }}      # 对应您截图里的 SENDER_EMAIL
+          EMAIL_PASS: ${{ secrets.SENDER_PASSWORD }}   # 对应您截图里的 SENDER_PASSWORD
+        
         run: python watchdog.py
