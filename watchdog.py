@@ -61,7 +61,7 @@ def send_email(to_email, subject, html_content):
         return False
 
 def watchdog():
-    print("🐕 Phoenix Watchdog V8.0 Running...")
+    print("🐕 Phoenix Watchdog V8.1 Running...")
     db = get_db()
     try:
         # 仅处理 active 状态
