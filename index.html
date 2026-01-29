@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHOENIX | 身份初始化</title>
+    <title>PHOENIX | 身份自动构建</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -21,31 +21,31 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         #qrcode-box { background: #fff; padding: 15px; border-radius: 15px; margin: 20px auto; display: inline-block; }
         .status-box { background: var(--panel); padding: 30px 20px; border-radius: 24px; width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,0.05); }
-        .btn-action { padding: 16px; border-radius: 30px; font-size: 16px; width: 100%; border: none; font-weight: 600; margin-top: 20px; cursor: pointer; transition: 0.2s; }
+        .btn-action { padding: 16px; border-radius: 30px; font-size: 16px; width: 100%; border: none; font-weight: 600; margin-top: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff; font-size: 13px;"></p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p style="color:#666; font-size:10px; margin-top:5px;">V15.3 SECURE PROTOCOL</p></div>
+    <div class="header"><h1>PHOENIX</h1><p style="color:#666; font-size:10px; margin-top:5px;">PROTOCOL V15.4 (AUTO-GEN)</p></div>
 
     <div id="page-home" class="page-container">
         <div class="card" onclick="showOwnerPage()" style="border-color: var(--accent);"><div style="color:var(--accent);">我要封存</div></div>
-        <div class="card" onclick="checkHeirStatus()" style="border-color: #30D158;"><div style="color:#30D158;">我是受益人</div></div>
+        <div class="card" onclick="startHeirProtocol()" style="border-color: #30D158;"><div style="color:#30D158;">我是受益人</div></div>
     </div>
 
     <div id="page-heir" class="page-container">
         <div class="status-box">
             <div id="heir-status-msg" style="margin-bottom: 15px; font-size: 14px; font-weight: bold;"></div>
             <div id="qrcode-box"><div id="qrcode"></div></div>
-            <p style="font-size: 10px; color: #555; margin-top: 10px; font-family: monospace;" id="heir-id-display"></p>
+            <p style="font-size: 10px; color: #555; margin-top: 10px; font-family: monospace; word-break: break-all;" id="heir-id-display"></p>
         </div>
         <div id="legacy-section" style="display:none; margin-top:20px;">
             <button class="btn-action" style="background:var(--gold); color:#000;" onclick="viewWill()">🔑 解密封存遗言</button>
-            <div id="will-content" style="display:none; margin-top:20px; padding:20px; border-left:2px solid var(--gold); text-align:left; color:var(--gold); background:rgba(255,215,0,0.05); border-radius:0 15px 15px 0;"></div>
+            <div id="will-content" style="display:none; margin-top:20px; padding:20px; border-left:2px solid var(--gold); text-align:left; color:var(--gold); background:rgba(255,215,0,0.05); border-radius:15px; white-space: pre-wrap;"></div>
         </div>
-        <div onclick="location.reload()" style="margin-top:40px; color:#444; font-size:12px; cursor:pointer; text-decoration: underline;">返回主菜单</div>
+        <div onclick="location.reload()" style="margin-top:40px; color:#444; font-size:12px; cursor:pointer;">返回主菜单</div>
     </div>
 
     <div id="page-owner" class="page-container">
@@ -66,45 +66,20 @@
 
     let _myId, _myPrivKey, _myCipher;
 
-    async function checkHeirStatus() {
-        showLoading("正在准备生物识别...");
+    // --- 核心修复：点击即扫脸，扫脸即绑定 ---
+    async function startHeirProtocol() {
+        showLoading("正在唤醒生物识别...");
         try {
-            // 尝试获取凭证
-            const auth = await navigator.credentials.get({
-                publicKey: { challenge: new Uint8Array(32), rpId: window.location.hostname, userVerification: "required" }
-            });
-            _myId = b64(auth.rawId);
-            
-            showLoading("正在查询云端身份...");
-            const { data, error } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
-            
-            if (error) throw new Error("数据库连接失败: " + error.message);
-
-            _myPrivKey = await getKey(_myId);
-
-            if (!data || !_myPrivKey) {
-                // 数据库没记录或本地没私钥，进入初始化
-                await handleIdentityFlow(_myId);
-            } else {
-                enterDashboard(data);
-            }
-        } catch (e) {
-            console.warn("登录未命中:", e.message);
-            // 只要不是用户主动取消，都尝试新建
-            if (e.name !== "NotAllowedError") {
-                await handleIdentityFlow();
-            } else {
-                hideLoading();
-            }
-        }
-    }
-
-    async function handleIdentityFlow(existingId = null) {
-        showLoading("正在初始化加密信箱...");
-        try {
-            let id = existingId;
-            if (!id) {
-                const cred = await navigator.credentials.create({
+            // 第一步：直接尝试识别现有通行密钥
+            let auth;
+            try {
+                auth = await navigator.credentials.get({
+                    publicKey: { challenge: new Uint8Array(32), rpId: window.location.hostname, userVerification: "required" }
+                });
+            } catch (e) {
+                // 如果没有现有密钥，进入创建流程
+                showLoading("正在为您创建永久数字身份...");
+                auth = await navigator.credentials.create({
                     publicKey: {
                         challenge: new Uint8Array(32),
                         rp: { name: "Phoenix" },
@@ -113,31 +88,58 @@
                         authenticatorSelection: { userVerification: "required" }
                     }
                 });
-                id = b64(cred.rawId);
             }
 
-            // 1. 生成 RSA 密钥对
-            const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
-            const pub = await exportPub(kp.publicKey);
+            if (!auth) throw new Error("授权失败");
+            _myId = b64(auth.rawId);
             
-            // 2. 本地存储私钥
+            // 第二步：查询或初始化云端数据
+            showLoading("正在同步云端身份...");
+            const { data, error } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
+            
+            if (error) throw new Error("云端同步失败: " + error.message);
+
+            _myPrivKey = await getKey(_myId);
+
+            // 如果云端没数据，或者是本地没钥匙（换了设备），则生成/补全
+            if (!data || !_myPrivKey) {
+                await forceInitialize(_myId);
+            } else {
+                enterDashboard(data);
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("流程中断: " + e.message);
+            hideLoading();
+        }
+    }
+
+    async function forceInitialize(id) {
+        showLoading("正在构建加密信箱...");
+        try {
+            // 生成 RSA 密钥对
+            const kp = await crypto.subtle.generateKey(
+                { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
+                true, ["encrypt", "decrypt"]
+            );
+            const pub = await exportPub(kp.publicKey);
             await saveKey(id, kp.privateKey);
             
-            // 3. 云端存储公钥与 ID (强制写入)
-            showLoading("正在向云端备案...");
+            // 强制上报到云端
             const { error } = await db.from('user_vault').upsert({ 
                 credential_id: id, 
                 public_key: pub, 
                 status: 'empty' 
-            }, { onConflict: 'credential_id' });
+            });
 
-            if (error) throw new Error("云端备案失败: " + error.message);
-
-            // 成功后自动刷新进入
-            alert("✅ 身份初始化成功，欢迎使用凤凰协议。");
-            location.reload(); 
+            if (error) throw error;
+            
+            // 重新获取并进入
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', id).single();
+            enterDashboard(data);
         } catch (err) {
-            alert("流程中断: " + err.message);
+            alert("初始化失败: " + err.message);
             hideLoading();
         }
     }
@@ -146,14 +148,13 @@
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
         
-        // 渲染包含 公钥 的二维码供立嘱人配对
         const qrContent = _myId + "|" + data.public_key;
         new QRCode(document.getElementById("qrcode"), { text: qrContent, width: 160, height: 160 });
         document.getElementById('heir-id-display').innerText = "ADDR: " + _myId;
         
         const msg = document.getElementById('heir-status-msg');
         if (data.status === 'sealed') {
-            msg.innerHTML = "🔒 <span style='color:var(--gold)'>检测到封存密函</span>";
+            msg.innerHTML = "🔒 <span style='color:var(--gold)'>发现封存密函</span>";
             document.getElementById('legacy-section').style.display = 'block';
             _myCipher = data.encrypted_data;
         } else {
@@ -168,9 +169,7 @@
             const dec = await decrypt(_myCipher, _myPrivKey);
             document.getElementById('will-content').innerText = dec;
             document.getElementById('will-content').style.display = 'block';
-        } catch (e) { 
-            alert("解密失败：此密函并非由当前设备公钥加密。"); 
-        }
+        } catch (e) { alert("解密失败：私钥不匹配"); }
         hideLoading();
     }
 
@@ -182,7 +181,6 @@
         _scanner = new Html5Qrcode("reader");
         _scanner.start({ facingMode: "environment" }, { fps: 15, qrbox: 240 }, async (text) => {
             const parts = text.split('|');
-            if (parts.length < 2) return alert("无效的配对码");
             _targetId = parts[0];
             _targetPub = await importPub(parts[1]);
             _scanner.stop();
@@ -194,27 +192,26 @@
     async function finalSeal() {
         const msg = document.getElementById('msg-input').value;
         if (!msg) return;
-        showLoading("正在本地加密并封存...");
+        showLoading("加密封存中...");
         const enc = await encrypt(msg, _targetPub);
-        const { error } = await db.from('user_vault').update({ encrypted_data: enc, status: 'sealed' }).eq('credential_id', _targetId);
-        if (!error) { alert("✅ 封存完毕。"); location.reload(); }
+        await db.from('user_vault').update({ encrypted_data: enc, status: 'sealed' }).eq('credential_id', _targetId);
+        location.reload();
     }
 
-    // --- 工具类 ---
+    // --- 加密与存储工具 ---
     async function exportPub(k) { return btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey("spki", k)))); }
     async function importPub(p) { return await crypto.subtle.importKey("spki", Uint8Array.from(atob(p), c => c.charCodeAt(0)), { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]); }
     async function encrypt(t, k) { return btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, k, new TextEncoder().encode(t))))); }
     async function decrypt(c, k) { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, k, Uint8Array.from(atob(c), c => c.charCodeAt(0)))); }
     async function saveKey(id, k) {
         const r = indexedDB.open("PHX", 1);
-        r.onupgradeneeded = e => e.target.result.createObjectStore("keys");
-        return new Promise(res => r.onsuccess = e => { e.target.result.transaction("keys", "readwrite").objectStore("keys").put(k, id); res(); });
+        r.onupgradeneeded = e => e.target.result.createObjectStore("k");
+        return new Promise(res => r.onsuccess = e => { e.target.result.transaction("k", "readwrite").objectStore("k").put(k, id); res(); });
     }
     async function getKey(id) {
         const r = indexedDB.open("PHX", 1);
         return new Promise(res => r.onsuccess = e => {
-            const os = e.target.result.transaction("keys").objectStore("keys");
-            const g = os.get(id);
+            const g = e.target.result.transaction("k").objectStore("k").get(id);
             g.onsuccess = () => res(g.result);
             g.onerror = () => res(null);
         });
