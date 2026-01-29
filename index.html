@@ -2,294 +2,171 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>凤凰协议 V6.5 | 移动终端</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="robots" content="noindex, nofollow">
+    <title>凤凰协议 | 绝密终端</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
-
     <style>
-        :root {
-            --matrix-green: #00ff41;
-            --danger-red: #ff3333;
-            --bg-color: #050505;
-            --panel-bg: rgba(20, 20, 20, 0.85);
-            --border-color: rgba(0, 255, 65, 0.5);
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-
+        :root { --matrix-green: #00ff41; --danger-red: #ff3333; --bg-black: #050505; --panel-bg: rgba(20, 20, 20, 0.95); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            background-color: var(--bg-color);
-            color: var(--matrix-green);
-            /* 适配 iOS/Android 默认等宽字体 */
-            font-family: 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
-            margin: 0;
-            height: 100vh;
-            /* 关键：使用 dvh (动态视口高度) 防止地址栏遮挡 */
-            height: 100dvh; 
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            background-image: radial-gradient(circle at center, #111 0%, #000 100%);
+        
+        body { 
+            background-color: var(--bg-black); color: var(--matrix-green); 
+            font-family: 'Courier New', monospace; margin: 0; height: 100vh; 
+            display: flex; flex-direction: column; overflow: hidden;
+            user-select: none; /* 基础防复制，解密区单独开启 */
         }
 
-        /* 扫描线效果 (更细腻) */
+        /* 干扰扫描线 */
         .scanlines {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.05));
-            background-size: 100% 3px;
-            pointer-events: none;
-            z-index: 999;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1));
+            background-size: 100% 4px; pointer-events: none; z-index: 999;
         }
 
-        /* 主容器：适配安全区域 */
-        .main-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            padding: 20px;
-            padding-top: calc(20px + var(--safe-top));
-            padding-bottom: calc(20px + var(--safe-bottom));
-            overflow-y: auto; /* 允许内容滚动，防止键盘遮挡 */
-        }
-
+        .main-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; z-index: 10; }
+        
         .panel {
-            width: 100%;
-            max-width: 450px;
-            margin: 0 auto;
-            padding: 25px;
-            border: 1px solid var(--border-color);
-            background: var(--panel-bg);
-            /* iOS 毛玻璃效果 */
-            backdrop-filter: blur(10px); 
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: 12px;
-            box-shadow: 0 0 15px rgba(0, 255, 65, 0.15);
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            width: 100%; max-width: 480px; padding: 25px; 
+            border: 1px solid #333; border-radius: 8px;
+            background: var(--panel-bg); box-shadow: 0 0 20px rgba(0, 255, 65, 0.1);
+            position: relative;
         }
 
-        /* 标题栏 */
-        .header {
-            text-align: center;
-            border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .header h2 { margin: 0; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; }
-        .header .subtitle { font-size: 0.7rem; opacity: 0.7; margin-top: 5px; display: block; }
+        h2 { text-align: center; border-bottom: 1px dashed #333; padding-bottom: 15px; margin-top: 0; letter-spacing: 2px; }
 
-        /* 输入框：iOS 优化 */
         input, textarea {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #333;
-            color: #fff;
-            padding: 16px; /* 增大触控区 */
-            margin-bottom: 15px;
-            font-family: inherit;
-            outline: none;
-            border-radius: 8px; /* 现代圆角 */
-            appearance: none; /* 移除 iOS 默认样式 */
-            -webkit-appearance: none;
-            font-size: 16px; /* ⚠️ 关键：防止 iOS 输入时自动放大 */
-            transition: border-color 0.3s;
+            width: 100%; background: #000; border: 1px solid #333; 
+            color: #fff; padding: 12px; margin-bottom: 15px; 
+            font-family: inherit; outline: none; border-radius: 4px;
         }
-        
-        input:focus, textarea:focus {
-            border-color: var(--matrix-green);
-            background: rgba(0, 255, 65, 0.05);
-        }
+        input:focus, textarea:focus { border-color: var(--matrix-green); }
 
-        /* 按钮组 */
-        .btn-group { display: flex; gap: 12px; margin-bottom: 10px; }
-        
         button {
-            flex: 1;
-            padding: 16px;
-            background: rgba(0, 255, 65, 0.1);
-            border: 1px solid var(--matrix-green);
-            color: var(--matrix-green);
-            font-weight: bold;
-            font-size: 1rem;
-            cursor: pointer;
-            border-radius: 8px;
-            text-transform: uppercase;
-            /* 消除点击高亮背景 */
-            -webkit-tap-highlight-color: transparent;
-            transition: all 0.2s;
+            width: 100%; padding: 15px; background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--matrix-green); color: var(--matrix-green);
+            font-weight: bold; cursor: pointer; text-transform: uppercase;
+            margin-bottom: 10px; transition: all 0.2s;
         }
+        button:active { transform: scale(0.98); background: var(--matrix-green); color: #000; }
+        
+        button.danger { border-color: var(--danger-red); color: var(--danger-red); background: rgba(255, 0, 0, 0.1); }
+        button.danger:active { background: var(--danger-red); color: #fff; }
+        
+        button.secondary { border-color: #555; color: #888; background: transparent; }
 
-        button:active {
-            background: var(--matrix-green);
-            color: #000;
-            transform: scale(0.98);
-        }
-
-        button.secondary {
-            background: transparent;
-            border-color: #555;
-            color: #888;
-        }
-        button.secondary:active {
-            background: #333;
-            color: #fff;
-        }
-
-        /* 状态标签 */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border: 1px solid var(--matrix-green);
-            border-radius: 4px;
-            font-size: 0.75rem;
-            margin-bottom: 20px;
-            background: rgba(0, 255, 65, 0.1);
-        }
-
-        /* 布局辅助 */
         .hidden { display: none !important; }
-        .divider { border-top: 1px dashed #333; margin: 25px 0; position: relative; height: 1px; }
-        .divider span {
-            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-            background: #000; padding: 0 10px; color: #555; font-size: 0.8rem;
-        }
-
-        /* 倒计时条 (吸顶) */
-        #timer-bar { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 4px; 
-            background: #333; z-index: 2000; display: none; 
-            padding-top: var(--safe-top); /* 避开刘海 */
-        }
+        
+        /* 倒计时条 */
+        #timer-bar { position: fixed; top: 0; left: 0; width: 100%; height: 4px; background: #222; z-index: 2000; display: none; }
         #timer-progress { height: 100%; background: var(--danger-red); width: 100%; transition: width 1s linear; }
-        #countdown-display {
-            position: fixed; top: calc(10px + var(--safe-top)); right: 20px;
-            color: var(--danger-red); font-weight: bold; font-size: 1.2rem;
-            display: none; text-shadow: 0 0 5px #000; z-index: 2000;
-            font-variant-numeric: tabular-nums; /* 数字等宽防跳动 */
+        #countdown-display { 
+            position: fixed; top: 10px; right: 15px; 
+            color: var(--danger-red); font-weight: bold; font-size: 1.2rem; 
+            z-index: 2000; display: none; 
+            font-variant-numeric: tabular-nums;
         }
 
-        /* 结果页 */
+        /* 解密结果区 */
+        #decrypt-view { text-align: center; }
         #decrypt-result {
-            margin-top: 20px; padding: 20px;
-            border: 1px dashed var(--matrix-green);
-            background: rgba(0, 30, 0, 0.3);
-            line-height: 1.6; word-break: break-all; white-space: pre-wrap;
-            font-size: 0.95rem; border-radius: 8px;
+            margin: 20px 0; padding: 20px; 
+            border: 1px dashed var(--danger-red); 
+            background: rgba(50, 0, 0, 0.1); 
+            color: #fff; text-align: left;
+            white-space: pre-wrap; word-break: break-all;
+            user-select: text; /* 允许选择复制 */
             max-height: 50vh; overflow-y: auto;
+            font-size: 0.9rem;
         }
 
         /* 销毁状态 */
         body.destroyed { background: #000 !important; }
         body.destroyed .main-wrapper, body.destroyed .scanlines { display: none; }
-        .destroy-msg {
-            display: none; color: red; font-size: 1.5rem; text-align: center;
+        .destroy-msg { 
+            display: none; color: red; font-size: 1.5rem; 
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 100%;
+            text-align: center;
         }
-        body.destroyed .destroy-msg { display: block; animation: flash 1s infinite; }
-        @keyframes flash { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+        body.destroyed .destroy-msg { display: block; }
     </style>
 </head>
 <body>
 
     <div id="timer-bar"><div id="timer-progress"></div></div>
-    <div id="countdown-display">24:00:00</div>
+    <div id="countdown-display">30:00</div>
     <div class="scanlines"></div>
     <div class="destroy-msg">SYSTEM PURGED<br>数据已物理销毁</div>
 
     <div class="main-wrapper">
         <div class="panel">
-            <div class="header">
-                <h2>PHOENIX PROTOCOL</h2>
-                <span class="subtitle">V6.5 MOBILE TERMINAL</span>
-            </div>
+            <h2 id="title">PHOENIX PROTOCOL</h2>
 
             <div id="login-section">
-                <div class="status-badge">● 等待生物授权</div>
-                
-                <input type="email" id="email" placeholder="电子邮箱 (Email)" inputmode="email" autocomplete="username">
-                <input type="password" id="password" placeholder="通行密码" autocomplete="current-password">
-                
-                <div class="btn-group">
+                <input type="email" id="email" placeholder="Email" autocomplete="username">
+                <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+                <div style="display:flex; gap:10px;">
                     <button onclick="login()">登录</button>
-                    <button class="secondary" onclick="registerWithBiometrics()">
-                        <span style="font-size:1.2em; vertical-align:middle;">🆔</span> 生物注册
-                    </button>
+                    <button class="secondary" onclick="signup()">注册</button>
                 </div>
-
-                <div class="divider"><span>OR</span></div>
-                
-                <button class="secondary" style="border-style: dashed;" onclick="toggleView('manual')">
-                    我是受益人 (提取)
-                </button>
+                <div style="margin:20px 0; border-top:1px dashed #333;"></div>
+                <button class="secondary" style="border-style:dashed" onclick="toggleView('manual')">我是受益人 (提取)</button>
             </div>
 
             <div id="manual-section" class="hidden">
-                <div class="status-badge" style="color: #00ff41;">● 安全信道已开启</div>
-                <p style="font-size: 0.85rem; color: #888; margin-bottom: 20px; line-height: 1.4;">
-                    请检查您的邮箱，输入收到的双重验证参数。
-                </p>
-                <input type="text" id="manual-id" placeholder="Vault ID" autocorrect="off" autocapitalize="none">
-                <input type="text" id="manual-key" placeholder="AES Key" autocorrect="off" autocapitalize="none">
+                <div style="color:var(--matrix-green); font-size:0.8rem; margin-bottom:15px; text-align:center;">
+                    [ 安全信道: 已建立 ]<br>
+                    <span style="color:#666">请勿在公共设备操作</span>
+                </div>
+                <input type="text" id="manual-id" placeholder="Vault ID" autocomplete="off" spellcheck="false">
+                <input type="text" id="manual-key" placeholder="AES Key" autocomplete="off" spellcheck="false">
                 
-                <button onclick="handleManualDecrypt()" style="margin-bottom: 15px;">验证并解密</button>
-                <button class="secondary" onclick="toggleView('login')">返回主菜单</button>
+                <button onclick="handleManualDecrypt()">验证并提取</button>
+                <button class="secondary" onclick="toggleView('login')">返回</button>
             </div>
 
             <div id="dash" class="hidden">
-                <div class="status-badge">● 隐形信道: 活跃</div>
-                
-                <textarea id="secret" rows="6" placeholder="在此输入绝密内容..."></textarea>
-                
-                <input type="email" id="ben" placeholder="受益人邮箱" inputmode="email">
-                
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <div style="flex:1">
-                        <label style="font-size:0.7rem; color:#888; display:block; margin-bottom:5px;">触发时长 (分钟)</label>
-                        <input type="number" id="time" value="60" min="1" inputmode="numeric">
-                    </div>
-                    <div style="flex:1">
-                        <label style="font-size:0.7rem; color:#888; display:block; margin-bottom:5px;">预警提前 (秒)</label>
-                        <input type="number" id="warn_sec" value="300" inputmode="numeric">
-                    </div>
-                </div>
-
-                <button onclick="deploy()" style="background: rgba(0, 255, 65, 0.2);">🚀 部署死手协议</button>
+                <textarea id="secret" rows="6" placeholder="输入绝密内容... (本地加密上传)"></textarea>
+                <input type="email" id="ben" placeholder="受益人邮箱">
+                <input type="number" id="time" value="60" placeholder="超时分钟数">
+                <button onclick="deploy()">启动死手协议</button>
             </div>
 
             <div id="decrypt-view" class="hidden">
-                <div class="status-badge" style="border-color: var(--danger-red); color: var(--danger-red); background: rgba(255,0,0,0.1);">
-                    ⚠ 警告: 倒计时已启动
+                <div style="color:var(--danger-red); border:1px solid var(--danger-red); padding:5px; font-size:0.8rem; margin-bottom:10px;">
+                    ⚠ 警告: 云端备份已销毁
+                </div>
+                <div style="font-size:0.75rem; color:#888; margin-bottom:5px;">
+                    请立即使用纸笔记录，严禁截图/云同步
                 </div>
                 
                 <div id="decrypt-result"></div>
-                
-                <button onclick="copyContent()" style="margin-top: 20px; border-color: #00aaff; color: #00aaff;">
-                    📄 复制全部内容
-                </button>
-                
-                <p style="margin-top:20px; font-size: 12px; color: #666; text-align: center;">
-                    请立即保存。窗口关闭后无法再次访问。
-                </p>
+
+                <button class="danger" onclick="triggerDestruction()">[ 立即销毁 ]</button>
+                <button class="secondary" onclick="copyContent()">复制内容</button>
             </div>
         </div>
     </div>
 
 <script>
-    // ================= 配置区 =================
-    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
-    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; 
+    // ================== 反调试防护 ==================
+    // 简单的反调试：如果检测到 DevTools 打开，可能会影响执行速度或冻结
+    setInterval(function(){
+        const start = performance.now();
+        debugger; // 陷阱
+        if (performance.now() - start > 100) {
+            console.log("DevTools detected."); 
+            // 可选择在此处清空页面
+        }
+    }, 2000);
 
-    const WATCHDOG_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+    // ================== 配置 ==================
+    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co'; 
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus'; // 替换为你的 Key
+    const WATCHDOG_PUB_KEY = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAviA23JxW181JM9cbwClQ
 x7+KP+rmhFJ2RF30z1OAjvWngczIYYRT4EGjx74OLqP3leYXME+4ZKZIqt6v8jf1
 trELXELa5khEOwWHj2EbOnhPdbk7aJ3Du/RmkZAu/gSVKHiWAeVPdmZuEDRP8wV1
@@ -300,173 +177,97 @@ pQIDAQAB
 -----END PUBLIC KEY-----`;
 
     const client = window.supabase.createClient(DB_URL, DB_KEY);
-    const DESTROY_TIME_MS = 24 * 60 * 60 * 1000; 
+    // 缩短暴露窗口至 30 分钟
+    const DESTROY_TIME_MS = 30 * 60 * 1000; 
     let countdownInterval;
+    let memoryCleaner = null; // 用于存储明文的引用，方便清理
 
     // 视图切换
-    function toggleView(viewName) {
+    function toggleView(view) {
         ['login-section', 'manual-section', 'dash', 'decrypt-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
-        if (viewName === 'login') document.getElementById('login-section').classList.remove('hidden');
-        if (viewName === 'manual') document.getElementById('manual-section').classList.remove('hidden');
-        if (viewName === 'dash') document.getElementById('dash').classList.remove('hidden');
-        if (viewName === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
+        if(view === 'login') document.getElementById('login-section').classList.remove('hidden');
+        if(view === 'manual') document.getElementById('manual-section').classList.remove('hidden');
+        if(view === 'dash') document.getElementById('dash').classList.remove('hidden');
+        if(view === 'result') document.getElementById('decrypt-view').classList.remove('hidden');
     }
 
-    // SweetAlert 移动端样式配置
-    const swalConfig = {
-        background: '#111',
-        color: '#fff',
-        confirmButtonColor: '#00ff41',
-        cancelButtonColor: '#333',
-        customClass: {
-            popup: 'mobile-swal'
-        }
-    };
+    // SweetAlert 样式
+    const swalStyle = { background: '#111', color: '#fff', confirmButtonColor: '#00ff41', cancelButtonColor: '#333' };
 
-    // 生物识别注册
-    async function registerWithBiometrics() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-
-        if(!email || password.length < 6) {
-            return Swal.fire({...swalConfig, text:'请输入邮箱和至少6位密码', icon: 'warning'});
-        }
-
-        if (!window.PublicKeyCredential) {
-            return Swal.fire({...swalConfig, text:'设备不支持生物识别', icon: 'error'});
-        }
-
-        try {
-            Swal.fire({
-                ...swalConfig,
-                title: '身份核验',
-                text: '请验证 FaceID / 指纹',
-                showConfirmButton: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const publicKey = {
-                challenge: challenge,
-                rp: { name: "Phoenix Mobile" },
-                user: {
-                    id: Uint8Array.from(email, c => c.charCodeAt(0)),
-                    name: email,
-                    displayName: email.split('@')[0]
-                },
-                pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                authenticatorSelection: { userVerification: "required" },
-                timeout: 60000
-            };
-
-            await navigator.credentials.create({ publicKey });
-            const { error } = await client.auth.signUp({email, password});
-            if(error) throw error;
-
-            Swal.fire({...swalConfig, icon:'success', title:'注册成功', text:'请查收确认邮件'});
-
-        } catch (e) {
-            let msg = '验证已取消';
-            if (e.message && e.message.includes('User')) msg = e.message; 
-            Swal.fire({...swalConfig, icon:'error', title:'验证失败', text: msg});
-        }
-    }
-
-    async function login() {
-        const email = document.getElementById("email").value;
-        const password = document.getElementById("password").value;
-        const {error} = await client.auth.signInWithPassword({email, password});
-        if(error) return Swal.fire({...swalConfig, text:'账号或密码错误', icon:'error'});
-        toggleView('dash');
-    }
-
-    async function deploy() {
-        const secret = document.getElementById("secret").value;
-        const ben = document.getElementById("ben").value;
-        const timeMin = document.getElementById("time").value;
-        const warnSec = document.getElementById("warn_sec").value;
-
-        if(!secret || !ben) return Swal.fire({...swalConfig, text:'请填写完整信息', icon:'warning'});
-
-        Swal.fire({
-            ...swalConfig,
-            title: '加密上传中...',
-            didOpen: () => Swal.showLoading()
-        });
-
-        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
-        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
-        
-        const payload = JSON.stringify({ k: aesKey, t: ben });
-        const encryptor = new JSEncrypt();
-        encryptor.setPublicKey(WATCHDOG_PUBLIC_KEY);
-        const wrappedPayload = encryptor.encrypt(payload);
-
-        if(!wrappedPayload) return Swal.fire({...swalConfig, text:'加密环境异常', icon:'error'});
-        
-        const user = (await client.auth.getUser()).data.user;
-        const timeoutSeconds = parseInt(timeMin) * 60;
-        const warnStartSeconds = parseInt(warnSec);
-
-        const {error} = await client.from("vaults").upsert({
-            id: user.id, 
-            encrypted_data: encryptedData, 
-            key_storage: wrappedPayload,
-            timeout_seconds: timeoutSeconds, 
-            warn_start_seconds: warnStartSeconds,
-            owner_email: user.email,
-            status: 'active', 
-            last_checkin_at: new Date(),
-            warn_sent_count: 0,
-            warn_max_count: 3 
-        });
-
-        if(error) Swal.fire({...swalConfig, text: error.message, icon:'error'});
-        else Swal.fire({...swalConfig, icon:'success', title:'协议已部署', text:'看门狗已启动'}).then(() => location.reload());
-    }
-
+    // --- 核心逻辑: 一次性解密 (Burn-on-Read) ---
     async function handleManualDecrypt() {
         const id = document.getElementById('manual-id').value.trim();
         const key = document.getElementById('manual-key').value.trim();
-        if(!id || !key) return Swal.fire({...swalConfig, text:'请输入完整参数', icon:'warning'});
-        
-        Swal.fire({ ...swalConfig, title: '正在提取...', didOpen: () => Swal.showLoading() });
-        
-        try {
-            const {data, error} = await client.from("vaults").select("encrypted_data").eq("id", id).single();
-            if(error || !data) throw new Error("数据不存在");
+        if(!id || !key) return Swal.fire({...swalStyle, text:'请输入完整参数', icon:'warning'});
 
+        // 1. 环境检测 (简单的 UserAgent 检查，实际上更严格的检测需要后端配合)
+        if (navigator.userAgent.includes('Headless')) {
+            return Swal.fire({...swalStyle, icon:'error', title:'环境不安全', text:'检测到自动化工具'});
+        }
+
+        Swal.fire({ ...swalStyle, title: '正在连接安全信道...', didOpen: () => Swal.showLoading() });
+
+        try {
+            // 2. 获取数据 (检查 status)
+            const { data, error } = await client.from("vaults").select("encrypted_data, status").eq("id", id).single();
+            
+            if (error || !data) throw new Error("凭证不存在或已被物理销毁");
+            if (data.status === 'burned') throw new Error("该凭证已失效 (一次性提取已完成)");
+
+            // 3. 本地试解密 (验证 Key 是否正确)
             const bytes = CryptoJS.AES.decrypt(data.encrypted_data, key);
-            const text = bytes.toString(CryptoJS.enc.Utf8);
-            if(!text) throw new Error("密钥无效");
+            memoryCleaner = bytes.toString(CryptoJS.enc.Utf8);
+            
+            if (!memoryCleaner) throw new Error("密钥错误，解密失败");
 
             Swal.close();
-            
+
+            // 4. 最终警告 & 物理销毁触发
             await Swal.fire({
-                ...swalConfig,
+                ...swalStyle,
                 title: '身份验证通过',
-                html: '<span style="color:#ff3333">⚠️ 数据即将销毁</span><br>倒计时将在查看后立即开始。',
+                html: '<span style="color:#ff3333">⚠️ 最终警告：阅后即焚</span><br><br>点击确认后，云端数据将被<b>永久抹除</b>。<br>倒计时结束后，本地数据也将销毁。',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ff3333',
-                confirmButtonText: '立即查看'
-            }).then((result) => {
+                confirmButtonText: '提取并销毁云端备份'
+            }).then(async (result) => {
                 if (result.isConfirmed) {
-                    showContentAndStartTimer(text);
+                    // 5. 执行云端销毁 (Burn)
+                    // 将数据覆写为 "VOID"，状态改为 burned
+                    const { error: burnErr } = await client
+                        .from("vaults")
+                        .update({ 
+                            status: 'burned', 
+                            encrypted_data: 'VOID', 
+                            key_storage: 'BURNED_BY_USER' 
+                        })
+                        .eq("id", id);
+                    
+                    if(burnErr) {
+                        console.error(burnErr);
+                        // 即使更新失败，也可能显示，但最好提示风险。这里选择继续显示但报错。
+                        Swal.fire({...swalStyle, icon:'error', title:'云端销毁失败', text:'无法抹除痕迹，建议手动停止'});
+                        return;
+                    }
+
+                    // 6. 显示内容并启动自毁
+                    showContent(memoryCleaner);
+                } else {
+                    memoryCleaner = null; // 清理内存
                 }
             });
 
-        } catch(e) {
-            Swal.fire({...swalConfig, icon:'error', title:'提取失败', text: e.message});
+        } catch (e) {
+            memoryCleaner = null;
+            Swal.fire({...swalStyle, icon:'error', title:'提取失败', text: e.message});
         }
     }
 
-    function showContentAndStartTimer(text) {
+    function showContent(text) {
         toggleView('result');
         document.getElementById("decrypt-result").innerText = text;
-        startSelfDestruct(); 
+        startSelfDestruct();
     }
 
     function startSelfDestruct() {
@@ -479,7 +280,6 @@ pQIDAQAB
         countdownInterval = setInterval(() => {
             remaining = endTime - Date.now();
             updateTimerDisplay(remaining);
-
             if (remaining <= 0) {
                 clearInterval(countdownInterval);
                 triggerDestruction();
@@ -488,31 +288,87 @@ pQIDAQAB
     }
 
     function updateTimerDisplay(ms) {
-        if(ms < 0) ms = 0;
-        const totalSec = Math.floor(ms / 1000);
-        const h = Math.floor(totalSec / 3600).toString().padStart(2, '0');
-        const m = Math.floor((totalSec % 3600) / 60).toString().padStart(2, '0');
-        const s = (totalSec % 60).toString().padStart(2, '0');
-        
-        document.getElementById('countdown-display').innerText = `${h}:${m}:${s}`;
-        const percent = (ms / DESTROY_TIME_MS) * 100;
-        document.getElementById('timer-progress').style.width = percent + '%';
+        if(ms<0) ms=0;
+        const totalSec = Math.floor(ms/1000);
+        const m = Math.floor(totalSec/60).toString().padStart(2,'0');
+        const s = (totalSec%60).toString().padStart(2,'0');
+        document.getElementById('countdown-display').innerText = `${m}:${s}`;
+        document.getElementById('timer-progress').style.width = (ms/DESTROY_TIME_MS)*100 + '%';
     }
 
     function triggerDestruction() {
+        // 1. 停止计时器
+        clearInterval(countdownInterval);
+        
+        // 2. 清理内存变量
+        memoryCleaner = null;
+        document.getElementById("decrypt-result").innerText = "";
+        
+        // 3. UI 销毁
         document.body.classList.add('destroyed');
-        document.body.innerHTML = '<div class="destroy-msg">SYSTEM PURGED<br>物理销毁完成</div>';
+        document.body.innerHTML = '<div class="destroy-msg">DATA PURGED<br>内存已清零<br>会话已结束</div>';
+        
+        // 4. 强制刷新防止后退查看 (可选)
+        setTimeout(() => window.location.replace("about:blank"), 3000);
     }
 
     function copyContent() {
         const text = document.getElementById("decrypt-result").innerText;
         navigator.clipboard.writeText(text).then(() => {
-            Swal.fire({
-                ...swalConfig,
-                icon: 'success', title: '已复制', 
-                toast: true, position: 'top', showConfirmButton: false, timer: 1500
-            });
+            Swal.fire({...swalStyle, icon:'success', title:'已复制', toast:true, position:'top', timer:1500, showConfirmButton:false});
         });
+    }
+
+    // --- 常规逻辑 ---
+    async function login() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const { error } = await client.auth.signInWithPassword({email, password});
+        if(error) return Swal.fire({...swalStyle, icon:'error', text:'认证失败'});
+        toggleView('dash');
+    }
+
+    async function signup() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+        const { error } = await client.auth.signUp({email, password});
+        if(error) return Swal.fire({...swalStyle, icon:'error', text:error.message});
+        Swal.fire({...swalStyle, icon:'success', text:'请查收确认邮件'});
+    }
+
+    async function deploy() {
+        const secret = document.getElementById("secret").value;
+        const ben = document.getElementById("ben").value;
+        const time = document.getElementById("time").value;
+        
+        if(!secret || !ben) return Swal.fire({...swalStyle, icon:'warning', text:'信息不全'});
+
+        Swal.fire({...swalStyle, title:'加密上传中...', didOpen:()=>Swal.showLoading()});
+
+        // 本地加密
+        const aesKey = Array.from(crypto.getRandomValues(new Uint8Array(32)), b=>b.toString(16).padStart(2,'0')).join('');
+        const encryptedData = CryptoJS.AES.encrypt(secret, aesKey).toString();
+        
+        // 密钥信封
+        const payload = JSON.stringify({ k: aesKey, t: ben });
+        const encryptor = new JSEncrypt();
+        encryptor.setPublicKey(WATCHDOG_PUB_KEY);
+        const wrappedPayload = encryptor.encrypt(payload);
+
+        const user = (await client.auth.getUser()).data.user;
+        const { error } = await client.from("vaults").upsert({
+            id: user.id,
+            encrypted_data: encryptedData,
+            key_storage: wrappedPayload,
+            timeout_seconds: parseInt(time) * 60,
+            status: 'active',
+            last_checkin_at: new Date(),
+            owner_email: user.email,
+            warn_sent_count: 0
+        });
+
+        if(error) Swal.fire({...swalStyle, icon:'error', text:error.message});
+        else Swal.fire({...swalStyle, icon:'success', title:'协议已部署', text:'看门狗正在值守'}).then(()=>location.reload());
     }
 </script>
 </body>
