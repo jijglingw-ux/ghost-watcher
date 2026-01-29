@@ -1,12 +1,10 @@
 import os
 import smtplib
 import json
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.header import Header  # 新增：用于处理中文标题
+from email.message import EmailMessage  # ✅ 换用现代库，彻底解决编码问题
 from datetime import datetime, timezone, timedelta
 from supabase import create_client, Client
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.backends import default_backend
 import base64
@@ -50,14 +48,14 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
 def send_email(to_email, subject, html_content):
     if not to_email or "None" in str(to_email): return False
     
-    # --- 修复核心：强制使用 UTF-8 编码 ---
-    msg = MIMEMultipart('alternative')
+    # ✅ 使用 EmailMessage，原生支持中文，无需手动 Header 编码
+    msg = EmailMessage()
+    msg['Subject'] = subject
     msg['From'] = SENDER_EMAIL
     msg['To'] = to_email
-    msg['Subject'] = Header(subject, 'utf-8') # 修复中文标题乱码
     
-    # 强制正文也使用 UTF-8
-    msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+    # 设置 HTML 内容
+    msg.set_content(html_content, subtype='html')
     
     try:
         server_host = "smtp.qq.com" if "qq.com" in SENDER_EMAIL else "smtp.gmail.com"
@@ -110,10 +108,9 @@ def send_final(to_email, key, uid):
     return send_email(to_email, "【绝密】数字资产提取通知", html)
 
 def watchdog():
-    print("🐕 凤凰看门狗 V7.1 (修复发信版) 启动...")
+    print("🐕 凤凰看门狗 V7.2 (EmailMessage稳定版) 启动...")
     db = get_db()
     
-    # 增加异常处理，防止没数据时报错
     try:
         response = db.table("vaults").select("*").eq("status", "active").execute()
         users = response.data
@@ -132,12 +129,10 @@ def watchdog():
         last_check = parse_time_safe(row['last_checkin_at'])
         if not last_check: continue
 
-        # 1. 计算时间 (全部按秒)
         elapsed = (now - last_check).total_seconds()
         timeout = row.get('timeout_seconds', 0)
         remaining = timeout - elapsed
 
-        # 预警配置
         warn_start = row.get('warn_start_seconds', 300)
         warn_interval = row.get('warn_interval_seconds', 3600) 
         warn_max = row.get('warn_max_count', 3)          
@@ -147,7 +142,6 @@ def watchdog():
 
         print(f"🔍 [{uid[:4]}] 剩余: {int(remaining)}s | 预警线: {warn_start}s | 已发预警: {warn_sent}/{warn_max}")
 
-        # --- 阶段 A: 最终触发 ---
         if remaining <= 0:
             print("⚡ 倒计时归零，执行发射...")
             payload = rsa_decrypt(row['key_storage'], RSA_PRIVATE_KEY_PEM)
@@ -160,7 +154,6 @@ def watchdog():
             else:
                 print("❌ 解密失败，私钥可能不匹配")
 
-        # --- 阶段 B: 智能唤醒 ---
         elif remaining <= warn_start and warn_sent < warn_max and owner_email:
             time_since_last_warn = (now - last_warn).total_seconds() if last_warn else 999999999
             
