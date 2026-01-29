@@ -2,15 +2,12 @@ name: Phoenix Watchdog
 
 on:
   schedule:
-    # 每 5 分钟运行一次 (UTC时间)
     - cron: '*/5 * * * *'
-  # 允许你在 GitHub 网页端手动点击按钮触发测试
   workflow_dispatch:
 
 jobs:
   check-pulse:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
@@ -21,12 +18,10 @@ jobs:
           python-version: '3.9'
 
       - name: Install Dependencies
-        run: |
-          pip install supabase cryptography
+        run: pip install supabase cryptography
 
       - name: Run Watchdog
         env:
-          # 这些是从 GitHub Settings > Secrets 中读取的
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
