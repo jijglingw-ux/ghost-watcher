@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V18 严格唯一版</title>
+    <title>凤凰协议 | V19 稳定强化版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -32,16 +32,19 @@
 </head>
 <body>
     <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">同步中...</p></div>
-    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V18 (STRICT)</p></div>
+    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V19 (STABLE)</p></div>
+    
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()"><div class="title">我要封存</div></div>
         <div class="card role-heir" onclick="checkHeirStatus()"><div class="title">我是继承人</div></div>
     </div>
+
     <div id="page-owner" class="page-container">
         <div id="scan-stage"><div id="reader"></div><button class="btn-action" onclick="triggerFileSelect()">🖼️ 选择照片</button><input type="file" id="qr-input-file" accept="image/*" style="display:none" onchange="handleFileScan(this)"></div>
         <div id="secret-panel"><textarea id="secret-input" placeholder="输入加密信息..."></textarea><button class="btn-action" style="background:var(--accent);color:#fff" onclick="sealLegacy()">🔒 确认封存</button></div>
-        <div style="margin-top:20px;color:#666" onclick="location.reload()">返回</div>
+        <div style="margin-top:20px;color:#666" onclick="location.reload()">返回首页</div>
     </div>
+
     <div id="page-heir" class="page-container">
         <div id="heir-dashboard">
             <div id="status-empty" class="status-box" style="display:none;">📭 信箱为空</div>
@@ -49,8 +52,9 @@
             <button class="btn-action" style="background:rgba(255,255,255,0.1);color:#fff" onclick="showQRModal()">📱 显示图腾</button>
         </div>
         <div id="legacy-reveal-panel" class="status-box"><div id="legacy-text" style="font-weight:bold;font-size:18px;word-break:break-all"></div></div>
-        <div style="margin-top:20px;color:#666" onclick="location.reload()">返回</div>
+        <div style="margin-top:20px;color:#666" onclick="location.reload()">返回首页</div>
     </div>
+
     <div id="qr-modal"><div id="qrcode-box"><div id="qrcode"></div></div><div style="margin-top:30px;color:#fff" onclick="document.getElementById('qr-modal').style.display='none'">关闭</div></div>
 
 <script>
@@ -65,38 +69,53 @@
             const auth = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" } });
             curID = btoa(String.fromCharCode(...new Uint8Array(auth.rawId))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
             
-            // 🔥 V18 修复点：降序排列并只取最新的一条，防止 1,2,1,2 跳变
             const { data } = await db.from('user_vault').select('*').eq('credential_id', curID).order('created_at', { ascending: false }).limit(1).maybeSingle();
             
-            hideLoading();
-            document.getElementById('page-home').style.display = 'none';
-            document.getElementById('page-heir').style.display = 'flex';
-
             if (!data) {
+                // 数据库没记录，去创建（不重载页面）
                 await mintIdentity(curID);
             } else {
                 curData = data.encrypted_data;
-                document.getElementById('status-empty').style.display = data.status === 'sealed' ? 'none' : 'block';
-                document.getElementById('status-sealed').style.display = data.status === 'sealed' ? 'block' : 'none';
+                curID = data.credential_id; // 确保 ID 一致
+                renderHeirUI(data.status);
             }
-        } catch (e) { await mintIdentity(); }
+        } catch (e) { 
+            console.error("Auth Error:", e);
+            // 只有彻底没密钥才去铸造
+            if(e.name === "NotFoundError" || !curID) await mintIdentity();
+            else hideLoading(); 
+        }
     }
 
     async function mintIdentity(existingID) {
         showLoading("初始化安全图腾...");
-        let id = existingID;
-        if (!id) {
-            const auth = await navigator.credentials.create({ publicKey: { challenge: new Uint8Array(32), rp: { name: "Phoenix" }, user: { id: new Uint8Array(16), name: "Heir", displayName: "Heir" }, pubKeyCredParams: [{ alg: -7, type: "public-key" }], authenticatorSelection: { userVerification: "required" } } });
-            id = btoa(String.fromCharCode(...new Uint8Array(auth.rawId))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+        try {
+            let id = existingID;
+            if (!id) {
+                const auth = await navigator.credentials.create({ publicKey: { challenge: new Uint8Array(32), rp: { name: "Phoenix" }, user: { id: new Uint8Array(16), name: "Heir", displayName: "Heir" }, pubKeyCredParams: [{ alg: -7, type: "public-key" }], authenticatorSelection: { userVerification: "required" } } });
+                id = btoa(String.fromCharCode(...new Uint8Array(auth.rawId))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
+            }
+            
+            const kp = await window.crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+            const priv = await window.crypto.subtle.exportKey("jwk", kp.privateKey);
+            localStorage.setItem('p_priv_'+id, JSON.stringify(priv));
+            const pub = btoa(String.fromCharCode(...new Uint8Array(await window.crypto.subtle.exportKey("spki", kp.publicKey))));
+            
+            await db.from('user_vault').upsert({ credential_id: id, public_key: pub, status: 'active' });
+            curID = id;
+            renderHeirUI('active');
+        } catch (e) {
+            alert("初始化失败: " + e.message);
         }
-        const kp = await window.crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1,0,1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
-        const priv = await window.crypto.subtle.exportKey("jwk", kp.privateKey);
-        localStorage.setItem('p_priv_'+id, JSON.stringify(priv));
-        const pub = btoa(String.fromCharCode(...new Uint8Array(await window.crypto.subtle.exportKey("spki", kp.publicKey))));
-        
-        // 确保数据库唯一
-        await db.from('user_vault').upsert({ credential_id: id, public_key: pub, status: 'active' });
-        curID = id; hideLoading(); location.reload();
+        hideLoading();
+    }
+
+    function renderHeirUI(status) {
+        hideLoading();
+        document.getElementById('page-home').style.display = 'none';
+        document.getElementById('page-heir').style.display = 'flex';
+        document.getElementById('status-empty').style.display = status === 'sealed' ? 'none' : 'block';
+        document.getElementById('status-sealed').style.display = status === 'sealed' ? 'block' : 'none';
     }
 
     async function revealLegacy() {
@@ -108,32 +127,38 @@
             document.getElementById('heir-dashboard').style.display = 'none';
             document.getElementById('legacy-reveal-panel').style.display = 'block';
             document.getElementById('legacy-text').innerText = new TextDecoder().decode(dec);
-        } catch (e) { alert("解密失败"); }
+        } catch (e) { alert("解密失败: 密钥不匹配"); }
         hideLoading();
     }
 
-    // 立嘱人逻辑简化
     async function onScanSuccess(id) {
+        showLoading("连接信箱...");
         const { data } = await db.from('user_vault').select('public_key').eq('credential_id', id).single();
-        pubK = data.public_key; curID = id;
-        document.getElementById('scan-stage').style.display='none';
-        document.getElementById('secret-panel').style.display='block';
+        if(data) {
+            pubK = data.public_key; curID = id;
+            document.getElementById('scan-stage').style.display='none';
+            document.getElementById('secret-panel').style.display='block';
+        }
+        hideLoading();
     }
+
     async function sealLegacy() {
         showLoading("加密封存中...");
-        const bin = atob(pubK), der = new Uint8Array(bin.length);
-        for(let i=0;i<bin.length;i++) der[i]=bin.charCodeAt(i);
-        const key = await window.crypto.subtle.importKey("spki", der.buffer, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
-        const enc = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, new TextEncoder().encode(document.getElementById('secret-input').value));
-        await db.from('user_vault').update({ encrypted_data: btoa(String.fromCharCode(...new Uint8Array(enc))), status: 'sealed' }).eq('credential_id', curID);
-        alert("🔒 已加密封存"); location.reload();
+        try {
+            const bin = atob(pubK), der = new Uint8Array(bin.length);
+            for(let i=0;i<bin.length;i++) der[i]=bin.charCodeAt(i);
+            const key = await window.crypto.subtle.importKey("spki", der.buffer, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
+            const enc = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, new TextEncoder().encode(document.getElementById('secret-input').value));
+            await db.from('user_vault').update({ encrypted_data: btoa(String.fromCharCode(...new Uint8Array(enc))), status: 'sealed' }).eq('credential_id', curID);
+            alert("🔒 已加密封存"); location.reload();
+        } catch(e) { alert("封存失败"); hideLoading(); }
     }
 
     let scanner = null;
     function showOwnerPage() { document.getElementById('page-home').style.display='none'; document.getElementById('page-owner').style.display='flex'; scanner = new Html5Qrcode("reader"); scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, onScanSuccess); }
     function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
-    async function handleFileScan(input) { const res = await scanner.scanFile(input.files[0], true); onScanSuccess(res); }
-    function showQRModal() { document.getElementById('qr-modal').style.display='flex'; new QRCode(document.getElementById("qrcode"), { text: curID, width: 220, height: 220 }); }
+    async function handleFileScan(input) { try { const res = await scanner.scanFile(input.files[0], true); onScanSuccess(res); } catch(e){ alert("无法识别二维码"); } }
+    function showQRModal() { document.getElementById('qr-modal').style.display='flex'; document.getElementById("qrcode").innerHTML=""; new QRCode(document.getElementById("qrcode"), { text: curID, width: 220, height: 220 }); }
     function showLoading(t) { document.getElementById('loading-overlay').style.display='flex'; document.getElementById('loading-text').innerText=t; }
     function hideLoading() { document.getElementById('loading-overlay').style.display='none'; }
 </script>
