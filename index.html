@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHOENIX | V19.5 强力解码版</title>
+    <title>PHOENIX | V19.6 智能识别版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -14,8 +14,6 @@
         h1 { font-weight: 200; letter-spacing: 4px; font-size: 24px; }
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
         .card { width: 100%; height: 110px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
-        .role-owner .title { color: var(--accent); font-size: 18px; font-weight: 600; }
-        .role-heir .title { color: #30D158; font-size: 18px; font-weight: 600; }
         .btn-action { padding: 15px; border-radius: 12px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 15px; }
         .status-box { background: var(--panel); padding: 25px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
         #page-owner, #page-heir, #legacy-reveal-panel { display: none; }
@@ -29,42 +27,41 @@
     </style>
 </head>
 <body>
-    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">安全连接中...</p></div>
-    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V19.5 (POWER DECODE)</p></div>
+    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">连接中...</p></div>
+    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V19.6 (SMART DECODE)</p></div>
     
     <div id="page-home" class="page-container">
-        <div class="card role-owner" onclick="showOwnerPage()"><div class="title">我要封存</div></div>
-        <div class="card role-heir" onclick="checkHeirStatus()"><div class="title">我是继承人</div></div>
+        <div class="card" onclick="showOwnerPage()" style="border-color:var(--accent);"><div style="color:var(--accent); font-size:18px; font-weight:600;">我要封存</div></div>
+        <div class="card" onclick="checkHeirStatus()" style="border-color:#30D158;"><div style="color:#30D158; font-size:18px; font-weight:600;">我是继承人</div></div>
     </div>
 
     <div id="page-owner" class="page-container">
         <div id="scan-stage">
-            <p style="color:var(--accent); font-size:14px; margin-bottom:15px;">请扫描或上传受益人的安全图腾</p>
+            <p style="color:var(--accent); font-size:14px; margin-bottom:15px;">扫描图腾进行身份绑定</p>
             <div id="reader"></div>
-            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#ccc;" onclick="triggerFileSelect()">🖼️ 从相册选择截图解析</button>
+            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff;" onclick="triggerFileSelect()">🖼️ 从相册选择截图解析</button>
             <input type="file" id="qr-input-file" accept="image/*" style="display:none" onchange="handleFileScan(this)">
         </div>
 
         <div id="secret-panel" style="display: none;">
-            <p style="color:#30D158; font-size:14px;">✅ 信箱配对成功</p>
-            <textarea id="secret-input" placeholder="请在此输入加密遗言..."></textarea>
-            <button class="btn-action" style="background:var(--accent); color:#fff" onclick="sealLegacy()">🔒 确认并封存</button>
+            <p style="color:#30D158; font-size:14px;">✅ 信箱连接成功</p>
+            <textarea id="secret-input" placeholder="请在此输入遗嘱文字内容..."></textarea>
+            <button class="btn-action" style="background:var(--accent); color:#fff" onclick="sealLegacy()">🔒 加密封存</button>
         </div>
-        
         <div style="margin-top:20px; color:#666" onclick="location.reload()">返回首页</div>
     </div>
 
     <div id="page-heir" class="page-container">
         <div id="heir-dashboard">
-            <div id="status-empty" class="status-box" style="display:none;">📭 信箱为空</div>
-            <div id="status-sealed" class="status-box" style="display:none;">🔒 发现加密遗嘱<button class="btn-action" style="background:var(--gold); color:#000" onclick="revealLegacy()">🔑 解密开启</button></div>
-            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff" onclick="showQRModal()">📱 显示我的图腾</button>
+            <div id="status-empty" class="status-box" style="display:none;">📭 暂无遗嘱</div>
+            <div id="status-sealed" class="status-box" style="display:none;">🔒 发现加密信息<button class="btn-action" style="background:var(--gold); color:#000" onclick="revealLegacy()">🔑 刷脸解密</button></div>
+            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff" onclick="showQRModal()">📱 显示我的公钥图腾</button>
         </div>
         <div id="legacy-reveal-panel" class="status-box"><div id="legacy-text" style="font-weight:bold; font-size:18px; word-break:break-all"></div></div>
         <div style="margin-top:20px; color:#666" onclick="location.reload()">返回首页</div>
     </div>
 
-    <div id="qr-modal"><div id="qrcode-box"><div id="qrcode"></div></div><div style="margin-top:30px; color:#fff" onclick="document.getElementById('qr-modal').style.display='none'">关闭</div></div>
+    <div id="qr-modal"><div id="qrcode-box"><div id="qrcode"></div></div><div style="margin-top:30px; color:#fff" onclick="document.getElementById('qr-modal').style.display='none'">关闭图腾</div></div>
 
 <script>
     const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
@@ -73,7 +70,7 @@
     let curData = null, curID = null, pubK = null;
 
     async function checkHeirStatus() {
-        showLoading("身份核验...");
+        showLoading("核验身份...");
         try {
             const auth = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" } });
             curID = btoa(String.fromCharCode(...new Uint8Array(auth.rawId))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,"");
@@ -84,7 +81,7 @@
     }
 
     async function mintIdentity(existingID) {
-        showLoading("初始化信箱...");
+        showLoading("初始化加密信箱...");
         try {
             let id = existingID;
             if (!id) {
@@ -97,7 +94,7 @@
             const pub = btoa(String.fromCharCode(...new Uint8Array(await window.crypto.subtle.exportKey("spki", kp.publicKey))));
             await db.from('user_vault').upsert({ credential_id: id, public_key: pub, status: 'active' });
             curID = id; renderHeirUI('active');
-        } catch (e) { alert("操作已取消"); }
+        } catch (e) { alert("操作取消"); }
         hideLoading();
     }
 
@@ -110,7 +107,7 @@
     }
 
     async function revealLegacy() {
-        showLoading("正在解密...");
+        showLoading("正在解密文字...");
         try {
             const privJWK = JSON.parse(localStorage.getItem('p_priv_'+curID));
             const privKey = await window.crypto.subtle.importKey("jwk", privJWK, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["decrypt"]);
@@ -118,37 +115,36 @@
             document.getElementById('heir-dashboard').style.display = 'none';
             document.getElementById('legacy-reveal-panel').style.display = 'block';
             document.getElementById('legacy-text').innerText = new TextDecoder().decode(dec);
-        } catch (e) { alert("解密失败: 密钥已失效"); }
+        } catch (e) { alert("解密失败：私钥不匹配"); }
         hideLoading();
     }
 
-    // --- 强化解析逻辑 ---
     async function onScanSuccess(id) {
-        showLoading("核对图腾...");
+        showLoading("配对中...");
         try {
             const { data } = await db.from('user_vault').select('public_key').eq('credential_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle();
             if(data) {
                 pubK = data.public_key; curID = id;
-                if(scanner) { await scanner.stop().catch(e=>{}); scanner = null; }
+                if(scanner) await scanner.stop().catch(e=>{});
                 document.getElementById('scan-stage').style.display = 'none';
                 document.getElementById('secret-panel').style.display = 'block';
-            } else { alert("该图腾尚未在云端注册，请受益人先行点击“我是继承人”。"); }
-        } catch (e) { alert("数据库连接超时"); }
+            } else { alert("图腾未注册，请受益人先初始化"); }
+        } catch (e) { alert("连接失败"); }
         hideLoading();
     }
 
     async function sealLegacy() {
         const val = document.getElementById('secret-input').value;
         if(!val) return alert("请输入内容");
-        showLoading("加密中...");
+        showLoading("加密封印...");
         try {
             const bin = atob(pubK), der = new Uint8Array(bin.length);
             for(let i=0; i<bin.length; i++) der[i] = bin.charCodeAt(i);
             const key = await window.crypto.subtle.importKey("spki", der.buffer, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
             const enc = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, new TextEncoder().encode(val));
             await db.from('user_vault').update({ encrypted_data: btoa(String.fromCharCode(...new Uint8Array(enc))), status: 'sealed' }).eq('credential_id', curID);
-            alert("🔒 遗嘱已加密存入云端"); location.reload();
-        } catch(e) { alert("加密过程出错"); hideLoading(); }
+            alert("🔒 封存完成"); location.reload();
+        } catch(e) { alert("加密错误"); hideLoading(); }
     }
 
     let scanner = null;
@@ -163,15 +159,15 @@
     
     async function handleFileScan(input) { 
         if (input.files.length === 0) return;
-        showLoading("正在强力解析相册...");
+        showLoading("正在智能扫描全图...");
         try {
-            // 确保解析器处于可用状态
             if(!scanner) scanner = new Html5Qrcode("reader");
+            // 使用增强解析模式，即便二维码不居中也能尝试锁定
             const res = await scanner.scanFile(input.files[0], true); 
             onScanSuccess(res); 
         } catch(e){ 
             hideLoading();
-            alert("解析失败：请确保截图中心包含完整的二维码，且没有反光干扰。"); 
+            alert("解析失败：由于二维码在截图中比例过小或不居中，请让受益人重新截图并尽量只截取正方形二维码部分发送。"); 
         } 
     }
 
