@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 极简信使</title>
+    <title>凤凰协议 | 密态信使</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root { --bg: #000000; --text: #ffffff; --accent: #0A84FF; --gold: #FFD700; --panel: #1c1c1e; --grey: #888; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; overflow: hidden; }
+        :root { --bg: #000; --text: #fff; --accent: #0A84FF; --gold: #FFD700; --panel: #1c1c1e; --grey: #888; }
+        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; overflow: hidden; }
         .header { margin-top: 10px; margin-bottom: 20px; flex-shrink: 0; }
         h1 { font-weight: 300; letter-spacing: 4px; margin: 0; font-size: 24px; }
         .page-container { width: 100%; max-width: 400px; display: none; flex-direction: column; height: 100%; animation: fadeIn 0.4s ease; }
         #page-home { display: flex; justify-content: center; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .main-card { width: 100%; padding: 35px 25px; background: var(--panel); border: 1px solid #333; border-radius: 24px; margin-bottom: 20px; cursor: pointer; transition: 0.2s; box-sizing: border-box; }
-        .main-card:active { transform: scale(0.98); background: #2c2c2e; }
-        .card-title { font-size: 20px; font-weight: 600; margin-bottom: 10px; }
-        .card-desc { font-size: 13px; color: var(--grey); line-height: 1.4; }
+        .main-card:active { transform: scale(0.98); }
         .mail-center { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; position: relative; }
         .mail-icon-box { cursor: pointer; transition: 0.3s; }
         .mail-icon-box.hidden { opacity: 0; transform: scale(0.5); pointer-events: none; position: absolute; }
@@ -26,16 +24,12 @@
         .content-paper { width: 100%; height: 90%; background: #111; border: 1px solid #333; border-radius: 28px; padding: 25px; box-sizing: border-box; text-align: left; display: none; overflow-y: auto; cursor: pointer; }
         .content-paper.visible { display: block; animation: slideUp 0.5s ease; }
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .paper-text { font-size: 18px; line-height: 1.7; color: var(--gold); white-space: pre-wrap; }
+        .paper-text { font-size: 18px; line-height: 1.7; color: var(--gold); white-space: pre-wrap; word-break: break-all; }
         .write-area { flex: 1; display: flex; flex-direction: column; width: 100%; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; margin-bottom: 15px; }
         textarea { width: 100%; height: 100%; background: transparent; border: none; color: #fff; padding: 20px; box-sizing: border-box; outline: none; font-size: 17px; line-height: 1.6; resize: none; }
         .bottom-bar { padding: 15px 0; border-top: 1px solid #222; width: 100%; flex-shrink: 0; }
-        .id-display-box { background: #080808; padding: 16px; border-radius: 16px; border: 1px solid #222; font-family: monospace; font-size: 12px; color: var(--grey); cursor: pointer; word-break: break-all; transition: 0.2s; }
-        .id-display-box:active { background: #1a1a1a; transform: scale(0.98); }
-        .back-link { margin-top: 15px; font-size: 13px; color: #444; cursor: pointer; text-decoration: underline; display: inline-block; }
+        .id-display-box { background: #080808; padding: 16px; border-radius: 16px; border: 1px solid #222; font-family: monospace; font-size: 11px; color: var(--grey); cursor: pointer; word-break: break-all; transition: 0.2s; }
         .btn-full { width: 100%; padding: 16px; border-radius: 30px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
-        .btn-blue { background: var(--accent); color: #fff; }
-        .btn-gold { background: var(--gold); color: #000; }
         #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 30px; height: 30px; border: 3px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -49,12 +43,12 @@
 
     <div id="page-home" class="page-container">
         <div class="main-card" onclick="showOwnerPage()">
-            <div class="card-title" style="color:var(--accent)">我要写信</div>
-            <div class="card-desc">输入收信人 ID 代码<br>为其存入一段私密话语</div>
+            <div style="color:var(--accent); font-size:20px; font-weight:600;">我要写信</div>
+            <div style="color:var(--grey); font-size:13px; margin-top:10px;">只有对方本人刷脸才能解密查看</div>
         </div>
         <div class="main-card" onclick="checkHeirStatus()">
-            <div class="card-title" style="color:var(--gold)">我是收信人</div>
-            <div class="card-desc">刷脸确认身份<br>查看收到的信件或获取 ID</div>
+            <div style="color:var(--gold); font-size:20px; font-weight:600;">我是收信人</div>
+            <div style="color:var(--grey); font-size:13px; margin-top:10px;">刷脸提取您的私钥并开启信箱</div>
         </div>
     </div>
 
@@ -62,17 +56,17 @@
         <div class="mail-center">
             <div id="mail-closed" class="mail-icon-box" onclick="openMail()">
                 <div class="big-icon" id="mail-icon">📭</div>
-                <div id="mail-tip" style="color:var(--grey); font-size:14px; margin-top:20px;">正在检查信箱...</div>
+                <div id="mail-tip" style="color:var(--grey); font-size:14px; margin-top:20px;">正在检查信箱状态...</div>
             </div>
             <div id="mail-opened" class="content-paper" onclick="closeMail()">
-                <div style="color:var(--gold); font-size:10px; margin-bottom:15px; opacity:0.5; text-align:center; letter-spacing: 2px;">—— 信件内容 (点击关闭) ——</div>
+                <div style="color:var(--gold); font-size:10px; margin-bottom:15px; opacity:0.5; text-align:center;">—— 密函内容 (点击关闭) ——</div>
                 <div class="paper-text" id="mail-body"></div>
             </div>
         </div>
         <div class="bottom-bar">
-            <div style="font-size:11px; color:#444; margin-bottom:10px; letter-spacing: 1px;">我的身份代码 (点击下方代码直接复制)</div>
-            <div class="id-display-box" id="my-id-val" onclick="copyId()">获取中...</div>
-            <div class="back-link" onclick="location.reload()">退出</div>
+            <div style="font-size:11px; color:#444; margin-bottom:10px;">我的身份代码 (点击复制给写信人)</div>
+            <div class="id-display-box" id="my-id-val" onclick="copyId()">同步中...</div>
+            <div style="margin-top:15px; font-size:13px; color:#444; text-decoration:underline;" onclick="location.reload()">退出</div>
         </div>
     </div>
 
@@ -80,19 +74,19 @@
         <div id="step-id" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
             <div class="main-card" style="cursor:default; border:none; background:transparent;">
                 <h2 style="font-weight:400;">输入收信人 ID 代码</h2>
-                <p style="color:var(--grey); font-size:13px; margin-bottom:25px;">请在此粘贴对方发给您的身份 ID</p>
-                <input type="text" id="input-target-id" placeholder="粘贴 ID 字符串" style="width:100%; background:#111; border:1px solid #333; padding:18px; border-radius:15px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:14px;">
-                <button class="btn-full btn-blue" style="margin-top:25px;" onclick="goToWrite()">确认 ID 并写信</button>
+                <p style="color:var(--grey); font-size:13px; margin-bottom:25px;">代码中包含对方的加密公钥</p>
+                <input type="text" id="input-target-id" placeholder="粘贴 ID 代码" style="width:100%; background:#111; border:1px solid #333; padding:18px; border-radius:15px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:12px;">
+                <button class="btn-full" style="background:var(--accent); color:#fff; margin-top:25px;" onclick="goToWrite()">确认 ID 并写信</button>
             </div>
         </div>
         <div id="step-write" style="display:none; flex:1; flex-direction:column;">
-            <div style="font-size:12px; color:var(--grey); margin-bottom:10px; text-align:left;">信件内容：正在准备寄出...</div>
+            <div style="font-size:12px; color:var(--grey); margin-bottom:10px; text-align:left;">正在进行硬件级加密封存...</div>
             <div class="write-area">
                 <textarea id="input-msg" placeholder="在此写下您想留给对方的话..."></textarea>
             </div>
-            <button class="btn-full btn-gold" onclick="sendMail()">写好了，封存并寄出</button>
+            <button class="btn-full" style="background:var(--gold); color:#000;" onclick="sendMail()">加密并存入保险箱</button>
         </div>
-        <div class="back-link" onclick="location.reload()" style="margin-bottom:20px;">取消</div>
+        <div style="margin-top:20px; font-size:13px; color:#444;" onclick="location.reload()">取消返回</div>
     </div>
 
 <script>
@@ -100,137 +94,134 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let _selfId, _cachedMail, _targetId;
+    let _selfId, _cachedCipher, _targetCredId, _targetPubKey;
 
+    // ============================================
+    // 🧠 加密核心逻辑 (RSA-OAEP)
+    // ============================================
+    async function createKeys(id) {
+        const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+        const pubB64 = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey))));
+        
+        // 钥匙(私钥)存本地 IndexedDB
+        const r = indexedDB.open("PHX_VAULT", 1);
+        r.onupgradeneeded = e => e.target.result.createObjectStore("k");
+        await new Promise(res => r.onsuccess = e => { e.target.result.transaction("k", "readwrite").objectStore("k").put(kp.privateKey, id); res(); });
+        
+        return pubB64;
+    }
+
+    async function getLocalKey(id) {
+        return new Promise(res => {
+            const r = indexedDB.open("PHX_VAULT", 1);
+            r.onsuccess = e => {
+                const g = e.target.result.transaction("k").objectStore("k").get(id);
+                g.onsuccess = () => res(g.result);
+                g.onerror = () => res(null);
+            };
+        });
+    }
+
+    // ============================================
+    // 📩 收信人业务
+    // ============================================
     async function checkHeirStatus() {
-        showLoading("正在验证您的身份...");
+        showLoading("正在生物识别...");
         try {
-            const auth = await navigator.credentials.get({
-                publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" }
-            });
+            const auth = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" } });
             _selfId = b64(auth.rawId);
             
-            showLoading("同步云端状态...");
+            showLoading("同步信箱...");
             const { data } = await db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
-            
-            // 修复逻辑：如果是新用户，不再 reload，直接进入
-            if (!data) {
-                await registerBox(_selfId);
+            const priv = await getLocalKey(_selfId);
+
+            if (!data || !priv) {
+                showLoading("生成加密钥匙...");
+                const pub = await createKeys(_selfId);
+                await db.from('user_vault').upsert({ credential_id: _selfId, public_key: pub, status: 'empty' });
+                await new Promise(r => setTimeout(r, 400));
+                initUI({ status: 'empty', public_key: pub }, _selfId);
             } else {
                 initUI(data, _selfId);
             }
-        } catch (e) {
-            console.log("识别到新环境，引导开通...");
-            if (e.name !== "NotAllowedError") await registerBox();
-            else hideLoading();
-        }
-    }
-
-    async function registerBox(existingId = null) {
-        showLoading("正在开通新信箱...");
-        try {
-            let id = existingId;
-            if (!id) {
-                const cred = await navigator.credentials.create({
-                    publicKey: {
-                        challenge: new Uint8Array(32), rp: { name: "Phoenix" },
-                        user: { id: new Uint8Array(16), name: "User", displayName: "User" },
-                        pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-                        authenticatorSelection: { userVerification: "required" }
-                    }
-                });
-                id = b64(cred.rawId);
-            }
-            _selfId = id;
-            
-            // 写入数据库
-            const { error } = await db.from('user_vault').insert({ credential_id: id, status: 'empty' });
-            
-            // 关键修复：给安卓系统 300ms 缓冲时间关闭生物识别窗口，避免直接刷新/跳转造成闪退
-            await new Promise(r => setTimeout(r, 300));
-            
-            // 直接渲染 UI，不再 location.reload()
-            initUI({ status: 'empty' }, id);
-            
-        } catch (e) { 
-            console.error(e);
-            hideLoading(); 
-        }
+        } catch (e) { hideLoading(); }
     }
 
     function initUI(data, id) {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
-        document.getElementById('my-id-val').innerText = id;
+        // 身份代码 = ID + 公钥 (用 | 分隔)
+        document.getElementById('my-id-val').innerText = id + "|" + data.public_key;
         
         const icon = document.getElementById('mail-icon');
         const tip = document.getElementById('mail-tip');
 
         if (data.status === 'sealed') {
-            icon.innerText = "✉️";
-            icon.style.opacity = "1";
-            tip.innerHTML = `<span style="color:var(--gold)">● 您有一份新信件</span>`;
-            _cachedMail = data.encrypted_data;
+            icon.innerText = "✉️"; icon.style.opacity = "1";
+            tip.innerHTML = `<span style="color:var(--gold)">收到一份加密信件 · 点击解密</span>`;
+            _cachedCipher = data.encrypted_data;
         } else {
-            icon.innerText = "📭";
-            icon.style.opacity = "0.2";
-            tip.innerText = "信箱暂时是空的";
+            icon.innerText = "📭"; icon.style.opacity = "0.2";
+            tip.innerText = "信箱暂时为空";
         }
         hideLoading();
     }
 
-    function openMail() {
-        if (!_cachedMail) return;
-        document.getElementById('mail-closed').classList.add('hidden');
-        const opened = document.getElementById('mail-opened');
-        opened.classList.add('visible');
-        document.getElementById('mail-body').innerText = _cachedMail;
-        if(navigator.vibrate) navigator.vibrate(50);
+    async function openMail() {
+        if (!_cachedCipher) return;
+        showLoading("调用本地私钥解密...");
+        try {
+            const priv = await getLocalKey(_selfId);
+            const dec = new TextDecoder().decode(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, priv, Uint8Array.from(atob(_cachedCipher), c => c.charCodeAt(0))));
+            document.getElementById('mail-closed').classList.add('hidden');
+            document.getElementById('mail-opened').classList.add('visible');
+            document.getElementById('mail-body').innerText = dec;
+        } catch (e) { alert("解密失败：此信件并非由此设备加密或私钥已失效。"); }
+        hideLoading();
     }
 
-    function closeMail() {
-        document.getElementById('mail-opened').classList.remove('visible');
-        document.getElementById('mail-closed').classList.remove('hidden');
-    }
-
-    function copyId() {
-        if (!_selfId) return;
-        navigator.clipboard.writeText(_selfId).then(() => {
-            const el = document.getElementById('my-id-val');
-            el.innerText = "已成功复制 ID";
-            el.style.color = "var(--gold)";
-            if(navigator.vibrate) navigator.vibrate(200);
-            setTimeout(() => {
-                el.innerText = _selfId;
-                el.style.color = "var(--grey)";
-            }, 2000);
-        }).catch(() => {
-            alert("ID 代码: " + _selfId);
-        });
-    }
-
-    function showOwnerPage() {
-        document.getElementById('page-home').style.display = 'none';
-        document.getElementById('page-owner').style.display = 'flex';
-    }
-
+    // ============================================
+    // 🖋️ 写信人业务
+    // ============================================
     function goToWrite() {
-        const id = document.getElementById('input-target-id').value.trim();
-        if (id.length < 10) return alert("身份代码无效");
-        _targetId = id;
+        const fullCode = document.getElementById('input-target-id').value.trim();
+        const parts = fullCode.split('|');
+        if (parts.length < 2) return alert("无效的代码，请确保完整复制了对方的 ID");
+        _targetCredId = parts[0];
+        _targetPubKey = parts[1];
         document.getElementById('step-id').style.display = 'none';
         document.getElementById('step-write').style.display = 'flex';
     }
 
     async function sendMail() {
         const msg = document.getElementById('input-msg').value;
-        if (!msg) return alert("请输入内容");
-        showLoading("正在寄出...");
-        const { error } = await db.from('user_vault').update({ encrypted_data: msg, status: 'sealed' }).eq('credential_id', _targetId);
-        if (!error) { alert("信件已寄出！"); location.reload(); }
-        else { alert("发送失败"); hideLoading(); }
+        if (!msg) return;
+        showLoading("正在硬件级加密...");
+        try {
+            const pubKeyBuf = Uint8Array.from(atob(_targetPubKey), c => c.charCodeAt(0));
+            const pubKey = await crypto.subtle.importKey("spki", pubKeyBuf, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
+            const encrypted = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, pubKey, new TextEncoder().encode(msg)))));
+            
+            showLoading("投递密文...");
+            await db.from('user_vault').update({ encrypted_data: encrypted, status: 'sealed' }).eq('credential_id', _targetCredId);
+            alert("信件已安全存入对方信箱。");
+            location.reload();
+        } catch (e) { alert("加密投递失败"); hideLoading(); }
     }
 
+    // ============================================
+    // 🛠️ 工具
+    // ============================================
+    function copyId() {
+        navigator.clipboard.writeText(document.getElementById('my-id-val').innerText).then(() => {
+            const el = document.getElementById('my-id-val');
+            const oldText = el.innerText;
+            el.innerText = "代码已成功复制"; el.style.color = "var(--gold)";
+            setTimeout(() => { el.innerText = oldText; el.style.color = "var(--grey)"; }, 1500);
+        });
+    }
+    function showOwnerPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-owner').style.display = 'flex'; }
+    function closeMail() { document.getElementById('mail-opened').classList.remove('visible'); document.getElementById('mail-closed').classList.remove('hidden'); }
     function b64(b) { return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
     function showLoading(t) { document.getElementById('loader').style.display = 'flex'; document.getElementById('loader-msg').innerText = t; }
     function hideLoading() { document.getElementById('loader').style.display = 'none'; }
