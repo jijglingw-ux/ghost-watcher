@@ -3,113 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V17 密态信使</title>
+    <title>PHOENIX | 永恒回响协议</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
-        :root { --bg: #000000; --text: #fff; --accent: #0A84FF; --gold: #FFD700; --panel: #1c1c1e; --success: #30D158; }
-        body { background-color: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; user-select: none; }
+        :root { --bg: #050505; --text: #e0e0e0; --accent: #0A84FF; --gold: #D4AF37; --panel: #121214; --dim: #666; }
+        body { background-color: var(--bg); color: var(--text); font-family: "PingFang SC", "Hiragino Sans GB", sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
         
-        .header { margin-top: 30px; margin-bottom: 30px; }
-        h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
-        p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
+        .header { margin-top: 50px; margin-bottom: 40px; }
+        h1 { font-weight: 200; letter-spacing: 8px; margin: 0; font-size: 28px; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        .motto { color: var(--dim); font-size: 11px; margin-top: 12px; letter-spacing: 2px; text-transform: uppercase; }
 
-        .page-container { width: 100%; max-width: 340px; display: none; flex-direction: column; }
+        .page-container { width: 100%; max-width: 340px; display: none; flex-direction: column; animation: fadeIn 0.8s ease; }
         #page-home { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* 入口卡片 */
+        .portal-card { width: 100%; padding: 40px 20px; background: linear-gradient(145deg, #1a1a1c 0%, #0a0a0a 100%); border: 1px solid rgba(255,255,255,0.05); border-radius: 24px; margin-bottom: 25px; cursor: pointer; transition: 0.3s; box-sizing: border-box; }
+        .portal-card:active { transform: scale(0.97); border-color: rgba(255,255,255,0.2); }
+        .portal-card .role-title { font-size: 20px; font-weight: 300; letter-spacing: 3px; margin-bottom: 10px; }
+        .portal-card .role-desc { font-size: 12px; color: var(--dim); line-height: 1.6; }
+
+        /* 交互组件 */
+        .btn-ritual { padding: 16px; border-radius: 35px; font-size: 15px; cursor: pointer; width: 100%; border: none; font-weight: 400; letter-spacing: 2px; transition: 0.4s; }
+        .btn-gold { background: var(--gold); color: #000; box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2); }
+        .btn-dim { background: transparent; border: 1px solid #333; color: var(--dim); margin-top: 15px; }
         
-        /* 首页卡片 */
-        .card { width: 100%; height: 120px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
-        .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
-        .role-owner { border-color: rgba(10, 132, 255, 0.3); } 
-        .role-heir { border-color: rgba(48, 209, 88, 0.3); }
-        .card .title { font-size: 18px; font-weight: 600; margin-bottom: 5px; }
+        .status-box { background: var(--panel); padding: 35px 25px; border-radius: 28px; border: 1px solid rgba(255,255,255,0.03); width: 100%; box-sizing: border-box; }
 
-        /* 按钮 */
-        .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 20px; }
-        .btn-seal { background: var(--accent); color: white; }
-        .btn-open { background: var(--gold); color: #000; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 215, 0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); } }
+        /* 视觉：时空信封 */
+        .relic-wrapper { margin: 30px auto; position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; }
+        .relic-icon { font-size: 70px; transition: 0.5s; }
+        .relic-glow { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle, rgba(214,175,55,0.15) 0%, transparent 70%); animation: breathe 3s infinite; }
+        @keyframes breathe { 0%, 100% { opacity: 0.5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.1); } }
 
-        .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
+        /* 身份锚点展示 */
+        .anchor-section { margin-top: 35px; padding-top: 25px; border-top: 1px solid #1a1a1c; }
+        .anchor-label { font-size: 10px; color: var(--dim); letter-spacing: 2px; margin-bottom: 12px; }
+        .anchor-string { background: #000; padding: 15px; border-radius: 12px; border: 1px solid #222; word-break: break-all; font-family: "Courier New", monospace; font-size: 10px; color: var(--gold); line-height: 1.5; opacity: 0.7; }
+        .anchor-copy { background: transparent; border: none; color: var(--gold); font-size: 11px; margin-top: 10px; cursor: pointer; opacity: 0.6; text-decoration: underline; }
 
-        .status-box { background: var(--panel); padding: 30px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
+        /* 书写区域 */
+        textarea { width: 100%; height: 160px; background: #0a0a0a; border: 1px solid #222; color: #fff; padding: 20px; border-radius: 18px; font-size: 16px; box-sizing: border-box; resize: none; margin: 20px 0; line-height: 1.6; outline: none; }
+        textarea:focus { border-color: var(--accent); }
 
-        /* 信封视觉 */
-        .envelope-container { margin: 20px auto; width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; position: relative; }
-        .envelope-icon { font-size: 60px; filter: drop-shadow(0 0 10px rgba(255,215,0,0.3)); }
-        .seal-wax { position: absolute; font-size: 24px; bottom: 30px; }
-
-        /* ID 凭证展示 */
-        .id-label { font-size: 12px; color: #555; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px; }
-        .id-string-box { background: #000; padding: 12px; border-radius: 12px; border: 1px solid #333; word-break: break-all; font-family: monospace; font-size: 11px; color: var(--gold); margin: 10px 0; line-height: 1.4; user-select: text; -webkit-user-select: text; }
-        .btn-copy-id { color: var(--gold); font-size: 12px; background: transparent; border: none; cursor: pointer; text-decoration: underline; opacity: 0.8; }
-
-        /* 立嘱人输入 */
-        #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
-        textarea { width: 100%; height: 120px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
-        
-        /* 揭示面板 */
-        #legacy-reveal-panel { display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold); box-shadow: 0 0 50px rgba(255, 215, 0, 0.1); animation: popIn 0.6s; margin-top: 20px;}
-        .legacy-content { font-size: 20px; line-height: 1.6; color: #fff; white-space: pre-wrap; margin: 20px 0; font-weight: bold; }
-
-        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        /* 加载蒙层 */
+        #ritual-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
+        .ritual-spinner { width: 30px; height: 30px; border: 2px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff; font-size:12px;"></p></div>
+    <div id="ritual-overlay"><div class="ritual-spinner"></div><p id="ritual-text" style="margin-top:20px; font-size:12px; color:var(--dim); letter-spacing:1px;"></p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V17</p></div>
+    <div class="header"><h1>PHOENIX</h1><div class="motto">Memento Mori · Digital Vestige</div></div>
 
     <div id="page-home" class="page-container">
-        <div class="card role-owner" onclick="showOwnerPage()">
-            <div class="title" style="color:var(--accent);">我要封存</div><div style="color:#555; font-size:11px;">输入受益人ID进行配对</div>
+        <div class="portal-card" onclick="showOwnerPage()">
+            <div class="role-title" style="color:var(--accent)">铭刻者</div>
+            <div class="role-desc">输入对方的身份锚点<br>为其封存一份跨越时空的回响</div>
         </div>
-        <div class="card role-heir" onclick="checkHeirStatus()">
-            <div class="title" style="color:var(--success);">我是继承人</div><div style="color:#555; font-size:11px;">刷脸开启我的加密信箱</div>
+        <div class="portal-card" onclick="checkHeirStatus()">
+            <div class="role-title" style="color:var(--gold)">寻踪者</div>
+            <div class="role-desc">通过生物特征唤醒密钥<br>开启属于您的密闭信箱</div>
         </div>
     </div>
 
     <div id="page-owner" class="page-container">
-        <div id="id-input-stage" class="status-box">
-            <h3 style="margin-top:0; font-weight:400;">锁定受益人</h3>
-            <p style="color:#666; font-size:12px; margin-bottom:25px;">请在下方输入或粘贴对方提供的唯一 ID 凭证</p>
-            <input type="text" id="manual-id-input" placeholder="在此粘贴 ID 字符" style="width:100%; background:rgba(255,255,255,0.05); border:1px solid #444; border-radius:12px; color:#fff; padding:15px; font-size:13px; box-sizing:border-box; outline:none; text-align:center; font-family:monospace;">
-            <button class="btn-action btn-seal" onclick="handlePairing()">开始配对</button>
+        <div id="pairing-stage" class="status-box">
+            <h3 style="font-weight:300; letter-spacing:2px;">锚点配对</h3>
+            <p style="color:var(--dim); font-size:12px; margin-bottom:30px;">请粘贴接收方提供的唯一凭证字符串</p>
+            <input type="text" id="id-input" placeholder="身份锚点 (Identity Anchor)" style="width:100%; background:#000; border:1px solid #333; border-radius:14px; color:#fff; padding:18px; font-size:13px; box-sizing:border-box; outline:none; text-align:center; font-family:monospace;">
+            <button class="btn-ritual btn-gold" style="margin-top:25px;" onclick="performPairing()">建立联系</button>
         </div>
 
-        <div id="secret-panel">
-            <div style="font-size:11px; color:#555; text-transform:uppercase;">已配对目标 ID:</div>
-            <div style="color:var(--accent); font-family:monospace; font-size:10px; word-break:break-all; margin-top:5px;" id="target-id-display">...</div>
-            <textarea id="secret-input" placeholder="输入你想传承给对方的信息..."></textarea>
-            <button class="btn-action btn-seal" onclick="sealLegacy()">确认封存并上传</button>
+        <div id="etching-stage" style="display:none; text-align:left;">
+            <div class="anchor-label">已连接的寻踪者：</div>
+            <div class="anchor-string" id="target-id-label"></div>
+            <textarea id="echo-input" placeholder="在这里写下您的回响..."></textarea>
+            <button class="btn-ritual btn-gold" onclick="sealRitual()">完成铭刻 · 封存</button>
         </div>
-        <div class="back-btn" onclick="location.reload()">返回首页</div>
+        <div class="back-btn" onclick="location.reload()">放弃并返回</div>
     </div>
 
     <div id="page-heir" class="page-container">
         <div class="status-box">
-            <div class="envelope-container" id="heir-visual-box">
+            <div class="relic-wrapper" id="relic-visual">
                 </div>
-            <div id="heir-status-text" style="font-size:14px; margin-bottom:10px;"></div>
+            <div id="vault-status-text" style="font-size:15px; letter-spacing:1px;"></div>
 
-            <div class="id-label">我的唯一身份凭证</div>
-            <div class="id-string-box" id="heir-id-string">...</div>
-            <button class="btn-copy-id" onclick="copyHeirID()">点击复制ID</button>
-        </div>
-
-        <div id="heir-legacy-toggle-area" style="display: none; margin-top: 20px;">
-            <button class="btn-action btn-open" id="toggle-btn" onclick="toggleLegacyView()">🔑 开启封存密函</button>
-            <div id="legacy-reveal-panel">
-                <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
-                <div class="legacy-content" id="legacy-text"></div>
-                <div style="margin-top:30px; border-top:1px solid #444; padding-top:15px; font-size:10px; color:#666;">PHOENIX PROTOCOL</div>
+            <div class="anchor-section">
+                <div class="anchor-label">您的唯一身份锚点</div>
+                <div class="anchor-string" id="my-anchor-id"></div>
+                <button class="anchor-copy" onclick="copyAnchor()">点击复制锚点</button>
             </div>
         </div>
 
-        <div class="back-btn" onclick="location.reload()">退出信箱</div>
+        <div id="legacy-gate" style="display: none; margin-top: 25px;">
+            <button class="btn-ritual btn-gold" id="gate-btn" onclick="revealVestige()">🔑 开启密闭回响</button>
+            <div id="echo-reveal-panel" style="display:none; background:rgba(212,175,55,0.03); border:1px solid rgba(212,175,55,0.2); border-radius:24px; padding:30px; margin-top:25px; text-align:left; animation: fadeIn 1s;">
+                <div style="color:var(--gold); font-size:11px; letter-spacing:3px; margin-bottom:15px; opacity:0.6;">—— 永恒印记 ——</div>
+                <div style="font-size:18px; line-height:1.8; white-space:pre-wrap;" id="echo-text"></div>
+                <div style="margin-top:40px; border-top:1px solid #222; padding-top:15px; font-size:9px; color:#444; letter-spacing:2px;">PHOENIX PROTOCOL END</div>
+            </div>
+        </div>
+
+        <div class="back-btn" onclick="location.reload()">断开物理连接</div>
     </div>
 
 <script>
@@ -117,34 +117,32 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let _myId, _myCipher, _targetId;
-    let isLegacyVisible = false;
+    let _selfId, _cachedEcho, _targetId;
 
-    // --- 受益人核心逻辑 ---
+    // ============================================
+    // 🧠 寻踪者逻辑（接收端）
+    // ============================================
     async function checkHeirStatus() {
-        showLoading("核验生物信息...");
+        showRitual("核验生物密钥...");
         try {
             const auth = await navigator.credentials.get({
                 publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" }
             });
-            _myId = bufferToBase64url(auth.rawId);
+            _selfId = b64(auth.rawId);
             
-            showLoading("正在同步云端状态...");
-            const { data } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
+            showRitual("同步时空数据...");
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
             
-            if (!data) {
-                await mintNewIdentity(_myId);
-            } else {
-                renderHeirUI(data, _myId);
-            }
+            if (!data) await initializeVessel(_selfId);
+            else renderVault(data, _selfId);
         } catch (e) {
-            if (e.name !== "NotAllowedError") await mintNewIdentity();
-            else hideLoading();
+            if (e.name !== "NotAllowedError") await initializeVessel();
+            else hideRitual();
         }
     }
 
-    async function mintNewIdentity(existingId = null) {
-        showLoading("正在为您开辟数字信箱...");
+    async function initializeVessel(existingId = null) {
+        showRitual("开辟数字虚空...");
         try {
             let id = existingId;
             if (!id) {
@@ -156,93 +154,99 @@
                         authenticatorSelection: { userVerification: "required" }
                     }
                 });
-                id = bufferToBase64url(cred.rawId);
+                id = b64(cred.rawId);
             }
             await db.from('user_vault').insert({ credential_id: id, status: 'empty' });
             const { data } = await db.from('user_vault').select('*').eq('credential_id', id).single();
-            renderHeirUI(data, id);
-        } catch (e) { hideLoading(); }
+            renderVault(data, id);
+        } catch (e) { hideRitual(); }
     }
 
-    function renderHeirUI(data, id) {
+    function renderVault(data, id) {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
-        document.getElementById('heir-id-string').innerText = id;
+        document.getElementById('my-anchor-id').innerText = id;
         
-        const visualBox = document.getElementById('heir-visual-box');
-        const statusText = document.getElementById('heir-status-text');
-        const toggleArea = document.getElementById('heir-legacy-toggle-area');
+        const relic = document.getElementById('relic-visual');
+        const status = document.getElementById('vault-status-text');
+        const gate = document.getElementById('legacy-gate');
 
         if (data && data.status === 'sealed') {
-            visualBox.innerHTML = `<div class="envelope-icon">✉️</div><div class="seal-wax">🧧</div>`;
-            statusText.innerHTML = `<span style="color:var(--gold)">发现封存密函</span>`;
-            _myCipher = data.encrypted_data;
-            toggleArea.style.display = 'block';
+            relic.innerHTML = `<div class="relic-glow"></div><div class="relic-icon">✉️</div>`;
+            status.innerHTML = `<span style="color:var(--gold)">发现封存回响</span>`;
+            _cachedEcho = data.encrypted_data;
+            gate.style.display = 'block';
         } else {
-            visualBox.innerHTML = `<div class="envelope-icon" style="opacity:0.2;">📭</div>`;
-            statusText.innerHTML = `<span style="color:#666">信箱目前为空</span>`;
-            toggleArea.style.display = 'none';
+            relic.innerHTML = `<div class="relic-icon" style="opacity:0.15">⌛</div>`;
+            status.innerHTML = `<span style="color:var(--dim)">信箱静默中</span>`;
+            gate.style.display = 'none';
         }
-        hideLoading();
+        hideRitual();
     }
 
-    function copyHeirID() {
-        const idText = document.getElementById('heir-id-string').innerText;
-        navigator.clipboard.writeText(idText).then(() => {
-            const btn = document.querySelector('.btn-copy-id');
-            btn.innerText = "已复制";
-            setTimeout(() => btn.innerText = "点击复制ID", 2000);
+    function copyAnchor() {
+        const text = document.getElementById('my-anchor-id').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector('.anchor-copy');
+            btn.innerText = "已记录至剪贴板";
+            setTimeout(() => btn.innerText = "点击复制锚点", 2000);
         });
     }
 
-    function toggleLegacyView() {
-        const panel = document.getElementById('legacy-reveal-panel');
-        const btn = document.getElementById('toggle-btn');
-        isLegacyVisible = !isLegacyVisible;
-        if (isLegacyVisible) {
+    function revealVestige() {
+        const panel = document.getElementById('echo-reveal-panel');
+        const btn = document.getElementById('gate-btn');
+        if (panel.style.display === 'none') {
             panel.style.display = 'block';
-            document.getElementById('legacy-text').innerText = _myCipher; // V17暂存为明文
-            btn.innerText = "✖ 关闭显示";
-            btn.style.background = "#333";
-            btn.style.color = "#888";
+            document.getElementById('echo-text').innerText = _cachedEcho;
+            btn.innerText = "✖ 隐藏回响";
+            btn.classList.add('btn-dim');
+            btn.classList.remove('btn-gold');
         } else {
             panel.style.display = 'none';
-            btn.innerText = "🔑 开启封存密函";
-            btn.style.background = "var(--gold)";
-            btn.style.color = "#000";
+            btn.innerText = "🔑 开启密闭回响";
+            btn.classList.add('btn-gold');
+            btn.classList.remove('btn-dim');
         }
     }
 
-    // --- 立嘱人核心逻辑 ---
+    // ============================================
+    // 🖋️ 铭刻者逻辑（发送端）
+    // ============================================
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-owner').style.display = 'flex';
     }
 
-    function handlePairing() {
-        const inputId = document.getElementById('manual-id-input').value.trim();
-        if (inputId.length < 10) return alert("请输入有效的 ID 凭证");
-        
-        _targetId = inputId;
-        document.getElementById('id-input-stage').style.display = 'none';
-        document.getElementById('secret-panel').style.display = 'block';
-        document.getElementById('target-id-display').innerText = _targetId;
+    function performPairing() {
+        const input = document.getElementById('id-input').value.trim();
+        if (input.length < 10) return alert("请输入有效的身份锚点");
+        _targetId = input;
+        document.getElementById('pairing-stage').style.display = 'none';
+        document.getElementById('etching-stage').style.display = 'block';
+        document.getElementById('target-id-label').innerText = _targetId;
     }
 
-    async function sealLegacy() {
-        const msg = document.getElementById('secret-input').value;
-        if (!msg) return alert("请输入内容");
-        showLoading("正在安全封存...");
+    async function sealRitual() {
+        const msg = document.getElementById('echo-input').value;
+        if (!msg) return alert("回响内容不能为空");
+        showRitual("正在执行铭刻仪式...");
         const { error } = await db.from('user_vault').update({ encrypted_data: msg, status: 'sealed' }).eq('credential_id', _targetId);
-        hideLoading();
-        if (!error) { alert("✅ 封存完毕！"); location.reload(); }
-        else { alert("投递失败：请核对 ID 是否正确"); }
+        hideRitual();
+        if (!error) {
+            alert("✅ 铭刻完成。回响已封存于数字虚空。");
+            location.reload();
+        } else {
+            alert("仪式中断：请检查锚点是否正确");
+        }
     }
 
-    // --- 工具 ---
-    function bufferToBase64url(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
-    function showLoading(t) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = t; }
-    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+    // ============================================
+    // 🛠️ 协议工具
+    // ============================================
+    function b64(buffer) { return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
+    function showRitual(txt) { document.getElementById('ritual-overlay').style.display = 'flex'; document.getElementById('ritual-text').innerText = txt; }
+    function hideRitual() { document.getElementById('ritual-overlay').style.display = 'none'; }
 </script>
 </body>
 </html>
