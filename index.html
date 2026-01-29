@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V15.8 密态感知</title>
+    <title>凤凰协议 | V15.9 极致稳定</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -16,13 +16,13 @@
         h1 { font-weight: 200; letter-spacing: 4px; margin: 0; font-size: 24px; opacity: 0.9; }
         p { color: #666; font-size: 13px; margin-top: 10px; letter-spacing: 1px; }
 
-        .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
+        .page-container { width: 100%; max-width: 340px; display: none; flex-direction: column; }
+        #page-home { display: flex; }
         
         .card { width: 100%; height: 120px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
         .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
         .role-owner { border-color: rgba(10, 132, 255, 0.3); } .role-owner .title { color: var(--accent); font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .role-heir { border-color: rgba(48, 209, 88, 0.3); } .role-heir .title { color: #30D158; font-size: 18px; font-weight: 600; margin-bottom: 5px; }
-        .desc { font-size: 12px; color: #888; }
 
         .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 20px; }
         .btn-seal { background: var(--accent); color: white; }
@@ -32,47 +32,36 @@
 
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        .status-icon { font-size: 40px; margin-bottom: 15px; }
         .status-box { background: var(--panel); padding: 30px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
-
-        #page-owner, #page-heir { display: none; }
         #reader { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000; position: relative; }
-        #qr-shaded-region { display: none !important; }
         
-        #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; animation: slideUp 0.5s; text-align: left; }
-        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        #secret-panel { display: none; width: 100%; background: var(--panel); padding: 20px; border-radius: 20px; box-sizing: border-box; text-align: left; }
         textarea { width: 100%; height: 120px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
         
-        #legacy-reveal-panel { display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold); box-shadow: 0 0 50px rgba(255, 215, 0, 0.1); animation: popIn 0.6s; margin-top: 20px;}
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        #legacy-reveal-panel { display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold); box-shadow: 0 0 50px rgba(255, 215, 0, 0.1); margin-top: 20px;}
         .legacy-content { font-size: 20px; line-height: 1.6; color: #fff; white-space: pre-wrap; margin: 20px 0; font-weight: bold; }
 
-        #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
+        #loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        #qrcode-box { display: block; background: #fff; padding: 20px; border-radius: 20px; margin: 20px auto; width: fit-content; }
-        #env-warning { display: none; width: 100%; background: rgba(255, 69, 58, 0.15); border: 1px solid #FF453A; color: #FF453A; padding: 10px; font-size: 12px; margin-bottom: 20px; border-radius: 8px; text-align: left; }
-        
+        #qrcode-box { background: #fff; padding: 15px; border-radius: 15px; margin: 20px auto; display: inline-block; }
         .address-tag { font-family: monospace; font-size: 10px; color: #555; margin-top: 10px; word-break: break-all; }
         .will-status-badge { display: inline-block; padding: 5px 15px; border-radius: 15px; font-size: 12px; margin-bottom: 15px; }
-        .badge-none { background: rgba(255,255,255,0.1); color: #888; }
-        .badge-active { background: rgba(255, 215, 0, 0.2); color: var(--gold); border: 1px solid var(--gold); }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff;">连接中...</p></div>
+    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff;"></p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V15 (ENCRYPTED)</p></div>
-    <div id="env-warning"></div>
+    <div class="header"><h1>PHOENIX</h1><p id="subtitle">V15.9 SECURE PROTOCOL</p></div>
 
     <div id="page-home" class="page-container">
         <div class="card role-owner" onclick="showOwnerPage()">
             <div class="title">我要封存</div><div class="desc">扫码 / 上传 · 存入保险箱</div>
         </div>
         <div class="card role-heir" onclick="checkHeirStatus()">
-            <div class="title">我是继承人</div><div class="desc">刷脸 · 查看信箱状态</div>
+            <div class="title">我是继承人</div><div class="desc">刷脸 · 进入信箱</div>
         </div>
     </div>
 
@@ -88,9 +77,9 @@
             <div style="font-size:12px; color:#888;">已锁定信箱:</div>
             <div style="color:var(--accent); font-family:monospace; font-size:10px; word-break:break-all;" id="target-id-display">...</div>
             <textarea id="secret-input" placeholder="输入要传承的信息..."></textarea>
-            <button class="btn-action btn-seal" onclick="sealLegacy()">确认封存 (本地加密后投递)</button>
+            <button class="btn-action btn-seal" onclick="sealLegacy()">确认封存 (本地加密投递)</button>
         </div>
-        <div class="back-btn" onclick="goHome()">返回首页</div>
+        <div class="back-btn" onclick="location.reload()">返回首页</div>
     </div>
 
     <div id="page-heir" class="page-container">
@@ -99,10 +88,10 @@
             <div style="font-size: 13px; color: #aaa; margin-bottom: 5px;">我的身份配对地址</div>
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <div class="address-tag" id="heir-id-tag"></div>
-            <p style="font-size:11px; color:#555; margin-top:15px;">请让立嘱人扫描上方二维码<br>即可完成身份配对并为您留言</p>
+            <p style="font-size:11px; color:#555; margin-top:15px;">立嘱人扫描上方二维码即可为您留言</p>
         </div>
 
-        <div id="heir-legacy-toggle-area" style="display: none;">
+        <div id="heir-legacy-toggle-area" style="display: none; margin-top: 20px;">
             <button class="btn-action btn-open" id="toggle-btn" onclick="toggleLegacyView()">🔑 开启封存密函</button>
             <div id="legacy-reveal-panel">
                 <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
@@ -110,7 +99,7 @@
                 <div style="margin-top:30px; border-top:1px solid #444; padding-top:15px; font-size:10px; color:#666;">PHOENIX PROTOCOL</div>
             </div>
         </div>
-        <div class="back-btn" onclick="goHome()">返回首页</div>
+        <div class="back-btn" onclick="location.reload()">退出并返回</div>
     </div>
 
 <script>
@@ -118,15 +107,14 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let _myId, _myCipher, _targetId, _targetPubKey;
-    let isLegacyVisible = false;
+    let _myId, _myCipher, _targetId, _targetPub;
     let html5QrCode = null;
 
     // ============================================
-    // 🧠 受益人逻辑：刷脸 + 身份构建
+    // 🧠 受益人：绝不卡死逻辑
     // ============================================
     async function checkHeirStatus() {
-        showLoading("正在生物识别验证...");
+        showLoading("正在唤醒生物识别...");
         try {
             let auth;
             try {
@@ -134,32 +122,32 @@
                     publicKey: { challenge: new Uint8Array(32), rpId: window.location.hostname, userVerification: "required" }
                 });
             } catch (e) {
-                return await mintIdentity(); // 识别失败/无身份，跳转新建
+                // 如果没有现有密钥，立即引导创建
+                return await mintIdentity();
             }
 
-            _myId = b64url(auth.rawId);
-            showLoading("同步云端状态...");
+            _myId = b64(auth.rawId);
+            hideLoading(); // 拿到 ID 立即关掉 Loading，防止后续卡死
             
-            // 增加5秒超时竞争，防止数据库查询挂起
-            const { data, error } = await Promise.race([
-                db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle(),
-                new Promise((_, r) => setTimeout(() => r(new Error("TIMEOUT")), 5000))
-            ]);
+            // 异步后台查询，查询过程中页面已经是可见的
+            const { data } = await db.from('user_vault').select('*').eq('credential_id', _myId).maybeSingle();
+            const priv = await getKey(_myId);
 
-            const privKey = await getKey(_myId);
-            if (!data || !privKey) {
+            if (!data || !priv) {
+                // 数据库没记录或本地没钥匙，自动触发补完流程
                 await mintIdentity(_myId);
             } else {
                 renderHeirUI(data, _myId);
             }
         } catch (err) {
-            console.warn("身份核验中断，尝试修复流程...");
-            await mintIdentity();
+            console.error(err);
+            hideLoading();
+            alert("身份核验失败，请重试");
         }
     }
 
     async function mintIdentity(existingId = null) {
-        showLoading("正在初始化加密环境...");
+        showLoading("正在构建永久加密环境...");
         try {
             let id = existingId;
             if (!id) {
@@ -171,15 +159,14 @@
                         authenticatorSelection: { userVerification: "required" }
                     }
                 });
-                id = b64url(cred.rawId);
+                id = b64(cred.rawId);
             }
-            // 生成 RSA 密钥对
             const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
             const pubB64 = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey))));
-            
             await saveKey(id, kp.privateKey);
             await db.from('user_vault').upsert({ credential_id: id, public_key: pubB64, status: 'empty' });
             
+            // 完工刷新，重新载入
             location.reload();
         } catch (e) { hideLoading(); }
     }
@@ -191,46 +178,42 @@
 
         const qrEl = document.getElementById("qrcode");
         qrEl.innerHTML = "";
-        // 重要：二维码包含 ID 和 公钥，以便立嘱人加密
-        new QRCode(qrEl, { text: id + "|" + data.public_key, width: 180, height: 180, colorDark:"#000", colorLight:"#fff" });
+        new QRCode(qrEl, { text: id + "|" + data.public_key, width: 180, height: 180 });
         document.getElementById('heir-id-tag').innerText = "ADDR: " + id;
 
         const indicator = document.getElementById('heir-will-indicator');
         const toggleArea = document.getElementById('heir-legacy-toggle-area');
         
         if (data.status === 'sealed') {
-            indicator.innerHTML = `<div class="will-status-badge badge-active">● 发现封存密函</div>`;
+            indicator.innerHTML = `<div class="will-status-badge" style="background:rgba(255,215,0,0.2); color:var(--gold); border:1px solid var(--gold);">● 发现封存密函</div>`;
             toggleArea.style.display = 'block';
         } else {
-            indicator.innerHTML = `<div class="will-status-badge badge-none">信箱目前为空</div>`;
+            indicator.innerHTML = `<div class="will-status-badge" style="background:rgba(255,255,255,0.1); color:#666;">信箱空置中</div>`;
             toggleArea.style.display = 'none';
         }
-        hideLoading();
     }
 
     async function toggleLegacyView() {
         const panel = document.getElementById('legacy-reveal-panel');
         const btn = document.getElementById('toggle-btn');
-        if (!isLegacyVisible) {
+        if (panel.style.display !== 'block') {
             showLoading("私钥解密中...");
             try {
                 const priv = await getKey(_myId);
                 const dec = new TextDecoder().decode(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, priv, Uint8Array.from(atob(_myCipher), c => c.charCodeAt(0))));
                 document.getElementById('legacy-text').innerText = dec;
                 panel.style.display = 'block';
-                btn.innerText = "✖ 关闭遗嘱显示";
-                isLegacyVisible = true;
-            } catch (e) { alert("解密失败：硬件密钥不匹配"); }
+                btn.innerText = "✖ 关闭显示";
+            } catch (e) { alert("解密失败"); }
             hideLoading();
         } else {
             panel.style.display = 'none';
             btn.innerText = "🔑 开启封存密函";
-            isLegacyVisible = false;
         }
     }
 
     // ============================================
-    // 📷 立嘱人逻辑：恢复你认可的操作流程
+    // 📷 立嘱人：恢复 100% 原始 UI 流程
     // ============================================
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
@@ -244,43 +227,36 @@
         setTimeout(() => {
             if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
             html5QrCode.start({ facingMode: "environment" }, { fps: 20, qrbox: 250 }, onScanSuccess)
-            .catch(err => { document.getElementById('reader').innerHTML = "<p style='padding-top:140px; color:#666;'>摄像头不可用<br>请从相册上传</p>"; });
+            .catch(err => { document.getElementById('reader').innerHTML = "<p style='padding-top:140px; color:#666;'>相机不可用，请使用下方上传</p>"; });
         }, 300);
     }
 
     async function onScanSuccess(text) {
         const parts = text.split('|');
-        if (parts.length < 2) return alert("无效的凤凰身份码");
-        
-        showLoading("解析对方公钥...");
+        if (parts.length < 2) return alert("无效配对码");
+        showLoading("解析公钥...");
         _targetId = parts[0];
-        try {
-            _targetPubKey = await crypto.subtle.importKey("spki", Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0)), { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
-            if (html5QrCode) await html5QrCode.stop();
-            document.getElementById('scan-stage').style.display = 'none';
-            document.getElementById('secret-panel').style.display = 'block';
-            document.getElementById('target-id-display').innerText = _targetId;
-        } catch (e) { alert("公钥解析失败"); }
+        _targetPub = await crypto.subtle.importKey("spki", Uint8Array.from(atob(parts[1]), c => c.charCodeAt(0)), { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
+        if (html5QrCode) await html5QrCode.stop();
+        document.getElementById('scan-stage').style.display = 'none';
+        document.getElementById('secret-panel').style.display = 'block';
+        document.getElementById('target-id-display').innerText = _targetId;
         hideLoading();
     }
 
     async function sealLegacy() {
         const msg = document.getElementById('secret-input').value;
-        if (!msg) return alert("请输入信息");
-        showLoading("正在硬件加密...");
+        if (!msg) return alert("内容不能为空");
+        showLoading("硬件加密投递...");
         try {
-            const enc = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, _targetPubKey, new TextEncoder().encode(msg)))));
-            showLoading("正在安全投递...");
-            const { error } = await db.from('user_vault').update({ encrypted_data: enc, status: 'sealed' }).eq('credential_id', _targetId);
-            if (error) throw error;
-            alert("✅ 封存完毕！内容已加密存入云端。");
-            goHome();
-        } catch (e) { alert("投递失败: " + e.message); hideLoading(); }
+            const enc = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, _targetPub, new TextEncoder().encode(msg)))));
+            await db.from('user_vault').update({ encrypted_data: enc, status: 'sealed' }).eq('credential_id', _targetId);
+            alert("✅ 封存完毕");
+            location.reload();
+        } catch (e) { alert("失败: " + e.message); hideLoading(); }
     }
 
-    // ============================================
-    // 🛠️ 辅助工具
-    // ============================================
+    // 工具箱
     function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
     async function handleFileScan(input) {
         if (input.files.length === 0) return;
@@ -288,17 +264,16 @@
         try {
             const decoded = await new Html5Qrcode("reader").scanFile(input.files[0], true);
             onScanSuccess(decoded);
-        } catch (err) { alert("无法识别二维码"); hideLoading(); }
+        } catch (err) { alert("识码失败"); hideLoading(); }
     }
-
     async function saveKey(id, k) {
-        const r = indexedDB.open("PHX_ENC", 1);
+        const r = indexedDB.open("PHX_V15", 1);
         r.onupgradeneeded = e => e.target.result.createObjectStore("k");
         return new Promise(res => r.onsuccess = e => { e.target.result.transaction("k", "readwrite").objectStore("k").put(k, id); res(); });
     }
     async function getKey(id) {
         return new Promise(res => {
-            const r = indexedDB.open("PHX_ENC", 1);
+            const r = indexedDB.open("PHX_V15", 1);
             r.onsuccess = e => {
                 const g = e.target.result.transaction("k").objectStore("k").get(id);
                 g.onsuccess = () => res(g.result);
@@ -307,11 +282,9 @@
             r.onerror = () => res(null);
         });
     }
-
-    function b64url(b) { return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
+    function b64(b) { return btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, ""); }
     function showLoading(t) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = t; }
     function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
-    function goHome() { location.reload(); }
 </script>
 </body>
 </html>
