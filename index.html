@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PHOENIX | V22 终极兼容版</title>
+    <title>PHOENIX | V23 全域感光</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -15,9 +15,11 @@
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
         .card { width: 100%; height: 110px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         .btn-action { padding: 15px; border-radius: 12px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 15px; }
-        .status-box { background: var(--panel); padding: 25px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
         #page-owner, #page-heir { display: none; }
-        #reader { width: 100%; border-radius: 20px; overflow: hidden; background: #000; border: 2px solid #333; }
+        
+        /* 扫码容器：全屏取景模式 */
+        #reader { width: 100%; aspect-ratio: 1/1; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid #333; }
+        
         textarea { width: 100%; height: 120px; background: #2c2c2e; border: 2px solid var(--accent); color: #fff; padding: 15px; border-radius: 15px; margin: 15px 0; font-size: 16px; box-sizing: border-box; outline: none; }
         #qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 888; flex-direction: column; justify-content: center; align-items: center; }
         #qrcode-box { background: #fff; padding: 20px; border-radius: 20px; }
@@ -27,36 +29,39 @@
     </style>
 </head>
 <body>
-    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">连接中...</p></div>
-    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V22 (ULTIMATE)</p></div>
+    <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">同步中...</p></div>
+    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V23 (FULL VIEW)</p></div>
     
     <div id="page-home" class="page-container">
-        <div class="card" onclick="showOwnerPage()" style="border-color:var(--accent);"><div style="color:var(--accent); font-size:18px; font-weight:600;">我要封封存</div></div>
+        <div class="card" onclick="showOwnerPage()" style="border-color:var(--accent);"><div style="color:var(--accent); font-size:18px; font-weight:600;">我要封存</div></div>
         <div class="card" onclick="checkHeirStatus()" style="border-color:#30D158;"><div style="color:#30D158; font-size:18px; font-weight:600;">我是继承人</div></div>
     </div>
 
     <div id="page-owner" class="page-container">
         <div id="scan-stage">
-            <p style="color:var(--accent); font-size:12px; margin-bottom:15px;">请扫描受益人图腾</p>
+            <p style="color:var(--accent); font-size:12px; margin-bottom:15px;">全屏捕捉模式：让图腾出现在镜头内即可</p>
             <div id="reader"></div>
-            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff;" onclick="triggerFileSelect()">🖼️ 从相册选择截图 (兼容 V16 引擎)</button>
+            <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff;" onclick="triggerFileSelect()">🖼️ 从相册解析截图</button>
             <input type="file" id="qr-input-file" accept="image/*" style="display:none" onchange="handleFileScan(this)">
         </div>
         <div id="secret-panel" style="display: none;">
-            <p style="color:#30D158; font-size:14px;">✅ 信箱锁定成功</p>
-            <textarea id="secret-input" placeholder="输入加密信息..."></textarea>
-            <button class="btn-action" style="background:var(--accent); color:#fff" onclick="sealLegacy()">🔒 确认并存入保险箱</button>
+            <p style="color:#30D158; font-size:14px;">✅ 身份锁定成功</p>
+            <textarea id="secret-input" placeholder="输入要封存的信息..."></textarea>
+            <button class="btn-action" style="background:var(--accent); color:#fff" onclick="sealLegacy()">🔒 确认加密并封存</button>
         </div>
         <div style="margin-top:20px; color:#666" onclick="location.reload()">返回首页</div>
     </div>
 
     <div id="page-heir" class="page-container">
         <div id="heir-dashboard">
-            <div id="status-empty" class="status-box" style="display:none;">📭 信箱为空</div>
-            <div id="status-sealed" class="status-box" style="display:none;">🔒 发现封存信息<button class="btn-action" style="background:var(--gold); color:#000" onclick="revealLegacy()">🔑 刷脸开启</button></div>
+            <div id="status-empty" class="status-box" style="display:none; background:var(--panel); padding:20px; border-radius:20px;">📭 信箱为空</div>
+            <div id="status-sealed" class="status-box" style="display:none; background:var(--panel); padding:20px; border-radius:20px; border: 1px solid var(--gold);">
+                🔒 发现封存信息
+                <button class="btn-action" style="background:var(--gold); color:#000" onclick="revealLegacy()">🔑 刷脸开启</button>
+            </div>
             <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="showQRModal()">📱 显示我的公钥图腾</button>
         </div>
-        <div id="legacy-reveal-panel" class="status-box" style="display:none;"><div id="legacy-text" style="font-weight:bold; font-size:18px; word-break:break-all"></div></div>
+        <div id="legacy-reveal-panel" style="display:none; background:var(--panel); padding:20px; border-radius:20px;"><div id="legacy-text" style="font-weight:bold; font-size:18px; word-break:break-all"></div></div>
         <div style="margin-top:20px; color:#666" onclick="location.reload()">返回首页</div>
     </div>
 
@@ -68,7 +73,6 @@
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let curData = null, curID = null, pubK = null;
 
-    // 鉴权逻辑
     async function checkHeirStatus() {
         showLoading("身份核验...");
         try {
@@ -81,7 +85,7 @@
     }
 
     async function mintIdentity(existingID) {
-        showLoading("初始化信箱...");
+        showLoading("初始化加密信箱...");
         try {
             let id = existingID;
             if (!id) {
@@ -94,7 +98,7 @@
             const pub = btoa(String.fromCharCode(...new Uint8Array(await window.crypto.subtle.exportKey("spki", kp.publicKey))));
             await db.from('user_vault').upsert({ credential_id: id, public_key: pub, status: 'active' });
             curID = id; renderHeirUI('active');
-            showQRModal(); // 注册成功弹一次图腾
+            showQRModal();
         } catch (e) { alert("初始化取消"); }
         hideLoading();
     }
@@ -120,16 +124,15 @@
         hideLoading();
     }
 
-    // 扫描逻辑 (复刻 V16 引擎)
     async function onScanSuccess(id) {
-        showLoading("核对图腾...");
+        showLoading("正在匹配云端...");
         const { data } = await db.from('user_vault').select('public_key').eq('credential_id', id).maybeSingle();
         if(data && data.public_key) {
             pubK = data.public_key; curID = id;
             if(scanner) await scanner.stop().catch(e=>{});
             document.getElementById('scan-stage').style.display = 'none';
             document.getElementById('secret-panel').style.display = 'block';
-        } else { alert("图腾未激活"); }
+        } else { alert("图腾无效或未激活"); }
         hideLoading();
     }
 
@@ -143,8 +146,8 @@
             const key = await window.crypto.subtle.importKey("spki", der.buffer, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
             const enc = await window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, key, new TextEncoder().encode(val));
             await db.from('user_vault').update({ encrypted_data: btoa(String.fromCharCode(...new Uint8Array(enc))), status: 'sealed' }).eq('credential_id', curID);
-            alert("🔒 封存完成"); location.reload();
-        } catch(e) { alert("加密错误"); hideLoading(); }
+            alert("🔒 遗嘱已安全封存"); location.reload();
+        } catch(e) { alert("加密失败"); hideLoading(); }
     }
 
     let scanner = null;
@@ -152,19 +155,19 @@
         document.getElementById('page-home').style.display = 'none'; 
         document.getElementById('page-owner').style.display = 'flex'; 
         if(!scanner) scanner = new Html5Qrcode("reader"); 
-        scanner.start({ facingMode: "environment" }, { fps: 20, qrbox: 250, aspectRatio: 1.0 }, onScanSuccess); 
+        // 🔥 V23 核心：不指定 qrbox 形状，实现全屏侦测
+        scanner.start({ facingMode: "environment" }, { fps: 30, aspectRatio: 1.0 }, onScanSuccess); 
     }
     
     function triggerFileSelect() { document.getElementById('qr-input-file').click(); }
     async function handleFileScan(input) { 
         if (input.files.length === 0) return;
-        showLoading("解析图片...");
+        showLoading("深度解析图中...");
         try {
             if(!scanner) scanner = new Html5Qrcode("reader");
-            // 使用 V16 的强制解析模式
             const res = await scanner.scanFile(input.files[0], true); 
             onScanSuccess(res); 
-        } catch(e){ hideLoading(); alert("解析失败：请确保二维码清晰可见。"); } 
+        } catch(e){ hideLoading(); alert("解析失败：请确保图中包含清晰的二维码（图腾）。"); } 
     }
 
     function showQRModal() { document.getElementById('qr-modal').style.display='flex'; document.getElementById("qrcode").innerHTML=""; new QRCode(document.getElementById("qrcode"), { text: curID, width: 220, height: 220 }); }
