@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V15.1 增强仪表盘</title>
+    <title>凤凰协议 | V15.2 极简看板修正版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -15,10 +15,11 @@
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
         .card { width: 100%; height: 110px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
         .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 15px; }
-        .btn-open { background: var(--gold); color: #000; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+        .btn-open { background: var(--gold); color: #000; }
+        .btn-close { background: #333 !important; color: #fff !important; }
         .status-box { background: var(--panel); padding: 30px 20px; border-radius: 20px; margin-top: 10px; width: 100%; box-sizing: border-box; }
-        #page-owner, #page-heir, #legacy-reveal-panel { display: none; }
-        /* 扫码框修正为正方形 */
+        #page-owner, #page-heir { display: none; }
+        /* 保持 V15.1 稳定的扫描框样式 */
         #reader { width: 100%; border-radius: 20px; overflow: hidden; background: #000; border: 1px solid #333; }
         textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; margin: 15px 0; }
         #qr-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 888; flex-direction: column; justify-content: center; align-items: center; }
@@ -26,11 +27,14 @@
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        /* 遗嘱展开区域样式 */
+        #legacy-content-area { display: none; margin-top: 20px; padding: 20px; background: rgba(255,215,0,0.05); border: 1px solid var(--gold); border-radius: 15px; text-align: left; }
+        .legacy-text { font-size: 18px; font-weight: bold; line-height: 1.6; word-break: break-all; color: #fff; }
     </style>
 </head>
 <body>
     <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px;">同步中...</p></div>
-    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V15.1</p></div>
+    <div class="header"><h1>PHOENIX</h1><p>PROTOCOL V15.2 FIXED</p></div>
     
     <div id="page-home" class="page-container">
         <div class="card" onclick="showOwnerPage()"><div style="color:var(--accent); font-weight:600;">我要封存</div></div>
@@ -54,20 +58,22 @@
         <div id="heir-status-empty" class="status-box" style="display:none;">
             <div style="font-size:40px; margin-bottom:15px;">📭</div>
             <h3 style="color:#888;">信箱为空</h3>
-            <p style="font-size:12px; color:#666;">请让立嘱人扫描下方二维码</p>
+            <p style="font-size:12px; color:#666;">请让立嘱人扫描下方图腾按钮</p>
         </div>
 
         <div id="heir-status-sealed" class="status-box" style="display:none;">
             <div style="font-size:40px; margin-bottom:15px;">🔒</div>
             <h3 style="color:var(--gold);">发现封存遗嘱</h3>
-            <button class="btn-action btn-open" onclick="revealLegacy()">🔑 直接开启查看</button>
+            <button id="btn-toggle-legacy" class="btn-action btn-open" onclick="toggleLegacy()">🔑 直接开启查看</button>
+            
+            <div id="legacy-content-area">
+                <p style="color:var(--gold); font-size:11px; margin-bottom:10px;">—— 传承印记 ——</p>
+                <div id="legacy-text-display" class="legacy-text"></div>
+            </div>
         </div>
 
         <button class="btn-action" style="background:rgba(255,255,255,0.1); color:#fff; margin-top:20px;" onclick="showQRModal()">📱 显示我的图腾</button>
         
-        <div id="legacy-reveal-panel" class="status-box" style="margin-top:20px;">
-            <div id="legacy-text" style="font-weight:bold; font-size:18px; word-break:break-all;"></div>
-        </div>
         <div style="margin-top:40px; color:#666; font-size:12px;" onclick="location.reload()">返回首页</div>
     </div>
 
@@ -93,11 +99,28 @@
             } else if (data.status === 'sealed') {
                 curData = data.encrypted_data;
                 document.getElementById('heir-status-sealed').style.display = 'block';
+                document.getElementById('legacy-text-display').innerText = curData;
             } else {
                 document.getElementById('heir-status-empty').style.display = 'block';
             }
         } catch (e) { await mintIdentity(); }
         hideLoading();
+    }
+
+    // 切换显现逻辑
+    function toggleLegacy() {
+        const area = document.getElementById('legacy-content-area');
+        const btn = document.getElementById('btn-toggle-legacy');
+        if (area.style.display === 'block') {
+            area.style.display = 'none';
+            btn.innerText = '🔑 直接开启查看';
+            btn.classList.remove('btn-close');
+        } else {
+            area.style.display = 'block';
+            btn.innerText = '✖️ 收起遗嘱内容';
+            btn.classList.add('btn-close');
+            if(navigator.vibrate) navigator.vibrate(50);
+        }
     }
 
     async function mintIdentity() {
@@ -112,20 +135,13 @@
         hideLoading();
     }
 
-    function revealLegacy() {
-        document.getElementById('heir-status-sealed').style.display = 'none';
-        document.getElementById('legacy-reveal-panel').style.display = 'block';
-        document.getElementById('legacy-text').innerText = curData;
-        if(navigator.vibrate) navigator.vibrate([100,50,500]);
-    }
-
     function showQRModal() {
         document.getElementById('qr-modal').style.display = 'flex';
         document.getElementById("qrcode").innerHTML = "";
         new QRCode(document.getElementById("qrcode"), { text: curID, width: 220, height: 220 });
     }
 
-    // --- 扫码逻辑 ---
+    // --- 扫码逻辑：完全还原 15.1 稳定版 ---
     let scanner = null;
     function showOwnerPage() {
         document.getElementById('page-home').style.display = 'none';
