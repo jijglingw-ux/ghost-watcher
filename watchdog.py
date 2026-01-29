@@ -3,6 +3,7 @@ import smtplib
 import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header  # 新增：用于处理中文标题
 from datetime import datetime, timezone, timedelta
 from supabase import create_client, Client
 from cryptography.hazmat.primitives import serialization, hashes
@@ -48,20 +49,26 @@ def rsa_decrypt(encrypted_b64, private_key_pem):
 
 def send_email(to_email, subject, html_content):
     if not to_email or "None" in str(to_email): return False
+    
+    # --- 修复核心：强制使用 UTF-8 编码 ---
     msg = MIMEMultipart('alternative')
     msg['From'] = SENDER_EMAIL
     msg['To'] = to_email
-    msg['Subject'] = subject
-    msg.attach(MIMEText(html_content, 'html'))
+    msg['Subject'] = Header(subject, 'utf-8') # 修复中文标题乱码
+    
+    # 强制正文也使用 UTF-8
+    msg.attach(MIMEText(html_content, 'html', 'utf-8'))
     
     try:
         server_host = "smtp.qq.com" if "qq.com" in SENDER_EMAIL else "smtp.gmail.com"
         port = 465 if "qq.com" in SENDER_EMAIL else 587
+        
         if port == 465:
             server = smtplib.SMTP_SSL(server_host, 465)
         else:
             server = smtplib.SMTP(server_host, port)
             server.starttls()
+            
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         server.quit()
@@ -103,10 +110,22 @@ def send_final(to_email, key, uid):
     return send_email(to_email, "【绝密】数字资产提取通知", html)
 
 def watchdog():
-    print("🐕 凤凰看门狗 V7.0 (秒级精度版) 启动...")
+    print("🐕 凤凰看门狗 V7.1 (修复发信版) 启动...")
     db = get_db()
-    users = db.table("vaults").select("*").eq("status", "active").execute().data
+    
+    # 增加异常处理，防止没数据时报错
+    try:
+        response = db.table("vaults").select("*").eq("status", "active").execute()
+        users = response.data
+    except Exception as e:
+        print(f"⚠️ 数据库读取错误: {e}")
+        return
+
     now = datetime.now(timezone.utc)
+
+    if not users:
+        print("💤 当前没有活跃的协议。")
+        return
 
     for row in users:
         uid = row['id']
@@ -119,7 +138,7 @@ def watchdog():
         remaining = timeout - elapsed
 
         # 预警配置
-        warn_start = row.get('warn_start_seconds', 300)    # 默认5分钟预警
+        warn_start = row.get('warn_start_seconds', 300)
         warn_interval = row.get('warn_interval_seconds', 3600) 
         warn_max = row.get('warn_max_count', 3)          
         warn_sent = row.get('warn_sent_count', 0)        
@@ -136,12 +155,13 @@ def watchdog():
                 if send_final(payload['t'], payload['k'], uid):
                     db.table("vaults").update({"status": "dispatched", "key_storage": "BURNED"}).eq("id", uid).execute()
                     print("🔥 发射完成")
+                else:
+                    print("❌ 邮件发送失败，等待下一次重试")
             else:
-                print("❌ 解密失败")
+                print("❌ 解密失败，私钥可能不匹配")
 
         # --- 阶段 B: 智能唤醒 ---
         elif remaining <= warn_start and warn_sent < warn_max and owner_email:
-            # 检查间隔 (如果没有上次发送时间，或者距离上次已超过间隔)
             time_since_last_warn = (now - last_warn).total_seconds() if last_warn else 999999999
             
             if time_since_last_warn >= warn_interval:
@@ -156,4 +176,4 @@ def watchdog():
 
 if __name__ == "__main__":
     if RSA_PRIVATE_KEY_PEM: watchdog()
-    else: print("❌ 缺私钥")
+    else: print("❌ 缺私钥，请检查 GitHub Secrets")
