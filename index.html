@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | 密态信使</title>
+    <title>凤凰协议 | 极简信使</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -30,25 +30,25 @@
         .bottom-bar { padding: 15px 0; border-top: 1px solid #222; width: 100%; flex-shrink: 0; }
         .id-display-box { background: #080808; padding: 16px; border-radius: 16px; border: 1px solid #222; font-family: monospace; font-size: 11px; color: var(--grey); cursor: pointer; word-break: break-all; transition: 0.2s; }
         .btn-full { width: 100%; padding: 16px; border-radius: 30px; border: none; font-size: 16px; font-weight: 600; cursor: pointer; }
-        #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; }
+        #loader { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
         .spinner { width: 30px; height: 30px; border: 3px solid #222; border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div id="loader"><div class="spinner"></div><p id="loader-msg" style="margin-top:15px; font-size:13px;"></p></div>
+    <div id="loader"><div class="spinner"></div><p id="loader-msg" style="margin-top:15px; font-size:13px; color:#fff;"></p></div>
 
     <div class="header"><h1>凤凰协议</h1></div>
 
     <div id="page-home" class="page-container">
         <div class="main-card" onclick="showOwnerPage()">
             <div style="color:var(--accent); font-size:20px; font-weight:600;">我要写信</div>
-            <div style="color:var(--grey); font-size:13px; margin-top:10px;">只有对方本人刷脸才能解密查看</div>
+            <div style="color:var(--grey); font-size:13px; margin-top:10px;">通过 ID 存入一段加密信息</div>
         </div>
         <div class="main-card" onclick="checkHeirStatus()">
             <div style="color:var(--gold); font-size:20px; font-weight:600;">我是收信人</div>
-            <div style="color:var(--grey); font-size:13px; margin-top:10px;">刷脸提取您的私钥并开启信箱</div>
+            <div style="color:var(--grey); font-size:13px; margin-top:10px;">刷脸提取私钥并开启信箱</div>
         </div>
     </div>
 
@@ -56,7 +56,7 @@
         <div class="mail-center">
             <div id="mail-closed" class="mail-icon-box" onclick="openMail()">
                 <div class="big-icon" id="mail-icon">📭</div>
-                <div id="mail-tip" style="color:var(--grey); font-size:14px; margin-top:20px;">正在检查信箱状态...</div>
+                <div id="mail-tip" style="color:var(--grey); font-size:14px; margin-top:20px;">正在检查状态...</div>
             </div>
             <div id="mail-opened" class="content-paper" onclick="closeMail()">
                 <div style="color:var(--gold); font-size:10px; margin-bottom:15px; opacity:0.5; text-align:center;">—— 密函内容 (点击关闭) ——</div>
@@ -65,8 +65,8 @@
         </div>
         <div class="bottom-bar">
             <div style="font-size:11px; color:#444; margin-bottom:10px;">我的身份代码 (点击复制给写信人)</div>
-            <div class="id-display-box" id="my-id-val" onclick="copyId()">同步中...</div>
-            <div style="margin-top:15px; font-size:13px; color:#444; text-decoration:underline;" onclick="location.reload()">退出</div>
+            <div class="id-display-box" id="my-id-val" onclick="copyId()">获取中...</div>
+            <div style="margin-top:15px; font-size:13px; color:#444; text-decoration:underline;" onclick="location.reload()">安全退出</div>
         </div>
     </div>
 
@@ -74,17 +74,16 @@
         <div id="step-id" style="flex:1; display:flex; flex-direction:column; justify-content:center;">
             <div class="main-card" style="cursor:default; border:none; background:transparent;">
                 <h2 style="font-weight:400;">输入收信人 ID 代码</h2>
-                <p style="color:var(--grey); font-size:13px; margin-bottom:25px;">代码中包含对方的加密公钥</p>
-                <input type="text" id="input-target-id" placeholder="粘贴 ID 代码" style="width:100%; background:#111; border:1px solid #333; padding:18px; border-radius:15px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:12px;">
+                <input type="text" id="input-target-id" placeholder="在此粘贴 ID 代码" style="width:100%; background:#111; border:1px solid #333; padding:18px; border-radius:15px; color:#fff; text-align:center; font-family:monospace; outline:none; font-size:12px;">
                 <button class="btn-full" style="background:var(--accent); color:#fff; margin-top:25px;" onclick="goToWrite()">确认 ID 并写信</button>
             </div>
         </div>
         <div id="step-write" style="display:none; flex:1; flex-direction:column;">
-            <div style="font-size:12px; color:var(--grey); margin-bottom:10px; text-align:left;">正在进行硬件级加密封存...</div>
+            <div style="font-size:12px; color:var(--grey); margin-bottom:10px; text-align:left;">端到端加密模式：已开启</div>
             <div class="write-area">
                 <textarea id="input-msg" placeholder="在此写下您想留给对方的话..."></textarea>
             </div>
-            <button class="btn-full" style="background:var(--gold); color:#000;" onclick="sendMail()">加密并存入保险箱</button>
+            <button class="btn-full" style="background:var(--gold); color:#000;" onclick="sendMail()">写好了，封存投递</button>
         </div>
         <div style="margin-top:20px; font-size:13px; color:#444;" onclick="location.reload()">取消返回</div>
     </div>
@@ -96,47 +95,49 @@
 
     let _selfId, _cachedCipher, _targetCredId, _targetPubKey;
 
-    // ============================================
-    // 🧠 加密核心逻辑 (RSA-OAEP)
-    // ============================================
+    // --- 加密算法库 ---
     async function createKeys(id) {
         const kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
         const pubB64 = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey))));
-        
-        // 钥匙(私钥)存本地 IndexedDB
-        const r = indexedDB.open("PHX_VAULT", 1);
+        const r = indexedDB.open("PHX_STABLE", 1);
         r.onupgradeneeded = e => e.target.result.createObjectStore("k");
         await new Promise(res => r.onsuccess = e => { e.target.result.transaction("k", "readwrite").objectStore("k").put(kp.privateKey, id); res(); });
-        
         return pubB64;
     }
 
     async function getLocalKey(id) {
         return new Promise(res => {
-            const r = indexedDB.open("PHX_VAULT", 1);
+            const r = indexedDB.open("PHX_STABLE", 1);
             r.onsuccess = e => {
-                const g = e.target.result.transaction("k").objectStore("k").get(id);
-                g.onsuccess = () => res(g.result);
-                g.onerror = () => res(null);
+                const req = e.target.result.transaction("k").objectStore("k").get(id);
+                req.onsuccess = () => res(req.result);
+                req.onerror = () => res(null);
             };
+            r.onerror = () => res(null);
         });
     }
 
-    // ============================================
-    // 📩 收信人业务
-    // ============================================
+    // --- 核心修复函数：带超时的信箱同步 ---
     async function checkHeirStatus() {
         showLoading("正在生物识别...");
         try {
             const auth = await navigator.credentials.get({ publicKey: { challenge: new Uint8Array(32), rpId: location.hostname, userVerification: "required" } });
             _selfId = b64(auth.rawId);
             
-            showLoading("同步信箱...");
-            const { data } = await db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
+            showLoading("正在同步信箱...");
+
+            // 修复点：设置 8 秒超时竞争，防止数据库连接静默挂起
+            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("同步超时，请检查网络或刷新页面")), 8000));
+            const dbPromise = db.from('user_vault').select('*').eq('credential_id', _selfId).maybeSingle();
+
+            const { data, error } = await Promise.race([dbPromise, timeoutPromise]);
+
+            if (error) throw error;
+
             const priv = await getLocalKey(_selfId);
 
             if (!data || !priv) {
-                showLoading("生成加密钥匙...");
+                showLoading("正在生成加密钥匙...");
                 const pub = await createKeys(_selfId);
                 await db.from('user_vault').upsert({ credential_id: _selfId, public_key: pub, status: 'empty' });
                 await new Promise(r => setTimeout(r, 400));
@@ -144,13 +145,16 @@
             } else {
                 initUI(data, _selfId);
             }
-        } catch (e) { hideLoading(); }
+        } catch (e) {
+            console.error(e);
+            alert(e.message || "同步失败，请检查网络连接");
+            hideLoading();
+        }
     }
 
     function initUI(data, id) {
         document.getElementById('page-home').style.display = 'none';
         document.getElementById('page-heir').style.display = 'flex';
-        // 身份代码 = ID + 公钥 (用 | 分隔)
         document.getElementById('my-id-val').innerText = id + "|" + data.public_key;
         
         const icon = document.getElementById('mail-icon');
@@ -158,7 +162,7 @@
 
         if (data.status === 'sealed') {
             icon.innerText = "✉️"; icon.style.opacity = "1";
-            tip.innerHTML = `<span style="color:var(--gold)">收到一份加密信件 · 点击解密</span>`;
+            tip.innerHTML = `<span style="color:var(--gold)">● 收到一份加密信件 · 点击解密</span>`;
             _cachedCipher = data.encrypted_data;
         } else {
             icon.innerText = "📭"; icon.style.opacity = "0.2";
@@ -169,24 +173,25 @@
 
     async function openMail() {
         if (!_cachedCipher) return;
-        showLoading("调用本地私钥解密...");
+        showLoading("调用私钥解密...");
         try {
             const priv = await getLocalKey(_selfId);
+            if (!priv) throw new Error("本地私钥丢失，无法解密。");
             const dec = new TextDecoder().decode(await crypto.subtle.decrypt({ name: "RSA-OAEP" }, priv, Uint8Array.from(atob(_cachedCipher), c => c.charCodeAt(0))));
             document.getElementById('mail-closed').classList.add('hidden');
             document.getElementById('mail-opened').classList.add('visible');
             document.getElementById('mail-body').innerText = dec;
-        } catch (e) { alert("解密失败：此信件并非由此设备加密或私钥已失效。"); }
+        } catch (e) { 
+            alert("解密失败：此信件并非由此设备加密或私钥已失效。"); 
+        }
         hideLoading();
     }
 
-    // ============================================
-    // 🖋️ 写信人业务
-    // ============================================
+    // --- 写信逻辑 ---
     function goToWrite() {
         const fullCode = document.getElementById('input-target-id').value.trim();
         const parts = fullCode.split('|');
-        if (parts.length < 2) return alert("无效的代码，请确保完整复制了对方的 ID");
+        if (parts.length < 2) return alert("无效的代码，请完整复制对方的 ID");
         _targetCredId = parts[0];
         _targetPubKey = parts[1];
         document.getElementById('step-id').style.display = 'none';
@@ -196,22 +201,18 @@
     async function sendMail() {
         const msg = document.getElementById('input-msg').value;
         if (!msg) return;
-        showLoading("正在硬件级加密...");
+        showLoading("正在硬件加密...");
         try {
             const pubKeyBuf = Uint8Array.from(atob(_targetPubKey), c => c.charCodeAt(0));
             const pubKey = await crypto.subtle.importKey("spki", pubKeyBuf, { name: "RSA-OAEP", hash: "SHA-256" }, true, ["encrypt"]);
             const encrypted = btoa(String.fromCharCode(...new Uint8Array(await crypto.subtle.encrypt({ name: "RSA-OAEP" }, pubKey, new TextEncoder().encode(msg)))));
-            
-            showLoading("投递密文...");
             await db.from('user_vault').update({ encrypted_data: encrypted, status: 'sealed' }).eq('credential_id', _targetCredId);
-            alert("信件已安全存入对方信箱。");
+            alert("信件已成功存入对方信箱。");
             location.reload();
-        } catch (e) { alert("加密投递失败"); hideLoading(); }
+        } catch (e) { alert("投递失败，请核对 ID"); hideLoading(); }
     }
 
-    // ============================================
-    // 🛠️ 工具
-    // ============================================
+    // --- 通用工具 ---
     function copyId() {
         navigator.clipboard.writeText(document.getElementById('my-id-val').innerText).then(() => {
             const el = document.getElementById('my-id-val');
