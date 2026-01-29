@@ -25,6 +25,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
           RSA_PRIVATE_KEY: ${{ secrets.RSA_PRIVATE_KEY }}
-          EMAIL_USER: ${{ secrets.EMAIL_USER }}
-          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          # 关键修改：左边必须是 EMAIL_USER (配合代码)，右边必须是 SENDER_EMAIL (配合仓库)
+          EMAIL_USER: ${{ secrets.SENDER_EMAIL }}
+          EMAIL_PASS: ${{ secrets.SENDER_PASSWORD }}
         run: python watchdog.py
