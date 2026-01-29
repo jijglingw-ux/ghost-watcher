@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>凤凰协议 | V13 极简重生</title>
+    <title>凤凰协议 | V14 自动修复版</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
@@ -18,21 +18,21 @@
 
         .page-container { width: 100%; max-width: 340px; display: flex; flex-direction: column; }
         
-        /* 卡片样式 */
+        /* 卡片 */
         .card { width: 100%; height: 120px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; }
         .card:active { transform: scale(0.96); background: rgba(255,255,255,0.12); }
         .role-owner { border-color: rgba(10, 132, 255, 0.3); } .role-owner .title { color: var(--accent); font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .role-heir { border-color: rgba(48, 209, 88, 0.3); } .role-heir .title { color: #30D158; font-size: 18px; font-weight: 600; margin-bottom: 5px; }
         .desc { font-size: 12px; color: #888; }
 
-        /* 按钮与输入 */
+        /* 按钮 */
         .btn-action { padding: 15px; border-radius: 30px; font-size: 16px; cursor: pointer; width: 100%; border: none; font-weight: 600; margin-top: 20px; }
         .btn-mint { background: rgba(48, 209, 88, 0.15); border: 1px solid #30D158; color: #30D158; }
         .btn-seal { background: var(--accent); color: white; }
         .btn-file { background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #444; margin-top: 15px; font-size: 14px; }
         .back-btn { margin-top: 40px; color: #666; font-size: 12px; cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 5px; align-self: center; }
 
-        /* 功能区 */
+        /* 面板 */
         #page-owner, #page-heir { display: none; }
         #reader { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; border: 2px solid #333; margin-bottom: 10px; background: #000; position: relative; }
         #qr-shaded-region { display: none !important; }
@@ -41,7 +41,7 @@
         @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         textarea { width: 100%; height: 100px; background: #2c2c2e; border: none; color: #fff; padding: 15px; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; margin: 15px 0; }
         
-        /* 遗嘱显示 */
+        /* 遗嘱 */
         #legacy-reveal-panel { display: none; width: 100%; background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%); padding: 30px; border-radius: 20px; box-sizing: border-box; border: 1px solid var(--gold); box-shadow: 0 0 50px rgba(255, 215, 0, 0.1); animation: popIn 0.6s; }
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .legacy-content { font-size: 20px; line-height: 1.6; color: #fff; white-space: pre-wrap; margin: 20px 0; font-weight: bold; }
@@ -57,7 +57,7 @@
 
     <div id="loading-overlay"><div class="spinner"></div><p id="loading-text" style="margin-top:15px; color:#fff;">连接中...</p></div>
 
-    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V13 (CONFIGURED)</p></div>
+    <div class="header"><h1>PHOENIX</h1><p id="subtitle">PROTOCOL V14 (AUTO-REPAIR)</p></div>
     <div id="env-warning"></div>
 
     <div id="page-home" class="page-container">
@@ -90,7 +90,7 @@
         <div id="heir-wait-mode" style="display:none; width: 100%; flex-direction: column; align-items: center;">
             <div id="qrcode-box"><div id="qrcode"></div></div>
             <p style="margin-top:20px; color:#888;">请立嘱人扫描此码</p>
-            <p style="font-size:12px; color:#555;">(云端信箱已建立，等待存入)</p>
+            <p style="font-size:12px; color:#555;">(检测到数据已重置，已自动恢复信箱)</p>
         </div>
         <div id="legacy-reveal-panel">
             <div style="color:var(--gold); font-size:12px; letter-spacing:2px; margin-bottom:10px;">—— 传承印记 ——</div>
@@ -102,7 +102,7 @@
 
 <script>
     // ============================================
-    // ⚠️ 数据库配置 (已自动填充)
+    // ⚠️ 数据库配置 (Ready)
     // ============================================
     const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
@@ -110,32 +110,29 @@
     let db = null;
     try {
         db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        console.log("Supabase initialized");
     } catch (e) { console.error("DB Error:", e); }
 
     window.onload = function() {
-        // 环境检查
         if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
-            document.getElementById('env-warning').innerHTML = "⚠️ 必须使用 HTTPS 访问";
+            document.getElementById('env-warning').innerHTML = "⚠️ 必须使用 HTTPS";
             document.getElementById('env-warning').style.display = 'block';
         }
-        // 安卓微信/QQ检查
         const ua = navigator.userAgent.toLowerCase();
         if (ua.match(/MicroMessenger/i) || ua.match(/QQ/i)) {
-             document.getElementById('env-warning').innerHTML = "⚠️ 请点击右上角 -> 在浏览器打开 (Chrome/Edge)";
+             document.getElementById('env-warning').innerHTML = "⚠️ 请在浏览器(Chrome/Edge)打开";
              document.getElementById('env-warning').style.display = 'block';
         }
     }
 
     // ============================================
-    // 🧠 受益人逻辑
+    // 🧠 受益人逻辑 (V14: 自动修复模式)
     // ============================================
     async function checkHeirStatus() {
-        if (!db) { alert("数据库连接异常"); return; }
+        if (!db) { alert("数据库未连接"); return; }
         showLoading("生物鉴权中...");
 
         try {
-            // 1. 尝试读取现有密钥
+            // 1. 读取手机密钥
             const assertion = await navigator.credentials.get({
                 publicKey: {
                     challenge: new Uint8Array(32),
@@ -145,27 +142,38 @@
             });
 
             if (assertion) {
-                // 2. 老用户，查询数据库
                 const credentialId = bufferToBase64url(assertion.rawId);
-                console.log("用户ID:", credentialId);
+                console.log("手机持有密钥ID:", credentialId);
                 
-                const { data, error } = await db.from('user_vault').select('*').eq('credential_id', credentialId).single();
+                // 2. 去数据库查
+                // 🔥 使用 maybeSingle() 防止报错
+                const { data, error } = await db.from('user_vault').select('*').eq('credential_id', credentialId).maybeSingle();
+                
                 hideLoading();
                 showHeirPage();
 
-                if (data && data.status === 'sealed') {
-                    // 🎉 箱子满了：显示内容
+                if (!data) {
+                    // 🔥 关键修复：手机有钥匙，但数据库是空的！
+                    // 自动执行“复活”逻辑：把这个ID重新插回数据库
+                    console.log("检测到幽灵密钥，正在自动修复数据库...");
+                    await db.from('user_vault').insert({ credential_id: credentialId });
+                    
+                    // 显示二维码，让立嘱人重新扫
+                    showWaitMode(credentialId);
+                    
+                } else if (data.status === 'sealed') {
+                    // 正常：满箱子
                     document.getElementById('heir-wait-mode').style.display = 'none';
                     document.getElementById('legacy-reveal-panel').style.display = 'block';
                     document.getElementById('legacy-text').innerText = data.encrypted_data;
                     if(navigator.vibrate) navigator.vibrate([100,50,100,50,500]);
                 } else {
-                    // 📭 箱子空的：显示二维码
+                    // 正常：空箱子
                     showWaitMode(credentialId);
                 }
             }
         } catch (err) {
-            // 3. 没找到密钥 -> 注册新用户
+            // 3. 手机里没钥匙 -> 注册新用户
             console.log("新用户注册:", err);
             await mintIdentity();
         }
@@ -176,7 +184,6 @@
             const userId = new Uint8Array(16); window.crypto.getRandomValues(userId);
             const challenge = new Uint8Array(32); window.crypto.getRandomValues(challenge);
             
-            // 兼容安卓的注册参数
             const credential = await navigator.credentials.create({
                 publicKey: {
                     challenge: challenge, rp: { name: "Phoenix" },
@@ -188,7 +195,6 @@
             });
             const credentialId = bufferToBase64url(credential.rawId);
             
-            // 🔥 适配极简数据库结构
             if (db) await db.from('user_vault').insert({ credential_id: credentialId });
             
             hideLoading();
@@ -278,7 +284,7 @@
         document.getElementById('page-home').style.display = 'flex';
         document.getElementById('page-owner').style.display = 'none';
         document.getElementById('page-heir').style.display = 'none';
-        document.getElementById('subtitle').innerText = "PROTOCOL V13";
+        document.getElementById('subtitle').innerText = "PROTOCOL V14";
     }
     function showHeirPage() { document.getElementById('page-home').style.display = 'none'; document.getElementById('page-heir').style.display = 'flex'; }
 </script>
