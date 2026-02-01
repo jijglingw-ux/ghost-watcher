@@ -14,7 +14,7 @@
             --accent-gold: #FFD700;
             --accent-red: #ff453a;
             --accent-green: #32d74b;
-            --item-bg: rgba(255, 255, 255, 0.05);
+            --item-bg: rgba(255, 255, 255, 0.08);
             --border-light: rgba(255, 255, 255, 0.1);
             --safe-bottom: env(safe-area-inset-bottom);
         }
@@ -40,7 +40,7 @@
         .glow-spot-2 { position: absolute; bottom: -10%; right: -20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(255, 255, 255, 0.03), transparent 70%); filter: blur(100px); z-index: 0; pointer-events: none; }
         @keyframes breathe { 0% {opacity:0.5; transform:scale(1);} 100% {opacity:0.8; transform:scale(1.1);} }
 
-        /* 视图切换容器 */
+        /* 顶级页面容器 (登录/注册/主页) - 带动画 */
         .page-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             transition: transform 0.3s ease-out, opacity 0.3s;
@@ -48,6 +48,13 @@
             z-index: 10; display: flex; flex-direction: column;
         }
         .page-view.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 20; }
+
+        /* [修复] 内部 Tab 视图容器 - 无动画，避免黑屏 */
+        .tab-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 15;
+            display: none; flex-direction: column;
+        }
 
         /* ==================== 登录/注册 UI ==================== */
         .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
@@ -64,13 +71,32 @@
         .text-link { color: rgba(255, 255, 255, 0.3); font-size: 0.9rem; text-decoration: none; }
         .divider { color: rgba(255,255,255,0.1); }
 
-        /* ==================== 资产列表 UI ==================== */
-        .home-header { padding: 50px 24px 10px; background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%); z-index: 30; }
-        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 20px;}
+        /* ==================== 通用 UI 组件 ==================== */
+        /* 头部 */
+        .home-header {
+            padding: 50px 24px 10px;
+            background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            z-index: 30;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
+        
+        /* 历史按钮 */
+        .history-btn {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
+        }
+        .history-btn:active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+
+        /* 搜索框 */
         .search-container { padding: 0 20px 10px; }
         .search-box { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; color: #fff; outline: none; }
+        
+        /* 列表容器 */
         .list-scroll-area { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); }
         
+        /* 资产卡片 */
         .asset-item { display: flex; align-items: center; justify-content: space-between; background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; padding: 16px; border-radius: 12px; transition: 0.2s; cursor: pointer; }
         .asset-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
         .store-icon { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #333, #111); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; }
@@ -78,7 +104,7 @@
         .store-tag { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
         .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate"; }
 
-        /* 记录列表 */
+        /* 记录卡片 */
         .record-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .rec-title { font-size: 0.95rem; margin-bottom: 4px; }
         .rec-time { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
@@ -86,10 +112,17 @@
         .val-plus { color: var(--accent-green); } .val-minus { color: var(--accent-red); }
 
         /* ==================== 扫码探测 UI ==================== */
-        .scanner-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 25; display: none; }
+        /* 特殊：扫码层级更高，且不使用 flex 布局以适应 absolute 定位 */
+        .scanner-layer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: #000; z-index: 25; 
+            display: none; 
+        }
         .scanner-layer.active { display: block; }
+
         #reader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; border: none; }
         #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+        
         .scan-ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .camera-bg { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.3; }
         .scan-frame { width: 260px; height: 260px; position: relative; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 0 100vmax rgba(0,0,0,0.6); }
@@ -191,9 +224,10 @@
                 </div>
             </div>
 
-            <div id="tab-assets" class="page-view" style="display:flex;">
+            <div id="tab-assets" class="tab-view" style="display:flex;">
                 <div class="home-header">
-                    <div class="header-title">我的数字凭证</div>
+                    <div class="header-title" style="margin:0;">我的数字凭证</div>
+                    <div class="history-btn" onclick="switchTab('records')">🕒</div>
                 </div>
                 <div class="search-container">
                     <input type="text" class="search-box" placeholder="搜索商家..." oninput="renderAssets(this.value)">
@@ -201,10 +235,15 @@
                 <div class="list-scroll-area" id="asset-list-dom"></div>
             </div>
 
-            <div id="tab-records" class="page-view" style="display:none;">
+            <div id="tab-records" class="tab-view" style="display:none;">
                 <div class="home-header">
-                    <div class="header-title">交易记录</div>
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">Transaction History</div>
+                    <div style="display:flex; align-items:center;">
+                        <div onclick="switchTab('assets')" style="font-size:1.5rem; margin-right:15px; cursor:pointer;">←</div>
+                        <div>
+                            <div class="header-title" style="margin:0; font-size:1.2rem;">交易记录</div>
+                            <div style="font-size:0.7rem; color:#666;">Transaction History</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="list-scroll-area">
                     <div class="record-item">
@@ -226,7 +265,7 @@
                 </div>
             </div>
 
-            <div id="tab-settings" class="page-view" style="display:none;">
+            <div id="tab-settings" class="tab-view" style="display:none;">
                 <div class="home-header">
                     <div class="header-title">系统设置</div>
                 </div>
@@ -261,9 +300,6 @@
                 </div>
                 <div class="nav-btn active" id="nav-assets" onclick="switchTab('assets')">
                     <div class="nav-icon">💼</div><div class="nav-label">持有</div>
-                </div>
-                <div class="nav-btn" id="nav-records" onclick="switchTab('records')">
-                    <div class="nav-icon">📝</div><div class="nav-label">记录</div>
                 </div>
                 <div class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
                     <div class="nav-icon">⚙️</div><div class="nav-label">设置</div>
@@ -355,7 +391,6 @@
             const randomAmount = (Math.random() * 100).toFixed(2);
             const merchantName = "未知信号源 " + Math.floor(Math.random()*1000);
             
-            // 临时添加展示
             myAssets.unshift({ name: merchantName, tag: "捕获", count: parseFloat(randomAmount), icon: "👾" });
             
             document.getElementById('scan-result-text').innerText = `来源: ${decodedText}\n获取: +${randomAmount} CP`;
@@ -366,13 +401,23 @@
 
         // === 导航与状态机 ===
         function switchTab(tabName) {
+            // 隐藏所有 View
             ['scan', 'assets', 'records', 'settings'].forEach(t => {
                 const el = document.getElementById('tab-'+t);
                 if(t === 'scan') el.classList.remove('active');
                 else el.style.display = 'none';
-                document.getElementById('nav-'+t).classList.remove('active');
             });
             
+            // 处理底部导航激活状态
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            let activeNav = 'nav-' + tabName;
+            if (tabName === 'records') activeNav = 'nav-assets'; // 记录页属于持有页导航
+            
+            const navEl = document.getElementById(activeNav);
+            if(navEl) navEl.classList.add('active');
+
+            // 显示目标 View
             const target = document.getElementById('tab-'+tabName);
             if(tabName === 'scan') {
                 target.classList.add('active'); 
@@ -382,7 +427,6 @@
                 if(tabName === 'assets') renderAssets();
                 stopCamera();
             }
-            document.getElementById('nav-'+tabName).classList.add('active');
         }
 
         // === 交互逻辑 ===
