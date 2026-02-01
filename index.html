@@ -6,6 +6,7 @@
     <title>PLUVO | 价值联盟</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         /* ================= 视觉系统 (纯净演示版) ================= */
@@ -28,24 +29,40 @@
         /* --- 主界面 --- */
         .main-view { flex: 1; display: none; flex-direction: column; position: relative; }
         .main-view.active { display: flex; }
-        .top-bar { padding: 50px 20px 20px; font-size: 1.5rem; font-weight: bold; background: linear-gradient(180deg, #000 0%, transparent 100%); }
-        .tab-content { flex: 1; position: relative; overflow: hidden; }
+        .top-bar { padding: 50px 20px 20px; font-size: 1.5rem; font-weight: bold; background: linear-gradient(180deg, #000 0%, transparent 100%); z-index: 10; }
         .tab-pane { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
         .tab-pane.active { display: flex; }
 
-        /* TAB 1: 扫码 */
-        .scanner-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .scan-trigger { width: 200px; height: 200px; border-radius: 20px; border: 2px dashed var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 242, 255, 0.05); color: var(--accent); cursor: pointer; }
+        /* TAB 1: 扫码 (包含摄像头容器) */
+        .scanner-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: #000; }
+        #reader { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; }
+        
+        /* 扫码框覆盖层 */
+        .scan-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;
+            background: 
+                linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.8) 25%, transparent 25%, transparent 75%, rgba(0,0,0,0.8) 75%, rgba(0,0,0,0.8) 100%),
+                linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.8) 10%, transparent 10%, transparent 90%, rgba(0,0,0,0.8) 90%, rgba(0,0,0,0.8) 100%);
+        }
+        .scan-frame {
+            position: absolute; top: 25%; left: 10%; width: 80%; height: 50%;
+            border: 2px solid rgba(255,255,255,0.3); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);
+        }
         .scan-anim { width: 100%; height: 2px; background: var(--accent); position: absolute; top: 0; animation: scan 2s infinite; }
-        @keyframes scan { 0% {top:10%; opacity:0;} 50% {opacity:1;} 100% {top:90%; opacity:0;} }
+        @keyframes scan { 0% {top:0; opacity:0;} 50% {opacity:1;} 100% {top:100%; opacity:0;} }
+        
+        /* 摄像头控制按钮 */
+        .camera-controls { position: absolute; bottom: 120px; z-index: 20; display: flex; gap: 20px; }
+        .cam-btn { background: rgba(0,0,0,0.6); border: 1px solid #fff; color: #fff; padding: 10px 20px; border-radius: 20px; cursor: pointer; backdrop-filter: blur(5px); }
 
         /* TAB 2: 资产 */
-        .asset-card { background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 30px; text-align: center; margin-bottom: 20px; }
+        .asset-card { background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 30px; text-align: center; margin-bottom: 20px; margin-top: 60px; }
         .balance-num { font-size: 3rem; font-weight: 800; color: var(--gold); font-family: "DIN Alternate", sans-serif; }
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .action-btn { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 12px; color: #fff; text-align: center; cursor: pointer; }
 
         /* TAB 3: 记录 */
+        .record-list { margin-top: 60px; }
         .record-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #222; }
         .rec-amount { font-weight: bold; font-family: "DIN Alternate"; }
         .rec-mint { color: var(--success); } .rec-burn { color: var(--danger); }
@@ -77,22 +94,25 @@
 
     <div id="main-view" class="main-view">
         
-        <div id="tab-scan" class="tab-pane active">
-            <div class="top-bar">扫描探测</div>
+        <div id="tab-scan" class="tab-pane active" style="padding:0;">
             <div class="scanner-box">
-                <div class="scan-trigger" onclick="simulateScan()">
-                    <div style="font-size:3rem; margin-bottom:10px;">📷</div>
-                    <div style="font-size:0.9rem;">点击模拟扫码</div>
-                    <div class="scan-anim"></div>
+                <div id="reader"></div>
+                
+                <div class="scan-overlay">
+                    <div class="scan-frame">
+                        <div class="scan-anim"></div>
+                    </div>
                 </div>
-                <div style="margin-top:30px; text-align:center; color:#666; font-size:0.8rem;">
-                    演示模式：点击上方区域<br>模拟扫描商家收款码
+
+                <div class="camera-controls">
+                    <button class="cam-btn" onclick="startCamera()">📷 启动相机</button>
+                    <button class="cam-btn" onclick="stopCamera()">🛑 停止</button>
                 </div>
             </div>
         </div>
 
         <div id="tab-assets" class="tab-pane">
-            <div class="top-bar">我的资产</div>
+            <div class="top-bar" style="position:absolute; top:0; left:0; width:100%;">我的资产</div>
             <div class="asset-card">
                 <div style="color:#888; font-size:0.9rem; margin-bottom:10px;">当前持有凭证 (CP)</div>
                 <div class="balance-num" id="balance-display">0.00</div>
@@ -111,8 +131,8 @@
         </div>
 
         <div id="tab-records" class="tab-pane">
-            <div class="top-bar">账本记录</div>
-            <div id="record-list"></div>
+            <div class="top-bar" style="position:absolute; top:0; left:0; width:100%;">账本记录</div>
+            <div id="record-list" class="record-list"></div>
         </div>
 
         <div class="bottom-nav">
@@ -141,6 +161,7 @@
     
     // 初始化数据
     let transactions = JSON.parse(localStorage.getItem('pluvo_txs')) || [];
+    let html5QrCode;
     
     function saveAndRefresh() {
         localStorage.setItem('pluvo_txs', JSON.stringify(transactions));
@@ -148,19 +169,65 @@
         loadRecords();
     }
 
-    // 1. 登录 (假登录，只做界面切换)
+    // 1. 登录
     function handleLogin() {
         document.getElementById('auth-view').classList.add('hidden');
         document.getElementById('main-view').classList.add('active');
         loadBalance();
         loadRecords();
+        // 自动尝试启动相机（如果用户之前授权过）
+        // startCamera(); 
     }
 
-    // 2. 模拟扫码挖矿
-    async function simulateScan() {
+    // 2. 摄像头逻辑 (核心新增)
+    function startCamera() {
+        if(html5QrCode) return; // 防止重复启动
+
+        html5QrCode = new Html5Qrcode("reader");
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+        
+        // 优先使用后置摄像头
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+        .catch(err => {
+            console.error("相机启动失败", err);
+            // 如果是在非 HTTPS 环境或用户拒绝，回退到模拟扫码
+            Swal.fire({
+                title: '无法调用相机',
+                text: '请确保使用 HTTPS 访问或允许相机权限。是否切换到模拟模式？',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '使用模拟模式',
+                background: '#000', color: '#fff'
+            }).then((result) => {
+                if (result.isConfirmed) simulateScanInput();
+            });
+        });
+    }
+
+    function stopCamera() {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => {
+                html5QrCode.clear();
+                html5QrCode = null;
+            }).catch(err => console.error("停止失败", err));
+        }
+    }
+
+    // 扫码成功回调
+    function onScanSuccess(decodedText, decodedResult) {
+        // 扫码成功后，暂停摄像头并处理逻辑
+        stopCamera();
+        
+        // 模拟识别到商家码后的逻辑
+        handleScanResult(decodedText);
+    }
+
+    // 处理扫码结果
+    async function handleScanResult(codeContent) {
+        // 这里假设扫到的任何码都视为商家码
         const { value: amount } = await Swal.fire({
-            title: '模拟支付成功',
-            text: '请输入消费金额 (CNY)',
+            title: '扫码成功!',
+            text: `识别到商户: ${codeContent.substring(0, 10)}... \n请输入消费金额 (CNY)`,
             input: 'number',
             inputValue: 100,
             background: '#000', color: '#fff',
@@ -168,11 +235,11 @@
         });
 
         if (amount) {
-            const tokenAmount = (amount * 0.4).toFixed(2); // 系数 0.4
+            const tokenAmount = (amount * 0.4).toFixed(2);
             const newTx = {
                 type: 'mint',
                 amount: parseFloat(tokenAmount),
-                merchant: '演示商家',
+                merchant: 'PLUVO商户',
                 date: new Date().toISOString()
             };
             transactions.unshift(newTx);
@@ -186,13 +253,17 @@
         }
     }
 
+    // 手动模拟输入 (备用方案)
+    async function simulateScanInput() {
+        handleScanResult("模拟商家收款码-001");
+    }
+
     // 3. 模拟核销
     function openBurnModal() {
         document.getElementById('burn-modal').style.display = 'flex';
         document.getElementById('qrcode').innerHTML = "";
         new QRCode(document.getElementById("qrcode"), { text: "DEMO_BURN", width: 200, height: 200 });
         
-        // 3秒后自动扣款演示
         setTimeout(() => {
             const burnAmount = 5.00;
             const newTx = {
@@ -254,6 +325,15 @@
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.getElementById('tab-' + tabId).classList.add('active');
         btn.classList.add('active');
+
+        // 切换 Tab 时自动控制摄像头
+        if(tabId === 'scan') {
+            // 进入扫码页，可选：自动启动
+            // startCamera(); 
+        } else {
+            // 离开扫码页，必须关闭相机以省电和释放资源
+            stopCamera();
+        }
     }
 </script>
 </body>
