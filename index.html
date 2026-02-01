@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PLUVO - 价值捕获</title>
-    
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -74,12 +73,17 @@
             display: flex; justify-content: space-between; align-items: center;
         }
         .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
-        .history-btn {
-            width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
+        
+        /* 顶部右侧文字按钮 */
+        .header-btn-text {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            font-size: 0.8rem; color: #ccc;
+            cursor: pointer; transition: 0.2s;
         }
-        .history-btn:active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
+        .header-btn-text:active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
 
         .search-container { padding: 0 20px 10px; }
         .search-box { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; color: #fff; outline: none; }
@@ -223,7 +227,7 @@
             <div id="tab-assets" class="tab-view" style="display:flex;">
                 <div class="home-header">
                     <div class="header-title" style="margin:0;">我的数字凭证</div>
-                    <div class="history-btn" onclick="switchTab('records')">🕒</div>
+                    <div class="header-btn-text" onclick="switchTab('records')">流转记录</div>
                 </div>
                 <div class="search-container">
                     <input type="text" class="search-box" placeholder="搜索商家..." oninput="renderAssets(this.value)">
@@ -301,9 +305,6 @@
                 <div class="nav-btn active" id="nav-assets" onclick="switchTab('assets')">
                     <div class="nav-icon">💼</div><div class="nav-label">持有</div>
                 </div>
-                <div class="nav-btn" id="nav-records" onclick="switchTab('records')">
-                    <div class="nav-icon">📝</div><div class="nav-label">记录</div>
-                </div>
                 <div class="nav-btn" id="nav-me" onclick="switchTab('me')">
                     <div class="nav-icon">👤</div><div class="nav-label">我的</div>
                 </div>
@@ -335,7 +336,7 @@
         const myAssets = [
             { name: 'PLUVO 官方', tag: '官方通证', count: 500, icon: 'P' },
             { name: '老张牛肉面', tag: '中式面馆', count: 125, icon: '🍜' },
-            { name: '星空咖啡馆', tag: '休闲饮品', count: 8.00, icon: '☕' }
+            { name: '星空咖啡馆', tag: '休闲饮品', count: 10, icon: '☕' }
         ];
 
         function renderAssets(filter = "") {
@@ -431,7 +432,7 @@
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             
             let activeNav = 'nav-' + tabName;
-            if (tabName === 'records') activeNav = 'nav-assets';
+            if (tabName === 'records') activeNav = 'nav-assets'; // 记录属于持有页下的子功能
             
             const navEl = document.getElementById(activeNav);
             if(navEl) navEl.classList.add('active');
@@ -512,10 +513,8 @@
                 // 清空输入框，恢复初始状态
                 document.getElementById('login-acc').value = '';
                 document.getElementById('login-pwd').value = '';
-                // 恢复按钮文本
-                document.querySelector('#view-login .btn-main').innerText = "启动终端";
                 
-                switchTab('assets');
+                switchTab('assets'); // 重置回默认页
             }
         }
     </script>
