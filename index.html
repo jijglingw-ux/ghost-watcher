@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PLUVO - 价值联盟 (云端版)</title>
+    <title>PLUVO - 价值联盟</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* =========================================
-           样式保持 100% 不变 (1.txt 风格)
+           样式保持 100% 不变
            ========================================= */
         :root { --bg-deep: #000000; --accent-cyan: #00f2ff; --accent-gold: #FFD700; --accent-red: #ff453a; --accent-green: #32d74b; --item-bg: rgba(255, 255, 255, 0.05); }
         html, body { margin: 0; padding: 0; background-color: #000000 !important; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; height: 100dvh; width: 100vw; display: flex; justify-content: center; overflow: hidden; color: white; user-select: none; }
@@ -21,7 +21,11 @@
         .logo-text { font-size: 4.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -2px; background: linear-gradient(180deg, #fff 0%, #666 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .logo-dot { display: inline-block; width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 15px var(--accent-cyan); margin-left: 5px; }
         .slogan { font-size: 14px; color: rgba(255, 255, 255, 0.4); letter-spacing: 6px; margin-top: 15px; text-transform: uppercase; }
-        .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; margin-top: 30px; border-radius: 0; }
+        
+        /* 输入框样式微调：禁用默认的高亮背景 */
+        .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; margin-top: 30px; border-radius: 0; -webkit-text-fill-color: #fff; opacity: 1; } 
+        .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
+        
         .btn-glow { width: 100%; height: 60px; background: #fff; border: none; border-radius: 30px; color: #000; font-size: 1.1rem; font-weight: 700; margin-top: 50px; cursor: pointer; box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); }
         .home-header { padding: 60px 24px 10px; background: linear-gradient(180deg, #000 0%, transparent 100%); z-index: 30; }
         .header-title { font-size: 1.5rem; font-weight: 800; margin-bottom: 20px; }
@@ -56,8 +60,9 @@
                     <div class="slogan">万物消费 · 价值联盟</div>
                 </div>
                 <div style="flex:1"></div>
-                <input type="text" id="login-acc" class="clean-input" placeholder="账 号">
-                <input type="password" id="login-pwd" class="clean-input" placeholder="密 码">
+                <input type="text" id="login-acc" class="clean-input" placeholder="账 号" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="password" id="login-pwd" class="clean-input" placeholder="密 码" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                
                 <button class="btn-glow" onclick="Auth.login()">登 录</button>
                 <div style="text-align:center; margin-top:30px;">
                     <a href="javascript:void(0)" style="color:rgba(255,255,255,0.3); text-decoration:none;" onclick="Router.go('view-register')">注册节点</a>
@@ -69,12 +74,10 @@
         <div id="view-register" class="page-view">
             <div class="content-layer">
                 <div class="brand-section"><h1 class="logo-text" style="font-size:3rem">注册</h1></div>
-                <input type="text" id="reg-acc" class="clean-input" placeholder="设置账号">
-                <input type="password" id="reg-pwd" class="clean-input" placeholder="设置密码">
+                <input type="text" id="reg-acc" class="clean-input" placeholder="设置账号" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="password" id="reg-pwd" class="clean-input" placeholder="设置密码" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
                 <button class="btn-glow" onclick="Auth.register()">注 册</button>
-                <div style="text-align:center; margin-top:30px;">
-                    <a href="javascript:void(0)" style="color:rgba(255,255,255,0.3); text-decoration:none;" onclick="Router.go('view-login')">返回登录</a>
-                </div>
+                <div style="text-align:center; margin-top:30px;"><a href="javascript:void(0)" style="color:rgba(255,255,255,0.3); text-decoration:none;" onclick="Router.go('view-login')">返回登录</a></div>
             </div>
         </div>
 
@@ -126,7 +129,6 @@
                 
                 const btn = event.target; btn.innerText = "连接云端...";
                 
-                // 1. 真实写入云数据库
                 const { data, error } = await supabase.from('users').insert([{ account: acc, password: pwd }]).select();
                 
                 btn.innerText = "注 册";
@@ -146,7 +148,6 @@
                 
                 const btn = event.target; btn.innerText = "鉴权中...";
 
-                // 2. 真实查询云数据库
                 const { data, error } = await supabase.from('users').select('*').eq('account', acc).eq('password', pwd).single();
                 
                 btn.innerText = "登 录";
@@ -162,11 +163,9 @@
         const Backend = {
             fetchData: async () => {
                 if(!currentUserId) return;
-                // 联合查询
                 const { data: assets } = await supabase.from('assets').select('*').eq('user_id', currentUserId);
                 const { data: records } = await supabase.from('records').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false });
                 
-                // 渲染资产
                 const adom = document.getElementById('asset-list-dom');
                 adom.innerHTML = (!assets || assets.length === 0) ? '<div class="empty-state">暂无凭证，请去扫码</div>' : '';
                 assets?.forEach(item => {
@@ -182,7 +181,6 @@
                     }
                 });
 
-                // 渲染记录
                 const rdom = document.getElementById('record-list-dom');
                 rdom.innerHTML = (!records || records.length === 0) ? '<div class="empty-state">暂无记录</div>' : '';
                 records?.forEach(r => {
@@ -195,13 +193,11 @@
                 });
             },
             
-            // 真实写入：扫码挖矿
             scan: async () => {
                 const shops = ['老张牛肉面', '星空咖啡馆', 'PLUVO 官方'];
                 const shopName = shops[Math.floor(Math.random() * shops.length)];
-                const amount = 10; // 每次固定挖10个，演示用
+                const amount = 10; 
 
-                // 1. 查是否存在
                 const { data: existing } = await supabase.from('assets').select('*').eq('user_id', currentUserId).eq('shop_name', shopName).single();
                 
                 if(existing) {
@@ -221,7 +217,6 @@
                 document.getElementById('qr-modal').style.display = 'flex';
             },
 
-            // 真实写入：核销
             burn: async () => {
                 const name = document.getElementById('m-title').innerText;
                 const { data: asset } = await supabase.from('assets').select('*').eq('user_id', currentUserId).eq('shop_name', name).single();
