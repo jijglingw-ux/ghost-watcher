@@ -296,7 +296,7 @@
     }
 
     // ================= 业务逻辑：扫码挖矿 (Mint) =================
-    // 对应文档：第一阶段“傻瓜模式” 
+    // 对应文档：第一阶段“傻瓜模式”
     // 逻辑：输入消费金额 -> 按系数 0.4 计算贡献 -> 1:1 铸造凭证 (简化版公式)
     async function simulateScan() {
         const { value: amount } = await Swal.fire({
@@ -309,7 +309,7 @@
         });
 
         if (amount) {
-            // 核心算法：傻瓜模式系数 0.4
+            // 核心算法：傻瓜模式系数 0.4 
             const contribution = (amount * 0.4).toFixed(2); 
             // 简化模型：贡献值 1:1 转化为凭证 (复杂模型需调用后端)
             const tokenAmount = contribution; 
@@ -356,7 +356,7 @@
     }
 
     async function simulateMerchantScan() {
-        // 模拟商家在 POS 机上扣除了 5 个币换茶叶蛋
+        // 模拟商家在 POS 机上扣除了 5 个币换茶叶蛋 
         const burnAmount = 5.00; 
 
         document.getElementById('burn-modal').style.display = 'none';
