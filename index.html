@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PLUVO - 价值捕获</title>
+    <title>PLUVO - 数字凭证</title>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
@@ -15,351 +15,516 @@
             --accent-gold: #FFD700;
             --accent-red: #ff453a;
             --accent-green: #32d74b;
-            --item-bg: rgba(255, 255, 255, 0.08);
+            --item-bg: rgba(255, 255, 255, 0.05);
+            --border-light: rgba(255, 255, 255, 0.1);
             --safe-bottom: env(safe-area-inset-bottom);
         }
         
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         html, body {
-            margin: 0; padding: 0; background-color: #000;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            margin: 0; padding: 0;
+            background-color: #000000 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+            /* 适配 iOS 动态地址栏高度 */
             height: 100vh; height: 100dvh; width: 100vw;
-            overflow: hidden; color: white; user-select: none;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden; color: white;
+            user-select: none;
         }
 
         .mobile-wrapper {
-            width: 100%; max-width: 430px; height: 100%; margin: 0 auto;
+            width: 100%; max-width: 430px; height: 100%;
             position: relative; background: #000;
-            display: flex; flex-direction: column; overflow: hidden;
+            display: flex; flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            overflow: hidden;
         }
 
-        /* 背景光效 (仅在非扫码页显示) */
-        .glow-bg {
-            position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: 0;
+        /* 全局光效 (保留原版视觉) */
+        .glow-spot-1 {
+            position: absolute; top: -10%; left: -20%; width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(0, 242, 255, 0.15), transparent 70%);
+            filter: blur(80px); animation: breathe 8s infinite alternate; z-index: 0; pointer-events: none;
         }
-        .glow-spot-1 { position: absolute; top: -10%; left: -20%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(0, 242, 255, 0.15), transparent 70%); filter: blur(80px); animation: breathe 8s infinite alternate; }
-        .glow-spot-2 { position: absolute; bottom: -10%; right: -20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(255, 255, 255, 0.05), transparent 70%); filter: blur(100px); }
+        .glow-spot-2 {
+            position: absolute; bottom: -10%; right: -20%; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.03), transparent 70%);
+            filter: blur(100px); z-index: 0; pointer-events: none;
+        }
         @keyframes breathe { 0% {opacity:0.5; transform:scale(1);} 100% {opacity:0.8; transform:scale(1.1);} }
 
-        /* 页面容器 */
+        /* 视图切换容器 */
         .page-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            transition: transform 0.3s ease-out, opacity 0.3s;
-            background: #000; opacity: 0; pointer-events: none; z-index: 10;
-            display: flex; flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s;
+            background: #000; opacity: 0; pointer-events: none; transform: scale(0.95);
+            z-index: 10; display: flex; flex-direction: column;
         }
-        .page-view.active { opacity: 1; pointer-events: auto; z-index: 20; }
+        .page-view.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 20; }
 
-        /* --- 扫码页 (全屏相机) --- */
-        #tab-scan { background: #000; }
-        
-        /* 1. 摄像头层 (底层) */
-        #reader {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 1; background: #000;
+        /* ==================== 登录/注册 UI ==================== */
+        .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+        .brand-section { margin-bottom: 60px; text-align: left; }
+        .logo-text {
+            font-size: 4.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -2px;
+            background: linear-gradient(180deg, #fff 0%, #666 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative;
         }
-        /* 强制视频填满，不留黑边 */
-        #reader video {
-            object-fit: cover !important; width: 100% !important; height: 100% !important;
+        .logo-dot {
+            display: inline-block; width: 12px; height: 12px;
+            background: var(--accent-cyan); border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent-cyan); margin-left: 5px;
+        }
+        .slogan { font-size: 14px; color: rgba(255, 255, 255, 0.4); letter-spacing: 6px; margin-top: 15px; text-transform: uppercase; }
+
+        .form-section { display: flex; flex-direction: column; gap: 35px; }
+        .clean-input {
+            width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; transition: all 0.3s; border-radius: 0;
+        }
+        .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
+        .code-row { display: flex; align-items: flex-end; gap: 10px; }
+        .btn-code {
+            background: rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.3);
+            color: var(--accent-cyan); padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+        }
+        .action-area { margin-top: 50px; }
+        .btn-glow {
+            width: 100%; height: 60px; background: #fff; border: none; border-radius: 30px;
+            color: #000; font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; cursor: pointer;
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); transition: transform 0.2s;
+        }
+        .btn-glow:active { transform: scale(0.96); }
+        .link-row { display: flex; justify-content: center; margin-top: 30px; gap: 15px; }
+        .text-link { color: rgba(255, 255, 255, 0.3); font-size: 0.9rem; text-decoration: none; transition: color 0.3s; }
+        .text-link:hover { color: #fff; }
+        .divider { color: rgba(255,255,255,0.1); }
+
+        /* ==================== 资产列表 UI ==================== */
+        .home-header {
+            padding: 50px 24px 10px;
+            background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            z-index: 30;
+        }
+        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 20px;}
+        .search-container { padding: 0 20px 10px; }
+        .search-box {
+            width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 15px; border-radius: 8px; color: #fff; font-size: 0.9rem;
+            box-sizing: border-box; outline: none; transition: all 0.3s;
+        }
+        .search-box:focus { border-color: var(--accent-cyan); background: rgba(0, 242, 255, 0.05); }
+
+        .asset-list { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); }
+        .asset-item {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 12px; padding: 16px; border-radius: 12px;
+            transition: transform 0.2s; cursor: pointer;
+        }
+        .asset-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
+        .store-icon {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, #333, #111);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; border: 1px solid rgba(255,255,255,0.1); margin-right: 12px;
+        }
+        .store-name { font-size: 1rem; font-weight: 600; color: #fff; }
+        .store-tag { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+        .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate", sans-serif; }
+
+        /* ==================== 
+           [核心] 扫码探测 UI (强制覆盖层级)
+           ==================== */
+        .scanner-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 25; 
+            display: none; /* 默认隐藏 */
+            /* 关键：必须是 block 或 flex，但要控制好子元素定位 */
+            display: none; 
+        }
+        .scanner-layer.active { display: block; } /* 激活时改为 block 以适应绝对定位 */
+
+        /* 底层：真实摄像头画面 */
+        #reader { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            z-index: 1; border: none;
+        }
+        /* 强制视频填满屏幕，修复偏位 */
+        #reader video { 
+            width: 100% !important; height: 100% !important; 
+            object-fit: cover !important; 
         }
 
-        /* 2. UI 覆盖层 (顶层) */
-        .scan-overlay {
+        /* 顶层：悬浮 UI (网格、扫描框) */
+        .scan-ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; pointer-events: none;
+            z-index: 10; pointer-events: none; /* 让点击穿透 */
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            /* 半透明遮罩，突出中间 */
-            background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 80%);
         }
 
-        .scan-frame {
+        .camera-bg {
+            position: absolute; width: 100%; height: 100%;
+            background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px);
+            background-size: 40px 40px; opacity: 0.3;
+        }
+
+        .scan-frame { 
             width: 260px; height: 260px; position: relative;
-            border: 1px solid rgba(0, 242, 255, 0.3);
-            box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+            border: 1px solid rgba(255,255,255,0.1); 
+            /* 超大阴影遮罩，营造聚焦感 */
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.6);
         }
-        /* 扫描线动画 */
         .laser {
-            position: absolute; top: 0; left: 0; width: 100%; height: 2px;
-            background: var(--accent-cyan);
-            box-shadow: 0 0 10px var(--accent-cyan);
-            animation: scanMove 2s infinite linear;
+            position: absolute; width: 100%; height: 2px; background: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--accent-cyan); top: 0;
+            animation: scanAnim 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
         }
-        @keyframes scanMove { 0% {top:0; opacity:0;} 10% {opacity:1;} 90% {opacity:1;} 100% {top:100%; opacity:0;} }
-
-        /* 四角装饰 */
-        .corner { position: absolute; width: 20px; height: 20px; border-color: var(--accent-cyan); border-style: solid; border-width: 0; }
-        .tl { top: -2px; left: -2px; border-top-width: 3px; border-left-width: 3px; }
-        .tr { top: -2px; right: -2px; border-top-width: 3px; border-right-width: 3px; }
-        .bl { bottom: -2px; left: -2px; border-bottom-width: 3px; border-left-width: 3px; }
-        .br { bottom: -2px; right: -2px; border-bottom-width: 3px; border-right-width: 3px; }
+        @keyframes scanAnim { 0% {top:0; opacity:0;} 50% {opacity:1;} 100% {top:100%; opacity:0;} }
 
         .scan-tip {
-            margin-top: 20px; color: #fff; font-size: 0.9rem; letter-spacing: 1px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 4px;
+            position: absolute; bottom: 20%; 
+            background: rgba(0,0,0,0.6); padding: 8px 20px; 
+            border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); 
+            font-size: 0.9rem; color: #fff;
         }
 
-        /* --- 资产页 & 记录页 UI --- */
-        .header { padding: 50px 20px 10px; z-index: 30; background: linear-gradient(180deg, #000 20%, transparent 100%); }
-        .title { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; }
-        
-        .list-container { flex: 1; overflow-y: auto; padding: 10px 20px calc(90px + var(--safe-bottom)); }
-        
-        /* 卡片样式 */
-        .card {
+        /* ==================== 交易记录 UI ==================== */
+        .records-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 25; display: none; flex-direction: column; padding-top: 20px;
+        }
+        .records-layer.active { display: flex; }
+        .record-list { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); margin-top: 10px; }
+        .record-item {
             display: flex; align-items: center; justify-content: space-between;
-            background: var(--item-bg); backdrop-filter: blur(10px);
-            margin-bottom: 12px; padding: 16px; border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05); transition: transform 0.1s;
+            padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
         }
-        .card:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
-        
-        .icon-box { width: 44px; height: 44px; border-radius: 50%; background: #222; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; border: 1px solid rgba(255,255,255,0.1); }
-        .text-main { font-size: 1rem; font-weight: 600; color: #fff; margin-bottom: 3px; }
-        .text-sub { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
-        .num-val { font-size: 1.1rem; font-weight: 700; font-family: "DIN Alternate"; color: var(--accent-gold); }
-        .plus { color: var(--accent-green); }
-        .minus { color: var(--accent-red); }
+        .rec-info { display: flex; flex-direction: column; }
+        .rec-title { font-size: 0.95rem; color: #fff; margin-bottom: 4px; }
+        .rec-time { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+        .rec-val { font-size: 1rem; font-weight: bold; font-family: "DIN Alternate", sans-serif; }
+        .val-plus { color: var(--accent-green); }
+        .val-minus { color: var(--accent-red); }
 
-        /* 搜索框 */
-        .search-wrap { padding: 0 20px 10px; }
-        .search-input { width: 100%; background: rgba(255,255,255,0.1); border: none; padding: 12px; border-radius: 8px; color: #fff; outline: none; }
-
-        /* 底部导航 */
-        .nav-bar {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: calc(80px + var(--safe-bottom)); padding-bottom: var(--safe-bottom);
-            background: rgba(10,10,10,0.9); backdrop-filter: blur(20px);
+        /* ==================== 底部导航 ==================== */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            height: calc(80px + var(--safe-bottom)); padding-bottom: calc(10px + var(--safe-bottom));
+            background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex; align-items: center; z-index: 50;
+            display: flex; z-index: 40; box-sizing: border-box;
         }
-        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; color: #666; transition: 0.3s; cursor: pointer; }
-        .nav-item.active { color: var(--accent-cyan); }
-        .nav-icon { font-size: 1.5rem; margin-bottom: 4px; }
-        .nav-text { font-size: 0.7rem; font-weight: 500; }
+        .nav-btn {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: rgba(255,255,255,0.4); transition: all 0.3s; cursor: pointer;
+        }
+        .nav-btn.active { color: var(--accent-cyan); }
+        .nav-btn.active .nav-icon { transform: scale(1.1); text-shadow: 0 0 10px var(--accent-cyan); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s; }
+        .nav-label { font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; }
 
-        /* 登录页样式 */
-        .login-content { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 40px; }
-        .logo-big { font-size: 4rem; font-weight: 900; background: -webkit-linear-gradient(#fff, #666); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .input-line { width: 100%; background: transparent; border: none; border-bottom: 1px solid #333; padding: 15px 0; color: #fff; font-size: 1.1rem; margin-bottom: 20px; outline: none; }
-        .input-line:focus { border-color: var(--accent-cyan); }
-        .btn-main { width: 100%; height: 56px; background: #fff; border-radius: 28px; border: none; font-size: 1.1rem; font-weight: bold; margin-top: 40px; cursor: pointer; }
-
-        /* 弹窗 */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; opacity: 0; transition: 0.2s; }
-        .modal.show { opacity: 1; }
-        .modal-box { width: 80%; background: #1a1a1a; border-radius: 20px; padding: 30px; text-align: center; border: 1px solid rgba(255,255,255,0.1); transform: scale(0.9); transition: 0.2s; }
-        .modal.show .modal-box { transform: scale(1); }
+        /* ==================== 弹窗 ==================== */
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
+            z-index: 100; display: none; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .modal-overlay.show { opacity: 1; }
+        .modal-card {
+            width: 80%; background: #111; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px; padding: 40px 20px; text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            transform: scale(0.9); transition: transform 0.3s;
+        }
+        .modal-overlay.show .modal-card { transform: scale(1); }
+        .qr-placeholder {
+            width: 180px; height: 180px; background: #fff; margin: 0 auto 20px;
+            border-radius: 10px; padding: 10px; display: flex; justify-content: center; align-items: center;
+        }
+        .qr-pattern {
+            width: 160px; height: 160px;
+            background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), 
+                              linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
+            background-size: 20px 20px; background-position: 0 0, 10px 10px; opacity: 0.9;
+        }
+        .modal-store-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
+        .modal-tip { font-size: 0.8rem; color: #666; margin-bottom: 30px; }
+        .btn-close {
+            background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff;
+            padding: 10px 30px; border-radius: 20px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
 
     <div class="mobile-wrapper">
+        <div class="glow-spot-1"></div>
+        <div class="glow-spot-2"></div>
+
         <div id="view-login" class="page-view active">
-            <div class="glow-bg"><div class="glow-spot-1"></div><div class="glow-spot-2"></div></div>
-            <div class="login-content">
-                <div style="margin-bottom: 60px;">
-                    <div class="logo-big">PLUVO</div>
-                    <div style="color:var(--accent-cyan); letter-spacing:4px; margin-top:10px;">价值捕获系统</div>
+            <div class="content-layer">
+                <div class="brand-section">
+                    <h1 class="logo-text">PLUVO<span class="logo-dot"></span></h1>
+                    <div class="slogan">万物消费 · 价值联盟</div>
                 </div>
-                <input type="text" id="acc" class="input-line" placeholder="接入账号" value="Node_01">
-                <input type="password" class="input-line" placeholder="访问密钥" value="******">
-                <button class="btn-main" onclick="doLogin()">启动终端</button>
+                <div class="form-section">
+                    <div class="input-wrapper"><input type="text" id="login-acc" class="clean-input" placeholder="账 号"></div>
+                    <div class="input-wrapper"><input type="password" id="login-pwd" class="clean-input" placeholder="密 码"></div>
+                </div>
+                <div class="action-area">
+                    <button class="btn-glow" onclick="handleLogin()">登 录</button>
+                    <div class="link-row">
+                        <a href="javascript:void(0)" class="text-link" onclick="goToRegister()">注册节点</a>
+                        <span class="divider">|</span>
+                        <a href="#" class="text-link">忘记密码</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-register" class="page-view">
+            <div class="content-layer">
+                <div class="brand-section">
+                    <h1 class="logo-text" style="font-size: 3rem;">注册节点</h1>
+                    <div class="slogan" style="margin-top:10px;">加入网络</div>
+                </div>
+                <div class="form-section" style="gap: 30px;">
+                    <div class="input-wrapper"><input type="text" id="reg-acc" class="clean-input" placeholder="设置账号" value="123456"></div>
+                    <div class="input-wrapper"><input type="password" id="reg-pwd" class="clean-input" placeholder="设置密码" value="123456"></div>
+                    <div class="input-wrapper"><input type="tel" class="clean-input" placeholder="手机号码" value="13795289504"></div>
+                    <div class="input-wrapper code-row">
+                        <input type="number" class="clean-input" placeholder="验证码" value="123456">
+                        <button class="btn-code">获取验证码</button>
+                    </div>
+                </div>
+                <div class="action-area">
+                    <button class="btn-glow" id="btn-reg" onclick="handleRegister()">注 册</button>
+                    <div class="link-row"><a href="javascript:void(0)" class="text-link" onclick="backToLogin()">返回登录</a></div>
+                </div>
             </div>
         </div>
 
         <div id="view-home" class="page-view">
             
-            <div id="tab-scan" class="page-view" style="display:none; z-index:21;">
-                <div id="reader"></div> <div class="scan-overlay"> <div class="scan-frame">
-                        <div class="corner tl"></div><div class="corner tr"></div>
-                        <div class="corner bl"></div><div class="corner br"></div>
+            <div id="tab-scan" class="scanner-layer">
+                <div id="reader"></div>
+
+                <div class="scan-ui-layer">
+                    <div class="camera-bg"></div>
+                    <div class="scan-frame">
+                        <div style="position:absolute; top:-2px; left:-2px; width:20px; height:20px; border-top:3px solid var(--accent-cyan); border-left:3px solid var(--accent-cyan);"></div>
+                        <div style="position:absolute; top:-2px; right:-2px; width:20px; height:20px; border-top:3px solid var(--accent-cyan); border-right:3px solid var(--accent-cyan);"></div>
+                        <div style="position:absolute; bottom:-2px; left:-2px; width:20px; height:20px; border-bottom:3px solid var(--accent-cyan); border-left:3px solid var(--accent-cyan);"></div>
+                        <div style="position:absolute; bottom:-2px; right:-2px; width:20px; height:20px; border-bottom:3px solid var(--accent-cyan); border-right:3px solid var(--accent-cyan);"></div>
                         <div class="laser"></div>
                     </div>
-                    <div class="scan-tip">正在搜索资产信号...</div>
+                    <div class="scan-tip">对准商家二维码探测</div>
                 </div>
             </div>
 
-            <div id="tab-assets" class="page-view" style="display:flex;">
-                <div class="glow-bg"><div class="glow-spot-2"></div></div>
-                <div class="header">
-                    <div class="title">数字资产</div>
-                    <div style="color:#666; font-size:0.8rem; margin-top:5px;">My Assets</div>
+            <div id="tab-assets" style="height: 100%; display: flex; flex-direction: column; width: 100%;">
+                <div class="home-header">
+                    <div class="header-title">我的数字凭证</div>
                 </div>
-                <div class="search-wrap"><input type="text" class="search-input" placeholder="检索商户..." oninput="renderAssets(this.value)"></div>
-                <div class="list-container" id="asset-list-dom"></div>
+                <div class="search-container">
+                    <input type="text" class="search-box" placeholder="搜索商家..." oninput="renderAssets(this.value)">
+                </div>
+                <div class="asset-list" id="asset-list-dom"></div>
             </div>
 
-            <div id="tab-records" class="page-view" style="display:none;">
-                <div class="header">
-                    <div class="title">账本记录</div>
-                    <div style="color:#666; font-size:0.8rem; margin-top:5px;">Transaction Logs</div>
+            <div id="tab-records" class="records-layer">
+                <div style="padding: 20px 24px;">
+                    <h2 style="margin: 0; font-size: 1.5rem;">交易记录</h2>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">Transaction History</div>
                 </div>
-                <div class="list-container" id="record-list-dom">
-                    <div class="card"><div><div class="text-main">系统奖励</div><div class="text-sub">2026-02-01 10:00</div></div><div class="num-val plus">+500.00</div></div>
+                <div class="record-list">
+                    <div class="record-item">
+                        <div class="rec-info">
+                            <div class="rec-title">老张牛肉面</div>
+                            <div class="rec-time">今天 12:45 · 消费赠送</div>
+                        </div>
+                        <div class="rec-val val-plus">+ 5</div>
+                    </div>
+                    <div class="record-item">
+                        <div class="rec-info">
+                            <div class="rec-title">老张牛肉面</div>
+                            <div class="rec-time">今天 12:40 · 核销抵扣</div>
+                        </div>
+                        <div class="rec-val val-minus">- 1</div>
+                    </div>
+                    <div class="record-item">
+                        <div class="rec-info">
+                            <div class="rec-title">星空咖啡馆</div>
+                            <div class="rec-time">昨天 18:20 · 扫码捕获</div>
+                        </div>
+                        <div class="rec-val val-plus">+ 10</div>
+                    </div>
+                    <div class="record-item">
+                        <div class="rec-info">
+                            <div class="rec-title">PLUVO 官方</div>
+                            <div class="rec-time">2026-01-20 · 节点注册奖励</div>
+                        </div>
+                        <div class="rec-val val-plus">+ 500</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="nav-bar">
-                <div class="nav-item" id="nav-scan" onclick="switchTab('scan')">
-                    <div class="nav-icon">👁️</div><div class="nav-text">捕获</div>
+            <div class="bottom-nav">
+                <div class="nav-btn" id="nav-scan" onclick="switchTab('scan')">
+                    <div class="nav-icon">👁️</div><div class="nav-label">扫码</div>
                 </div>
-                <div class="nav-item active" id="nav-assets" onclick="switchTab('assets')">
-                    <div class="nav-icon">💼</div><div class="nav-text">持有</div>
+                <div class="nav-btn active" id="nav-assets" onclick="switchTab('assets')">
+                    <div class="nav-icon">💼</div><div class="nav-label">持有</div>
                 </div>
-                <div class="nav-item" id="nav-records" onclick="switchTab('records')">
-                    <div class="nav-icon">📝</div><div class="nav-text">记录</div>
+                <div class="nav-btn" id="nav-records" onclick="switchTab('records')">
+                    <div class="nav-icon">📝</div><div class="nav-label">记录</div>
                 </div>
             </div>
-        </div>
 
-        <div class="modal" id="success-modal">
-            <div class="modal-box">
-                <div style="font-size:3rem; margin-bottom:10px;">⚡</div>
-                <h3 style="color:#fff; margin:0 0 10px;">捕获成功</h3>
-                <p id="scan-result-text" style="color:#ccc; font-size:0.9rem; margin-bottom:20px;"></p>
-                <button class="btn-main" style="height:44px; margin-top:0;" onclick="closeModal()">收下资产</button>
+            <div class="modal-overlay" id="qr-modal">
+                <div class="modal-card">
+                    <div class="modal-store-name" id="modal-title">商家名称</div>
+                    <div class="modal-tip">请向商家出示此核销码</div>
+                    <div class="qr-placeholder"><div class="qr-pattern"></div></div>
+                    <button class="btn-close" onclick="closeModal()">关闭</button>
+                </div>
             </div>
+
         </div>
     </div>
 
     <script>
-        // === 数据状态 ===
-        let myAssets = [
-            { name: "PLUVO 官方", type: "Genesis", count: 500.00, icon: "P" },
-            { name: "老张牛肉面", type: "餐饮", count: 12.50, icon: "🍜" },
-            { name: "星空咖啡", type: "饮品", count: 8.00, icon: "☕" }
+        /* --- 数据初始化 --- */
+        const assetsData = [
+            { id: 1, name: 'PLUVO 官方', tag: '官方通证', count: 500, icon: 'P' },
+            { id: 2, name: '老张牛肉面', tag: '中式面馆', count: 125, icon: '🍜' },
+            { id: 3, name: '星空咖啡馆', tag: '休闲饮品', count: 10, icon: '☕' }
         ];
 
-        // === 核心：摄像头控制 ===
-        let html5QrCode;
-        let isScanning = false;
-
-        async function startScanner() {
-            if (isScanning) return;
-            try {
-                // 确保容器存在
-                if(!document.getElementById("reader")) return;
-                
-                html5QrCode = new Html5Qrcode("reader");
-                const config = { 
-                    fps: 15, 
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: window.innerWidth / window.innerHeight 
-                };
-                
-                // 启动后置摄像头
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    config, 
-                    onScanSuccess
-                );
-                isScanning = true;
-                console.log("Camera started");
-            } catch (err) {
-                console.error("Camera error:", err);
-                if(location.protocol !== 'https:' && location.hostname !== 'localhost') {
-                    alert("错误：请使用HTTPS协议访问以启用摄像头");
-                } else {
-                    alert("无法启动相机，请检查权限");
-                }
-            }
-        }
-
-        async function stopScanner() {
-            if (html5QrCode && isScanning) {
-                try {
-                    await html5QrCode.stop();
-                    html5QrCode.clear();
-                    isScanning = false;
-                    console.log("Camera stopped");
-                } catch (err) {
-                    console.error("Stop error:", err);
-                }
-            }
-        }
-
-        // 扫码成功回调
-        function onScanSuccess(decodedText) {
-            // 停止扫描
-            stopScanner();
-            
-            // 模拟解析：假设扫任何码都给奖励
-            // 实际逻辑可以是解析 JSON: { "merchant": "KFC", "amount": 10 }
-            const randomAmount = (Math.random() * 100).toFixed(2);
-            const merchantName = "未知信号源 " + Math.floor(Math.random()*1000);
-            
-            // 添加入库
-            myAssets.unshift({ name: merchantName, type: "捕获", count: parseFloat(randomAmount), icon: "👾" });
-            
-            // 弹窗提示
-            document.getElementById('scan-result-text').innerText = `来源: ${merchantName}\n获取: +${randomAmount} CP`;
-            const modal = document.getElementById('success-modal');
-            modal.style.display = 'flex';
-            setTimeout(()=>modal.classList.add('show'), 10);
-            
-            // 切回资产页
-            switchTab('assets'); 
-        }
-
-        // === 界面逻辑 ===
-        function doLogin() {
-            document.getElementById('view-login').classList.remove('active');
-            document.getElementById('view-home').classList.add('active');
-            renderAssets();
-        }
-
         function renderAssets(filter = "") {
-            const list = document.getElementById('asset-list-dom');
-            list.innerHTML = "";
-            myAssets.forEach(item => {
-                if(item.name.includes(filter)) {
-                    list.innerHTML += `
-                    <div class="card">
-                        <div style="display:flex; align-items:center;">
-                            <div class="icon-box">${item.icon}</div>
-                            <div>
-                                <div class="text-main">${item.name}</div>
-                                <div class="text-sub">${item.type}</div>
-                            </div>
+            const container = document.getElementById('asset-list-dom');
+            container.innerHTML = "";
+            assetsData.forEach(item => {
+                if(item.name.indexOf(filter) === -1) return;
+                const div = document.createElement('div');
+                div.className = 'asset-item';
+                div.onclick = () => openQrModal(item.name);
+                div.innerHTML = `
+                    <div style="display:flex; align-items:center;">
+                        <div class="store-icon">${item.icon}</div>
+                        <div>
+                            <div class="store-name">${item.name}</div>
+                            <div class="store-tag">${item.tag}</div>
                         </div>
-                        <div class="num-val plus">+${parseFloat(item.count).toFixed(2)}</div>
-                    </div>`;
+                    </div>
+                    <div class="asset-count">${item.count}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        /* --- 摄像头逻辑 (修复版) --- */
+        let html5QrCode = null;
+
+        function startCamera() {
+            if(html5QrCode) return;
+            const readerDiv = document.getElementById("reader");
+            if (!readerDiv) return;
+
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+            
+            // 启动后置摄像头
+            html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
+                alert(`扫码成功: ${decodedText}`);
+                stopCamera();
+                switchTab('assets');
+            }).catch(err => {
+                console.error("相机启动失败:", err);
+                if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                    alert("相机需要 HTTPS 环境");
                 }
             });
         }
 
-        function switchTab(tabName) {
-            // 导航栏状态
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById('nav-'+tabName).classList.add('active');
+        function stopCamera() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode.clear();
+                    html5QrCode = null;
+                }).catch(err => console.error("停止失败", err));
+            }
+        }
 
-            // 页面显隐
+        /* --- 导航逻辑 --- */
+        function switchTab(tab) {
+            // 隐藏所有
             ['scan', 'assets', 'records'].forEach(t => {
                 const el = document.getElementById('tab-'+t);
-                if(t === tabName) {
-                    if(t === 'scan') {
-                        el.style.display = 'block'; // 相机层用 block
-                        setTimeout(startScanner, 100); // 稍微延迟等待DOM渲染
-                    } else {
-                        el.style.display = 'flex'; // 列表页用 flex
-                        stopScanner(); // 离开扫码页立即关闭相机
-                    }
-                    el.classList.add('active');
-                } else {
-                    el.style.display = 'none';
-                    el.classList.remove('active');
-                }
+                // scan 页使用 active class 控制显示，其他页使用 style.display
+                if(t === 'scan') el.classList.remove('active');
+                else el.style.display = 'none';
+                
+                document.getElementById('nav-'+t).classList.remove('active');
             });
             
-            if(tabName === 'assets') renderAssets();
+            // 显示当前
+            const target = document.getElementById('tab-'+tab);
+            if(tab === 'assets') {
+                target.style.display = 'flex';
+            } else if (tab === 'records') {
+                target.style.display = 'flex';
+            } else if (tab === 'scan') {
+                target.classList.add('active'); // 激活 scanner-layer 的 block 显示
+            }
+            document.getElementById('nav-'+tab).classList.add('active');
+
+            // 摄像头控制
+            if (tab === 'scan') startCamera();
+            else stopCamera();
         }
 
+        /* --- 模态框逻辑 --- */
+        const modal = document.getElementById('qr-modal');
+        function openQrModal(name) {
+            document.getElementById('modal-title').innerText = name;
+            modal.style.display = "flex";
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
         function closeModal() {
-            const modal = document.getElementById('success-modal');
             modal.classList.remove('show');
-            setTimeout(()=>modal.style.display = 'none', 200);
+            setTimeout(() => modal.style.display = "none", 300);
+        }
+
+        /* --- 登录注册流程 --- */
+        const viewLogin = document.getElementById('view-login');
+        const viewRegister = document.getElementById('view-register');
+        const viewHome = document.getElementById('view-home');
+
+        function goToRegister() { viewLogin.classList.remove('active'); viewRegister.classList.add('active'); }
+        function backToLogin() { viewRegister.classList.remove('active'); viewLogin.classList.add('active'); }
+        
+        function handleRegister() {
+            const btn = document.getElementById('btn-reg');
+            btn.innerText = "注册中...";
+            setTimeout(() => {
+                alert("注册成功！");
+                document.getElementById('login-acc').value = document.getElementById('reg-acc').value;
+                document.getElementById('login-pwd').value = document.getElementById('reg-pwd').value;
+                btn.innerText = "注 册";
+                backToLogin();
+            }, 800);
+        }
+
+        function handleLogin() {
+            if(!document.getElementById('login-acc').value) { alert('请输入账号'); return; }
+            event.target.innerText = "鉴权中...";
+            setTimeout(() => {
+                viewLogin.classList.remove('active');
+                viewHome.classList.add('active');
+                renderAssets();
+            }, 800);
         }
     </script>
 </body>
