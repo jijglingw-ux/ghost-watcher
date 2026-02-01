@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PLUVO - 价值捕获</title>
-    
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
@@ -15,7 +14,7 @@
             --accent-gold: #FFD700;
             --accent-red: #ff453a;
             --accent-green: #32d74b;
-            --item-bg: rgba(255, 255, 255, 0.05);
+            --item-bg: rgba(255, 255, 255, 0.08);
             --border-light: rgba(255, 255, 255, 0.1);
             --safe-bottom: env(safe-area-inset-bottom);
         }
@@ -33,9 +32,7 @@
         .mobile-wrapper {
             width: 100%; max-width: 430px; height: 100%; margin: 0 auto;
             position: relative; background: #000;
-            display: flex; flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            overflow: hidden;
+            display: flex; flex-direction: column; overflow: hidden;
         }
 
         /* 全局光效 */
@@ -46,7 +43,7 @@
         /* 视图切换容器 */
         .page-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s;
+            transition: transform 0.3s ease-out, opacity 0.3s;
             background: #000; opacity: 0; pointer-events: none; transform: scale(0.95);
             z-index: 10; display: flex; flex-direction: column;
         }
@@ -55,124 +52,63 @@
         /* ==================== 登录/注册 UI ==================== */
         .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
         .brand-section { margin-bottom: 60px; text-align: left; }
-        .logo-text {
-            font-size: 4.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -2px;
-            background: linear-gradient(180deg, #fff 0%, #666 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative;
-        }
-        .logo-dot {
-            display: inline-block; width: 12px; height: 12px;
-            background: var(--accent-cyan); border-radius: 50%;
-            box-shadow: 0 0 15px var(--accent-cyan); margin-left: 5px;
-        }
+        .logo-text { font-size: 4.5rem; font-weight: 800; background: linear-gradient(180deg, #fff 0%, #666 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         .slogan { font-size: 14px; color: rgba(255, 255, 255, 0.4); letter-spacing: 6px; margin-top: 15px; text-transform: uppercase; }
-
         .form-section { display: flex; flex-direction: column; gap: 35px; }
-        .clean-input {
-            width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; transition: all 0.3s; border-radius: 0;
-        }
-        .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
+        .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; transition: 0.3s; }
+        .clean-input:focus { border-bottom-color: var(--accent-cyan); }
         .code-row { display: flex; align-items: flex-end; gap: 10px; }
-        .btn-code {
-            background: rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.3);
-            color: var(--accent-cyan); padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
-        }
-        .action-area { margin-top: 50px; }
-        .btn-glow {
-            width: 100%; height: 60px; background: #fff; border: none; border-radius: 30px;
-            color: #000; font-size: 1.1rem; font-weight: 700; letter-spacing: 2px; cursor: pointer;
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); transition: transform 0.2s;
-        }
-        .btn-glow:active { transform: scale(0.96); }
+        .btn-code { background: rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.3); color: var(--accent-cyan); padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; }
+        .btn-glow { width: 100%; height: 60px; background: #fff; border: none; border-radius: 30px; color: #000; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 50px; }
         .link-row { display: flex; justify-content: center; margin-top: 30px; gap: 15px; }
-        .text-link { color: rgba(255, 255, 255, 0.3); font-size: 0.9rem; text-decoration: none; transition: color 0.3s; }
-        .text-link:hover { color: #fff; }
+        .text-link { color: rgba(255, 255, 255, 0.3); font-size: 0.9rem; text-decoration: none; }
         .divider { color: rgba(255,255,255,0.1); }
 
-        /* ==================== 资产/记录列表 UI ==================== */
+        /* ==================== 资产列表 UI ==================== */
+        /* 修改头部支持左右布局 */
         .home-header {
             padding: 50px 24px 10px;
             background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
             z-index: 30;
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 20px;}
-        .search-container { padding: 0 20px 10px; }
-        .search-box {
-            width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
-            padding: 12px 15px; border-radius: 8px; color: #fff; font-size: 0.9rem;
-            box-sizing: border-box; outline: none; transition: all 0.3s;
+        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
+        /* 历史记录按钮 */
+        .history-btn {
+            width: 36px; height: 36px; background: rgba(255,255,255,0.1); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.1); transition: 0.2s;
         }
-        .search-box:focus { border-color: var(--accent-cyan); background: rgba(0, 242, 255, 0.05); }
+        .history-btn:active { background: var(--accent-cyan); color: #000; border-color: var(--accent-cyan); }
 
+        .search-container { padding: 0 20px 10px; }
+        .search-box { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; color: #fff; outline: none; }
         .list-scroll-area { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); }
         
-        .asset-item {
-            display: flex; align-items: center; justify-content: space-between;
-            background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 12px; padding: 16px; border-radius: 12px;
-            transition: transform 0.2s; cursor: pointer;
-        }
-        .asset-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
-        .store-icon {
-            width: 40px; height: 40px; border-radius: 50%;
-            background: linear-gradient(135deg, #333, #111);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; border: 1px solid rgba(255,255,255,0.1); margin-right: 12px;
-        }
-        .store-name { font-size: 1rem; font-weight: 600; color: #fff; }
+        .asset-item { display: flex; align-items: center; justify-content: space-between; background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; padding: 16px; border-radius: 12px; }
+        .store-icon { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #333, #111); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-right: 12px; }
+        .store-name { font-size: 1rem; font-weight: 600; }
         .store-tag { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
-        .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate", sans-serif; }
+        .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate"; }
 
-        /* 记录列表特定样式 */
-        .record-item {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .rec-title { font-size: 0.95rem; color: #fff; margin-bottom: 4px; }
+        /* 记录列表 */
+        .record-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .rec-title { font-size: 0.95rem; margin-bottom: 4px; }
         .rec-time { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
-        .rec-val { font-size: 1rem; font-weight: bold; font-family: "DIN Alternate", sans-serif; }
-        .val-plus { color: var(--accent-green); }
-        .val-minus { color: var(--accent-red); }
+        .rec-val { font-size: 1rem; font-weight: bold; font-family: "DIN Alternate"; }
+        .val-plus { color: var(--accent-green); } .val-minus { color: var(--accent-red); }
 
-        /* ==================== 扫码探测 UI (强制层叠) ==================== */
-        .scanner-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 25; 
-            display: none; 
-        }
+        /* ==================== 扫码探测 UI ==================== */
+        .scanner-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 25; display: none; }
         .scanner-layer.active { display: block; }
-
         #reader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; border: none; }
         #reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
-
-        .scan-ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; pointer-events: none;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        .camera-bg {
-            position: absolute; width: 100%; height: 100%;
-            background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px);
-            background-size: 40px 40px; opacity: 0.3;
-        }
-        .scan-frame { 
-            width: 260px; height: 260px; position: relative;
-            border: 1px solid rgba(255,255,255,0.1); 
-            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.6);
-        }
-        .laser {
-            position: absolute; width: 100%; height: 2px; background: var(--accent-cyan);
-            box-shadow: 0 0 20px var(--accent-cyan); top: 0;
-            animation: scanAnim 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .scan-ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .camera-bg { position: absolute; width: 100%; height: 100%; background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.3; }
+        .scan-frame { width: 260px; height: 260px; position: relative; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 0 100vmax rgba(0,0,0,0.6); }
+        .laser { position: absolute; width: 100%; height: 2px; background: var(--accent-cyan); box-shadow: 0 0 20px var(--accent-cyan); top: 0; animation: scanAnim 2s infinite linear; }
         @keyframes scanAnim { 0% {top:0; opacity:0;} 50% {opacity:1;} 100% {top:100%; opacity:0;} }
-        .scan-tip {
-            position: absolute; bottom: 20%; 
-            background: rgba(0,0,0,0.6); padding: 8px 20px; 
-            border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); 
-            font-size: 0.9rem; color: #fff;
-        }
+        .scan-tip { position: absolute; bottom: 20%; background: rgba(0,0,0,0.6); padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2); font-size: 0.9rem; color: #fff; }
 
         /* ==================== 底部导航 ==================== */
         .bottom-nav {
@@ -182,58 +118,24 @@
             border-top: 1px solid rgba(255,255,255,0.1);
             display: flex; z-index: 40; box-sizing: border-box;
         }
-        .nav-btn {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: rgba(255,255,255,0.4); transition: all 0.3s; cursor: pointer;
-        }
+        .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); transition: 0.3s; cursor: pointer; }
         .nav-btn.active { color: var(--accent-cyan); }
-        .nav-btn.active .nav-icon { transform: scale(1.1); text-shadow: 0 0 10px var(--accent-cyan); }
         .nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s; }
         .nav-label { font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; }
 
-        /* ==================== 弹窗 & 设置按钮 ==================== */
-        .modal-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
-            z-index: 100; display: none; justify-content: center; align-items: center;
-            opacity: 0; transition: opacity 0.3s;
-        }
+        /* ==================== 弹窗 & 设置 ==================== */
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 100; display: none; justify-content: center; align-items: center; opacity: 0; transition: 0.3s; }
         .modal-overlay.show { opacity: 1; }
-        .modal-card {
-            width: 80%; background: #111; border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 20px; padding: 40px 20px; text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            transform: scale(0.9); transition: transform 0.3s;
-        }
+        .modal-card { width: 80%; background: #111; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px 20px; text-align: center; transform: scale(0.9); transition: 0.3s; }
         .modal-overlay.show .modal-card { transform: scale(1); }
-        .qr-placeholder {
-            width: 180px; height: 180px; background: #fff; margin: 0 auto 20px;
-            border-radius: 10px; padding: 10px; display: flex; justify-content: center; align-items: center;
-        }
-        .qr-pattern {
-            width: 160px; height: 160px;
-            background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), 
-                              linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
-            background-size: 20px 20px; background-position: 0 0, 10px 10px; opacity: 0.9;
-        }
-        .modal-store-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
+        .qr-placeholder { width: 180px; height: 180px; background: #fff; margin: 0 auto 20px; border-radius: 10px; padding: 10px; display: flex; justify-content: center; align-items: center; }
+        .qr-pattern { width: 160px; height: 160px; background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000); background-size: 20px 20px; opacity: 0.9; }
+        .modal-store-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; }
         .modal-tip { font-size: 0.8rem; color: #666; margin-bottom: 30px; }
-        .btn-close {
-            background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff;
-            padding: 10px 30px; border-radius: 20px; cursor: pointer;
-        }
-        /* 设置页按钮 */
-        .btn-danger {
-            width: 100%; height: 50px; background: rgba(255, 69, 58, 0.15); 
-            border: 1px solid var(--accent-red); border-radius: 25px; 
-            color: var(--accent-red); font-size: 1rem; font-weight: bold; 
-            margin-top: 20px; cursor: pointer;
-        }
-        .btn-outline {
-            width: 100%; height: 50px; background: transparent;
-            border: 1px solid #444; border-radius: 25px;
-            color: #888; font-size: 1rem; margin-top: 15px; cursor: pointer;
-        }
+        .btn-close { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 30px; border-radius: 20px; cursor: pointer; }
+        
+        .btn-danger { width: 100%; height: 50px; background: rgba(255, 69, 58, 0.15); border: 1px solid var(--accent-red); border-radius: 25px; color: var(--accent-red); font-weight: bold; margin-top: 20px; cursor: pointer; }
+        .btn-outline { width: 100%; height: 50px; background: transparent; border: 1px solid #444; border-radius: 25px; color: #888; margin-top: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -304,7 +206,8 @@
 
             <div id="tab-assets" class="page-view" style="display:flex;">
                 <div class="home-header">
-                    <div class="header-title">我的数字凭证</div>
+                    <div class="header-title" style="margin:0;">我的数字凭证</div>
+                    <div class="history-btn" onclick="switchTab('records')">🕒</div>
                 </div>
                 <div class="search-container">
                     <input type="text" class="search-box" placeholder="搜索商家..." oninput="renderAssets(this.value)">
@@ -314,36 +217,29 @@
 
             <div id="tab-records" class="page-view" style="display:none;">
                 <div class="home-header">
-                    <div class="header-title">交易记录</div>
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">Transaction History</div>
+                    <div style="display:flex; align-items:center;">
+                        <div onclick="switchTab('assets')" style="font-size:1.5rem; margin-right:15px; cursor:pointer;">←</div>
+                        <div>
+                            <div class="header-title" style="margin:0; font-size:1.2rem;">交易记录</div>
+                            <div style="font-size:0.7rem; color:#666;">Transaction History</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="list-scroll-area">
                     <div class="record-item">
-                        <div class="rec-info">
-                            <div class="rec-title">老张牛肉面</div>
-                            <div class="rec-time">今天 12:45 · 消费赠送</div>
-                        </div>
+                        <div class="rec-info"><div class="rec-title">老张牛肉面</div><div class="rec-time">今天 12:45 · 消费赠送</div></div>
                         <div class="rec-val val-plus">+ 5</div>
                     </div>
                     <div class="record-item">
-                        <div class="rec-info">
-                            <div class="rec-title">老张牛肉面</div>
-                            <div class="rec-time">今天 12:40 · 核销抵扣</div>
-                        </div>
+                        <div class="rec-info"><div class="rec-title">老张牛肉面</div><div class="rec-time">今天 12:40 · 核销抵扣</div></div>
                         <div class="rec-val val-minus">- 1</div>
                     </div>
                     <div class="record-item">
-                        <div class="rec-info">
-                            <div class="rec-title">星空咖啡馆</div>
-                            <div class="rec-time">昨天 18:20 · 扫码捕获</div>
-                        </div>
+                        <div class="rec-info"><div class="rec-title">星空咖啡馆</div><div class="rec-time">昨天 18:20 · 扫码捕获</div></div>
                         <div class="rec-val val-plus">+ 10</div>
                     </div>
                     <div class="record-item">
-                        <div class="rec-info">
-                            <div class="rec-title">PLUVO 官方</div>
-                            <div class="rec-time">2026-01-20 · 节点注册奖励</div>
-                        </div>
+                        <div class="rec-info"><div class="rec-title">PLUVO 官方</div><div class="rec-time">2026-01-20 · 节点注册奖励</div></div>
                         <div class="rec-val val-plus">+ 500</div>
                     </div>
                 </div>
@@ -352,7 +248,6 @@
             <div id="tab-settings" class="page-view" style="display:none;">
                 <div class="home-header">
                     <div class="header-title">系统设置</div>
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">System Config</div>
                 </div>
                 <div class="list-scroll-area">
                     <div class="asset-item" style="flex-direction:column; align-items:flex-start;">
@@ -375,10 +270,7 @@
                         <button class="btn-danger" onclick="doLogout()">退出终端</button>
                         <button class="btn-outline" onclick="doLogout()">切换账号</button>
                     </div>
-                    
-                    <div style="text-align:center; color:#444; font-size:0.7rem; margin-top:20px;">
-                        PLUVO Core v2.4.0 (Build 20260201)
-                    </div>
+                    <div style="text-align:center; color:#444; font-size:0.7rem; margin-top:20px;">PLUVO Core v2.4.0</div>
                 </div>
             </div>
 
@@ -388,9 +280,6 @@
                 </div>
                 <div class="nav-btn active" id="nav-assets" onclick="switchTab('assets')">
                     <div class="nav-icon">💼</div><div class="nav-label">持有</div>
-                </div>
-                <div class="nav-btn" id="nav-records" onclick="switchTab('records')">
-                    <div class="nav-icon">📝</div><div class="nav-label">记录</div>
                 </div>
                 <div class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
                     <div class="nav-icon">⚙️</div><div class="nav-label">设置</div>
@@ -453,7 +342,8 @@
 
         function startCamera() {
             if(html5QrCode) return;
-            if(!document.getElementById("reader")) return;
+            const readerDiv = document.getElementById("reader");
+            if (!readerDiv) return;
 
             html5QrCode = new Html5Qrcode("reader");
             const config = { fps: 15, qrbox: { width: 250, height: 250 } };
@@ -481,7 +371,6 @@
             const randomAmount = (Math.random() * 100).toFixed(2);
             const merchantName = "未知信号源 " + Math.floor(Math.random()*1000);
             
-            // 临时添加展示
             myAssets.unshift({ name: merchantName, tag: "捕获", count: parseFloat(randomAmount), icon: "👾" });
             
             document.getElementById('scan-result-text').innerText = `来源: ${decodedText}\n获取: +${randomAmount} CP`;
@@ -491,24 +380,33 @@
         }
 
         // === 导航与状态机 ===
-        function switchTab(tab) {
+        function switchTab(tabName) {
+            // 隐藏所有 View
             ['scan', 'assets', 'records', 'settings'].forEach(t => {
                 const el = document.getElementById('tab-'+t);
                 if(t === 'scan') el.classList.remove('active');
                 else el.style.display = 'none';
-                document.getElementById('nav-'+t).classList.remove('active');
             });
             
-            const target = document.getElementById('tab-'+tab);
-            if(tab === 'scan') {
+            // 处理底部导航激活状态
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            let activeNav = 'nav-' + tabName;
+            if (tabName === 'records') activeNav = 'nav-assets'; // 记录页属于持有页导航
+            
+            const navEl = document.getElementById(activeNav);
+            if(navEl) navEl.classList.add('active');
+
+            // 显示目标 View
+            const target = document.getElementById('tab-'+tabName);
+            if(tabName === 'scan') {
                 target.classList.add('active'); 
                 startCamera();
             } else {
                 target.style.display = 'flex'; 
-                if(tab === 'assets') renderAssets();
+                if(tabName === 'assets') renderAssets();
                 stopCamera();
             }
-            document.getElementById('nav-'+tab).classList.add('active');
         }
 
         // === 交互逻辑 ===
