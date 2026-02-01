@@ -2,370 +2,440 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PLUVO - 价值联盟</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PLUVO | 价值联盟</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <style>
-        /* =========================================
-           UI 样式 (100% 还原)
-           ========================================= */
-        :root { --bg-deep: #000000; --accent-cyan: #00f2ff; --accent-gold: #FFD700; --accent-red: #ff453a; --accent-green: #32d74b; --item-bg: rgba(255, 255, 255, 0.05); }
-        html, body { margin: 0; padding: 0; background-color: #000000 !important; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; height: 100dvh; width: 100vw; display: flex; justify-content: center; overflow: hidden; color: white; user-select: none; }
-        .mobile-wrapper { width: 100%; max-width: 430px; height: 100%; position: fixed; top: 0; background: #000; display: flex; flex-direction: column; overflow: hidden; }
+        /* ================= 视觉系统 (纯净商业版) ================= */
+        :root {
+            --bg-deep: #050505;
+            --card-bg: #111;
+            --text-main: #fff;
+            --text-sub: #888;
+            --accent: #00f2ff; /* PLUVO 赛博青 */
+            --danger: #ff453a;
+            --success: #32d74b;
+            --gold: #FFD700;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
-        .glow-spot-1 { position: absolute; top: -10%; left: -20%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(0, 242, 255, 0.15), transparent 70%); filter: blur(80px); animation: breathe 8s infinite alternate; z-index: 0; pointer-events: none; }
-        .glow-spot-2 { position: absolute; bottom: -10%; right: -20%; width: 400px; height: 400px; background: radial-gradient(circle, rgba(255, 255, 255, 0.03), transparent 70%); filter: blur(100px); z-index: 0; pointer-events: none; }
-        @keyframes breathe { 0% {opacity:0.5; transform:scale(1);} 100% {opacity:0.8; transform:scale(1.1);} }
+        body {
+            margin: 0; background-color: var(--bg-deep); color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+            height: 100vh; display: flex; justify-content: center; overflow: hidden;
+        }
 
-        .page-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: opacity 0.4s ease; background: #000; opacity: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; }
-        .page-view.active { opacity: 1; pointer-events: auto; z-index: 20; }
+        .app-container {
+            width: 100%; max-width: 430px; height: 100%;
+            position: relative; background: var(--bg-deep);
+            display: flex; flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
 
-        .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; z-index: 5; }
-        .logo-text { font-size: 4.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -2px; background: linear-gradient(180deg, #fff 0%, #666 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; }
-        .logo-dot { display: inline-block; width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 15px var(--accent-cyan); margin-left: 5px; }
-        .slogan { font-size: 14px; color: rgba(255, 255, 255, 0.4); letter-spacing: 6px; margin-top: 15px; text-transform: uppercase; }
+        /* --- 登录页样式 --- */
+        .auth-view {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-deep); z-index: 100;
+            display: flex; flex-direction: column; justify-content: center; padding: 40px;
+            transition: opacity 0.3s;
+        }
+        .auth-view.hidden { opacity: 0; pointer-events: none; z-index: -1; }
+
+        .logo-area { margin-bottom: 60px; text-align: left; }
+        .logo-title { font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin: 0; }
+        .logo-sub { color: var(--accent); font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+
+        .clean-input {
+            width: 100%; background: transparent; border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding: 15px 0; color: #fff; font-size: 1.1rem; margin-bottom: 20px; outline: none;
+        }
+        .clean-input:focus { border-bottom-color: var(--accent); }
+
+        .btn-primary {
+            width: 100%; padding: 16px; background: #fff; border: none; border-radius: 4px;
+            color: #000; font-weight: bold; font-size: 1rem; margin-top: 20px; cursor: pointer;
+        }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
         
-        .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; margin-top: 30px; border-radius: 0; -webkit-text-fill-color: #fff; opacity: 1; }
-        .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
+        .auth-links { margin-top: 20px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; }
 
-        .btn-glow { width: 100%; height: 60px; background: #fff; border: none; border-radius: 30px; color: #000; font-size: 1.1rem; font-weight: 700; margin-top: 50px; cursor: pointer; box-shadow: 0 0 40px rgba(255, 255, 255, 0.15); transition: transform 0.2s; }
-        .btn-glow:active { transform: scale(0.96); }
-        .link-row { display: flex; justify-content: center; margin-top: 30px; gap: 15px; }
-        .text-link { color: rgba(255, 255, 255, 0.3); font-size: 0.9rem; text-decoration: none; transition: color 0.3s; }
-        
-        .code-row { display: flex; align-items: flex-end; gap: 10px; }
-        .btn-code { background: rgba(0, 242, 255, 0.1); border: 1px solid rgba(0, 242, 255, 0.3); color: var(--accent-cyan); padding: 8px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+        /* --- 主界面样式 --- */
+        .main-view {
+            flex: 1; display: none; flex-direction: column; position: relative;
+        }
+        .main-view.active { display: flex; }
 
-        .home-header { padding: 50px 24px 10px; background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%); z-index: 30; }
-        .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 20px;}
-        .search-container { padding: 0 20px 10px; }
-        .search-box { width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; color: #fff; font-size: 0.9rem; box-sizing: border-box; outline: none; transition: all 0.3s; }
-        .asset-list { flex: 1; overflow-y: auto; padding: 10px 20px 100px; -webkit-overflow-scrolling: touch; }
-        .asset-item { display: flex; align-items: center; justify-content: space-between; background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05); margin-bottom: 12px; padding: 16px; border-radius: 12px; transition: transform 0.2s; cursor: pointer; }
-        .store-icon { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #333, #111); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; border: 1px solid rgba(255,255,255,0.1); margin-right: 12px; }
-        .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate", sans-serif; }
+        /* 顶部栏 */
+        .top-bar { padding: 50px 20px 20px; font-size: 1.5rem; font-weight: bold; background: linear-gradient(180deg, #000 0%, transparent 100%); }
 
-        .scan-viewport { flex: 1; position: relative; background: #000; overflow: hidden; display:flex; flex-direction:column; justify-content:center; }
-        #reader { width: 100%; height: 100%; object-fit: cover; }
-        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; border-radius: 0 !important; }
-        .scan-overlay-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; justify-content: center; align-items: center; }
-        .scan-frame { width: 260px; height: 260px; position: relative; border: 1px solid rgba(255,255,255,0.3); box-shadow: 0 0 0 1000px rgba(0,0,0,0.6); }
-        .laser { position: absolute; width: 100%; height: 2px; background: var(--accent-cyan); box-shadow: 0 0 20px var(--accent-cyan); top: 0; animation: scanAnim 2s infinite cubic-bezier(0.4, 0, 0.2, 1); }
-        @keyframes scanAnim { 0% {top:0; opacity:0;} 10% {opacity:1;} 90% {opacity:1;} 100% {top:100%; opacity:0;} }
+        /* 标签页容器 */
+        .tab-content { flex: 1; position: relative; overflow: hidden; }
+        .tab-pane { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            display: none; flex-direction: column; overflow-y: auto; padding: 20px; 
+            padding-bottom: 100px; /* 避开底部导航 */
+        }
+        .tab-pane.active { display: flex; }
 
-        .record-list { flex: 1; overflow-y: auto; padding: 10px 20px 100px; margin-top: 10px; }
-        .record-item { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .rec-val { font-size: 1rem; font-weight: bold; font-family: "DIN Alternate", sans-serif; }
-        
-        .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.1); display: flex; z-index: 40; padding-bottom: 10px; box-sizing: border-box; }
-        .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: rgba(255,255,255,0.4); transition: all 0.3s; cursor: pointer; }
-        .nav-btn.active { color: var(--accent-cyan); }
-        .nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s; }
-        .nav-label { font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; }
+        /* TAB 1: 扫码挖矿 */
+        .scanner-box {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .scan-trigger {
+            width: 200px; height: 200px; border-radius: 20px;
+            border: 2px dashed var(--accent);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0, 242, 255, 0.05); color: var(--accent);
+            cursor: pointer; transition: all 0.3s;
+        }
+        .scan-trigger:active { background: rgba(0, 242, 255, 0.2); transform: scale(0.95); }
+        .scan-anim { width: 100%; height: 2px; background: var(--accent); position: absolute; top: 0; animation: scan 2s infinite; }
+        @keyframes scan { 0% {top:10%; opacity:0;} 50% {opacity:1;} 100% {top:90%; opacity:0;} }
 
-        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; display: none; justify-content: center; align-items: center; }
-        .modal-card { width: 80%; background: #111; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 40px 20px; text-align: center; }
-        .qr-placeholder { width: 180px; height: 180px; background: #fff; margin: 0 auto 20px; border-radius: 10px; padding: 10px; display: flex; justify-content: center; align-items: center; }
-        .qr-pattern { width: 160px; height: 160px; background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000); background-size: 20px 20px; opacity: 0.9; }
-        .modal-store-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
-        .btn-close { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 10px 30px; border-radius: 20px; cursor: pointer; }
-        .empty-state { text-align: center; margin-top: 50px; color: rgba(255,255,255,0.3); font-size: 0.9rem; }
+        /* TAB 2: 资产持有 */
+        .asset-card {
+            background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 30px;
+            text-align: center; margin-bottom: 20px;
+        }
+        .balance-label { color: #888; font-size: 0.9rem; margin-bottom: 10px; }
+        .balance-num { font-size: 3rem; font-weight: 800; color: var(--gold); font-family: "DIN Alternate", sans-serif; }
+        .balance-unit { font-size: 1rem; color: #666; }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .action-btn {
+            background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 12px;
+            color: #fff; text-align: center; cursor: pointer;
+        }
+        .action-btn:active { background: #333; }
+
+        /* TAB 3: 交易记录 */
+        .record-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0; border-bottom: 1px solid #222;
+        }
+        .rec-meta { display: flex; flex-direction: column; }
+        .rec-name { font-size: 1rem; margin-bottom: 4px; }
+        .rec-date { font-size: 0.8rem; color: #666; }
+        .rec-amount { font-weight: bold; font-family: "DIN Alternate"; }
+        .rec-mint { color: var(--success); }
+        .rec-burn { color: var(--danger); }
+
+        /* 底部导航 */
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 80px;
+            background: rgba(10,10,10,0.95); border-top: 1px solid #222;
+            display: flex; justify-content: space-around; align-items: center;
+            backdrop-filter: blur(10px); z-index: 50;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #555; font-size: 10px; gap: 4px; }
+        .nav-item.active { color: var(--accent); }
+        .nav-icon { font-size: 24px; }
+
+        /* 核销弹窗 */
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 200; display: none;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        #qrcode { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="mobile-wrapper">
-        <div class="glow-spot-1"></div>
-        <div class="glow-spot-2"></div>
+<div class="app-container">
+    
+    <div id="auth-view" class="auth-view">
+        <div class="logo-area">
+            <h1 class="logo-title">PLUVO</h1>
+            <div class="logo-sub">数字权益 · 价值网络</div>
+        </div>
+        
+        <input type="email" id="email" class="clean-input" placeholder="账号 (Email)">
+        <input type="password" id="password" class="clean-input" placeholder="密码">
+        
+        <button class="btn-primary" onclick="handleLogin()">登 录</button>
+        
+        <div class="auth-links">
+            <span onclick="handleRegister()">注册新账号</span>
+            <span>忘记密码?</span>
+        </div>
+    </div>
 
-        <div id="view-login" class="page-view active">
-            <div class="content-layer">
-                <div class="brand-section">
-                    <h1 class="logo-text">PLUVO<span class="logo-dot"></span></h1>
-                    <div class="slogan">万物消费 · 价值联盟</div>
+    <div id="main-view" class="main-view">
+        
+        <div id="tab-scan" class="tab-pane active">
+            <div class="top-bar">扫描探测</div>
+            <div class="scanner-box">
+                <div class="scan-trigger" onclick="simulateScan()">
+                    <div style="font-size:3rem; margin-bottom:10px;">📷</div>
+                    <div style="font-size:0.9rem;">点击扫描商家码</div>
+                    <div class="scan-anim"></div>
                 </div>
-                <div class="form-section">
-                    <div class="input-wrapper">
-                        <input type="text" id="login-acc" class="clean-input" placeholder="账 号">
-                    </div>
-                    <div class="input-wrapper">
-                        <input type="password" id="login-pwd" class="clean-input" placeholder="密 码">
-                    </div>
-                </div>
-                <div class="action-area">
-                    <button class="btn-glow" onclick="Auth.login()">登 录</button>
-                    <div class="link-row">
-                        <a href="javascript:void(0)" class="text-link" onclick="goToRegister()">注册节点</a>
-                    </div>
+                <div style="margin-top:30px; text-align:center; color:#666; font-size:0.8rem; line-height:1.6;">
+                    对准 PLUVO 联盟商户收款码<br>消费即挖矿 · 自动计算贡献值
                 </div>
             </div>
         </div>
 
-        <div id="view-register" class="page-view">
-            <div class="content-layer">
-                <div class="brand-section">
-                    <h1 class="logo-text" style="font-size: 3rem;">注册</h1>
+        <div id="tab-assets" class="tab-pane">
+            <div class="top-bar">我的资产</div>
+            
+            <div class="asset-card">
+                <div class="balance-label">当前持有凭证 (CP)</div>
+                <div class="balance-num" id="balance-display">0.00</div>
+                <div class="balance-unit">PLUVO Genesis Token</div>
+            </div>
+
+            <div class="action-grid">
+                <div class="action-btn" onclick="openBurnModal()">
+                    <div style="font-size:1.5rem; margin-bottom:5px;">⚡</div>
+                    <div>出示核销码</div>
                 </div>
-                <div class="form-section" style="gap: 30px;">
-                    <div class="input-wrapper"><input type="text" id="reg-acc" class="clean-input" placeholder="设置账号"></div>
-                    <div class="input-wrapper"><input type="password" id="reg-pwd" class="clean-input" placeholder="设置密码"></div>
-                    <div class="input-wrapper"><input type="tel" class="clean-input" placeholder="手机号码"></div>
-                    <div class="input-wrapper code-row">
-                        <input type="number" class="clean-input" placeholder="验证码">
-                        <button class="btn-code">获取验证码</button>
-                    </div>
+                <div class="action-btn" onclick="loadRecords()">
+                    <div style="font-size:1.5rem; margin-bottom:5px;">🔄</div>
+                    <div>刷新余额</div>
                 </div>
-                <div class="action-area">
-                    <button class="btn-glow" id="btn-reg" onclick="Auth.register()">注 册</button>
-                    <div class="link-row"><a href="javascript:void(0)" class="text-link" onclick="backToLogin()">返回登录</a></div>
+            </div>
+
+            <div style="margin-top:30px; padding:20px; background:#111; border-radius:12px;">
+                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:10px;">当前权益汇率</div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888; margin-bottom:8px;">
+                    <span>10.0 CP</span>
+                    <span>= 免单一份牛肉面</span>
                 </div>
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888;">
+                    <span>0.5 CP</span>
+                    <span>= 兑换卤蛋一枚</span>
+                </div>
+            </div>
+            
+            <button onclick="logout()" style="margin-top:30px; background:none; border:none; color:#444; width:100%;">安全退出</button>
+        </div>
+
+        <div id="tab-records" class="tab-pane">
+            <div class="top-bar">账本记录</div>
+            <div id="record-list">
+                <div style="text-align:center; color:#666; margin-top:50px;">加载中...</div>
             </div>
         </div>
 
-        <div id="view-home" class="page-view">
-            <div id="tab-scan" class="scanner-layer">
-                <div class="scan-viewport">
-                    <div id="reader"></div>
-                    <div class="scan-overlay-ui">
-                        <div class="scan-frame"><div class="laser"></div></div>
-                        <div style="position:absolute; bottom:15%; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:10px; font-size:0.8rem;">
-                            对准任意二维码以捕获凭证
-                        </div>
-                    </div>
-                </div>
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('scan', this)">
+                <div class="nav-icon">👁️</div>
+                <div>扫码</div>
             </div>
-
-            <div id="tab-assets" style="height: 100%; display: flex; flex-direction: column; width: 100%;">
-                <div class="home-header"><div class="header-title">我的数字凭证</div></div>
-                <div class="search-container"><input type="text" class="search-box" placeholder="搜索商家..."></div>
-                <div class="asset-list" id="asset-list-dom"></div>
+            <div class="nav-item" onclick="switchTab('assets', this)">
+                <div class="nav-icon">💼</div>
+                <div>持有</div>
             </div>
-
-            <div id="tab-records" class="records-layer">
-                <div style="padding: 20px 24px;">
-                    <h2 style="margin: 0; font-size: 1.5rem;">交易记录</h2>
-                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">Transaction History</div>
-                </div>
-                <div class="record-list" id="record-list-dom"></div>
-            </div>
-
-            <div class="bottom-nav">
-                <div class="nav-btn" id="nav-scan" onclick="switchTab('scan')"><div class="nav-icon">👁️</div><div class="nav-label">扫码</div></div>
-                <div class="nav-btn active" id="nav-assets" onclick="switchTab('assets')"><div class="nav-icon">💼</div><div class="nav-label">持有</div></div>
-                <div class="nav-btn" id="nav-records" onclick="switchTab('records')"><div class="nav-icon">📝</div><div class="nav-label">记录</div></div>
-            </div>
-
-            <div class="modal-overlay" id="qr-modal">
-                <div class="modal-card">
-                    <div class="modal-store-name" id="modal-title">商家名称</div>
-                    <div class="modal-tip">请向商家出示此核销码</div>
-                    <div class="qr-placeholder"><div class="qr-pattern"></div></div>
-                    <button class="btn-close" onclick="Backend.burn()">核销 (点击模拟商家扫我)</button>
-                </div>
+            <div class="nav-item" onclick="switchTab('records', this)">
+                <div class="nav-icon">📝</div>
+                <div>记录</div>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- 1. 配置 Supabase ---
-        const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
+    <div id="burn-modal" class="modal" onclick="this.style.display='none'">
+        <div id="qrcode"></div>
+        <div style="margin-top:20px; color:#fff; font-size:1.2rem; font-weight:bold;">向商家出示此码</div>
+        <div style="color:#888; font-size:0.9rem; margin-top:10px;">点击任意处关闭</div>
+    </div>
+
+</div>
+
+<script>
+    // ================= 配置区 =================
+    // ⚠️ 请替换为你自己的 Supabase URL 和 Key
+    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
+    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus';
+    
+    const client = window.supabase.createClient(DB_URL, DB_KEY);
+    let currentUser = null;
+
+    // ================= 认证逻辑 =================
+    async function handleLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        if(!email || !password) return Swal.fire({text:'请输入账号密码', icon:'warning', background:'#000', color:'#fff'});
+
+        Swal.showLoading();
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        if(error) return Swal.fire({text: error.message, icon:'error', background:'#000', color:'#fff'});
+
+        currentUser = data.user;
+        enterApp();
+    }
+
+    async function handleRegister() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        if(!email || password.length < 6) return Swal.fire({text:'密码需大于6位', icon:'warning', background:'#000', color:'#fff'});
+
+        Swal.showLoading();
+        const { data, error } = await client.auth.signUp({ email, password });
+        if(error) return Swal.fire({text: error.message, icon:'error', background:'#000', color:'#fff'});
         
-        let supabase = null;
-        let currentUserId = null;
-        let html5QrCode = null;
+        Swal.fire({title:'注册成功', text:'请登录', icon:'success', background:'#000', color:'#fff'});
+    }
 
-        try {
-            if (typeof window.supabase !== 'undefined') {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            } else {
-                alert("组件加载失败，请刷新页面");
-            }
-        } catch(e) { console.error("初始化错误:", e); }
+    async function logout() {
+        await client.auth.signOut();
+        location.reload();
+    }
 
-        // --- 2. 摄像头逻辑 ---
-        function startCamera() {
-            if(html5QrCode) return;
-            html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-            html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
-            .catch(err => {
-                console.error("相机启动失败", err);
-                alert("请允许摄像头权限以扫码");
+    function enterApp() {
+        document.getElementById('auth-view').classList.add('hidden');
+        document.getElementById('main-view').classList.add('active');
+        loadBalance();
+        loadRecords();
+    }
+
+    // ================= 业务逻辑：扫码挖矿 (Mint) =================
+    // 对应文档：第一阶段“傻瓜模式” 
+    // 逻辑：输入消费金额 -> 按系数 0.4 计算贡献 -> 1:1 铸造凭证 (简化版公式)
+    async function simulateScan() {
+        const { value: amount } = await Swal.fire({
+            title: '模拟扫码成功',
+            text: '请输入本次消费金额 (CNY)',
+            input: 'number',
+            background: '#000', color: '#fff',
+            confirmButtonColor: '#00f2ff',
+            showCancelButton: true
+        });
+
+        if (amount) {
+            // 核心算法：傻瓜模式系数 0.4
+            const contribution = (amount * 0.4).toFixed(2); 
+            // 简化模型：贡献值 1:1 转化为凭证 (复杂模型需调用后端)
+            const tokenAmount = contribution; 
+
+            // 写入数据库 (Mint)
+            const { error } = await client.from('transactions').insert({
+                user_id: currentUser.id,
+                type: 'mint',
+                amount: tokenAmount,
+                cash_value: amount,
+                merchant_name: '模拟商家-' + Math.floor(Math.random()*100)
             });
-        }
 
-        function stopCamera() {
-            if(html5QrCode) {
-                html5QrCode.stop().then(() => { html5QrCode.clear(); html5QrCode = null; }).catch(err => console.log("停止失败", err));
-            }
-        }
-
-        function onScanSuccess(decodedText, decodedResult) {
-            stopCamera();
-            Backend.scan(decodedText);
-        }
-
-        // --- 3. 业务逻辑 ---
-        const Auth = {
-            register: async () => {
-                if(!supabase) return;
-                const acc = document.getElementById('reg-acc').value;
-                const pwd = document.getElementById('reg-pwd').value;
-                if(!acc || !pwd) return alert('请填写完整');
-                
-                const btn = document.getElementById('btn-reg');
-                btn.innerText = "连接云端...";
-                
-                try {
-                    const { data, error } = await supabase.from('users').insert([{ account: acc, password: pwd }]).select();
-                    btn.innerText = "注 册";
-                    if(error) {
-                        if(error.code === '23505') return alert('账号已存在'); 
-                        return alert('注册失败');
-                    }
-                    alert('注册成功！');
-                    backToLogin();
-                } catch(e) { btn.innerText = "注 册"; alert("网络请求失败"); }
-            },
-            login: async () => {
-                if(!supabase) return;
-                const acc = document.getElementById('login-acc').value;
-                const pwd = document.getElementById('login-pwd').value;
-                const btn = event.target; 
-                const originalText = btn.innerText;
-                btn.innerText = "鉴权中...";
-
-                try {
-                    const { data, error } = await supabase.from('users').select('*').eq('account', acc).eq('password', pwd).single();
-                    btn.innerText = originalText;
-                    if(error || !data) return alert('账号或密码错误');
-                    
-                    currentUserId = data.id;
-                    Backend.fetchData();
-                    
-                    document.getElementById('view-login').classList.remove('active');
-                    document.getElementById('view-home').classList.add('active');
-                    switchTab('assets');
-                } catch(e) { btn.innerText = originalText; alert("登录失败，请检查网络"); }
-            }
-        };
-
-        const Backend = {
-            fetchData: async () => {
-                if(!currentUserId) return;
-                const { data: assets } = await supabase.from('assets').select('*').eq('user_id', currentUserId);
-                const { data: records } = await supabase.from('records').select('*').eq('user_id', currentUserId).order('created_at', { ascending: false });
-                
-                const adom = document.getElementById('asset-list-dom');
-                adom.innerHTML = (!assets || assets.length === 0) ? '<div class="empty-state">暂无凭证，请去扫码</div>' : '';
-                assets?.forEach(item => {
-                    if(item.amount > 0) {
-                        const div = document.createElement('div');
-                        div.className = 'asset-item';
-                        div.onclick = () => openQrModal(item.shop_name);
-                        div.innerHTML = `
-                            <div style="display:flex; align-items:center;">
-                                <div class="store-icon">${item.shop_name[0]}</div>
-                                <div><div class="store-name">${item.shop_name}</div><div class="store-tag">点击核销</div></div>
-                            </div>
-                            <div class="asset-count">${item.amount}</div>
-                        `;
-                        adom.appendChild(div);
-                    }
+            if(error) {
+                Swal.fire({text: '上链失败: '+error.message, icon:'error', background:'#000', color:'#fff'});
+            } else {
+                Swal.fire({
+                    title: '挖矿成功!',
+                    html: `消费: ¥${amount}<br>贡献: ¥${contribution}<br><b style="color:#00f2ff; font-size:1.5rem;">+${tokenAmount} CP</b>`,
+                    icon: 'success',
+                    background: '#000', color: '#fff'
                 });
+                loadBalance();
+                loadRecords();
+            }
+        }
+    }
 
-                const rdom = document.getElementById('record-list-dom');
-                rdom.innerHTML = (!records || records.length === 0) ? '<div class="empty-state">暂无记录</div>' : '';
-                records?.forEach(r => {
-                    const color = r.amount > 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-                    const sign = r.amount > 0 ? '+' : '';
-                    const div = document.createElement('div');
-                    div.className = 'record-item';
-                    div.innerHTML = `
-                        <div class="rec-info">
-                            <div class="rec-title">${r.shop_name}</div>
-                            <div class="rec-time">${new Date(r.created_at).toLocaleTimeString()} · ${r.type}</div>
+    // ================= 业务逻辑：资产核销 (Burn) =================
+    function openBurnModal() {
+        document.getElementById('burn-modal').style.display = 'flex';
+        document.getElementById('qrcode').innerHTML = "";
+        
+        // 生成二维码 (包含用户ID和时间戳)
+        new QRCode(document.getElementById("qrcode"), {
+            text: JSON.stringify({uid: currentUser.id, ts: Date.now()}),
+            width: 200, height: 200
+        });
+
+        // 模拟商家扫码扣款 (仅演示用，3秒后自动扣除)
+        setTimeout(() => {
+            simulateMerchantScan();
+        }, 3000);
+    }
+
+    async function simulateMerchantScan() {
+        // 模拟商家在 POS 机上扣除了 5 个币换茶叶蛋
+        const burnAmount = 5.00; 
+
+        document.getElementById('burn-modal').style.display = 'none';
+        
+        const { error } = await client.from('transactions').insert({
+            user_id: currentUser.id,
+            type: 'burn',
+            amount: -burnAmount, // 负数代表扣除
+            merchant_name: 'PLUVO 核销中心',
+            cash_value: 0
+        });
+
+        if(!error) {
+            Swal.fire({
+                title: '核销成功',
+                text: `已扣除 ${burnAmount} CP`,
+                icon: 'success', background: '#000', color: '#fff', timer: 1500, showConfirmButton: false
+            });
+            loadBalance();
+            loadRecords();
+        }
+    }
+
+    // ================= 数据加载 =================
+    async function loadBalance() {
+        const { data } = await client.from('transactions').select('amount').eq('user_id', currentUser.id);
+        if(data) {
+            // 计算总和
+            const total = data.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
+            document.getElementById('balance-display').innerText = total.toFixed(2);
+        }
+    }
+
+    async function loadRecords() {
+        const { data } = await client.from('transactions')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+            
+        const container = document.getElementById('record-list');
+        container.innerHTML = "";
+
+        if(data && data.length > 0) {
+            data.forEach(tx => {
+                const isMint = tx.type === 'mint';
+                const sign = isMint ? '+' : '';
+                const colorClass = isMint ? 'rec-mint' : 'rec-burn';
+                const date = new Date(tx.created_at).toLocaleString();
+                
+                const html = `
+                    <div class="record-item">
+                        <div class="rec-meta">
+                            <div class="rec-name">${tx.merchant_name || '系统'}</div>
+                            <div class="rec-date">${date}</div>
                         </div>
-                        <div class="rec-val" style="color:${color}">${sign}${r.amount}</div>
-                    `;
-                    rdom.appendChild(div);
-                });
-            },
-            
-            scan: async (qrContent) => {
-                // 模拟业务逻辑：根据扫到的码分发奖励 (实际需解析 qrContent)
-                const shops = ['老张牛肉面', '星空咖啡馆', 'PLUVO 官方'];
-                const shopName = shops[Math.floor(Math.random() * shops.length)];
-                const amount = 10; 
-
-                const { data: existing } = await supabase.from('assets').select('*').eq('user_id', currentUserId).eq('shop_name', shopName).single();
-                if(existing) {
-                    await supabase.from('assets').update({ amount: existing.amount + amount }).eq('id', existing.id);
-                } else {
-                    await supabase.from('assets').insert({ user_id: currentUserId, shop_name: shopName, amount: amount });
-                }
-                await supabase.from('records').insert({ user_id: currentUserId, shop_name: shopName, type: '扫码捕获', amount: amount });
-                
-                alert(`捕获成功！\n商家: ${shopName}\n数量: +${amount}`);
-                switchTab('assets');
-            },
-
-            burn: async () => {
-                const name = document.getElementById('modal-title').innerText;
-                const { data: asset } = await supabase.from('assets').select('*').eq('user_id', currentUserId).eq('shop_name', name).single();
-                
-                if(asset && asset.amount > 0) {
-                    await supabase.from('assets').update({ amount: asset.amount - 1 }).eq('id', asset.id);
-                    await supabase.from('records').insert({ user_id: currentUserId, shop_name: name, type: '核销抵扣', amount: -1 });
-                    alert('核销成功！云端数据已同步');
-                }
-                closeModal();
-                Backend.fetchData();
-            }
-        };
-
-        /* --- 页面切换逻辑 --- */
-        const viewLogin = document.getElementById('view-login');
-        const viewRegister = document.getElementById('view-register');
-        const modal = document.getElementById('qr-modal');
-
-        function goToRegister() { viewLogin.classList.remove('active'); viewRegister.classList.add('active'); }
-        function backToLogin() { viewRegister.classList.remove('active'); viewLogin.classList.add('active'); }
-        
-        function switchTab(tab) {
-            ['scan', 'assets', 'records'].forEach(t => {
-                document.getElementById('tab-'+t).style.display = 'none';
-                if(t !== 'assets') document.getElementById('tab-'+t).classList.remove('active'); 
-                document.getElementById('nav-'+t).classList.remove('active');
+                        <div class="rec-amount ${colorClass}">${sign}${tx.amount}</div>
+                    </div>
+                `;
+                container.innerHTML += html;
             });
-            
-            const target = document.getElementById('tab-'+tab);
-            target.style.display = (tab === 'scan') ? 'flex' : 'flex'; 
-            if(tab === 'scan' || tab === 'records') target.classList.add('active');
-            
-            document.getElementById('nav-'+tab).classList.add('active');
-            
-            if(tab === 'scan') {
-                startCamera();
-            } else {
-                stopCamera();
-                if(tab !== 'scan') Backend.fetchData();
-            }
+        } else {
+            container.innerHTML = '<div style="text-align:center; color:#444; margin-top:50px;">暂无记录</div>';
         }
+    }
 
-        function openQrModal(name) {
-            document.getElementById('modal-title').innerText = name;
-            modal.style.display = "flex";
-            setTimeout(() => modal.classList.add('show'), 10);
-        }
-        function closeModal() {
-            modal.classList.remove('show');
-            setTimeout(() => modal.style.display = "none", 300);
-        }
-    </script>
+    // ================= UI 切换 =================
+    function switchTab(tabId, btn) {
+        // 隐藏所有 Tab
+        document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        
+        // 显示当前 Tab
+        document.getElementById('tab-' + tabId).classList.add('active');
+        btn.classList.add('active');
+        
+        // 刷新数据
+        if(tabId === 'assets') loadBalance();
+        if(tabId === 'records') loadRecords();
+    }
+</script>
 </body>
 </html>
