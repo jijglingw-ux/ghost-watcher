@@ -2,37 +2,44 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>PLUVO - 数字凭证</title>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 
     <style>
         /* =========================================
-           基础设置 (防白屏 + 深色模式)
+           基础设置 (iOS 修复版)
            ========================================= */
         :root {
             --bg-deep: #000000;
-            --accent-cyan: #00f2ff; /* 赛博青 - 强调/增加 */
-            --accent-gold: #FFD700; /* 价值金 - 币种 */
-            --accent-red: #ff453a;  /* 警示红 - 支出 */
-            --accent-green: #32d74b; /* 成功绿 - 收入 */
+            --accent-cyan: #00f2ff;
+            --accent-gold: #FFD700;
+            --accent-red: #ff453a;
+            --accent-green: #32d74b;
             --item-bg: rgba(255, 255, 255, 0.05);
             --border-light: rgba(255, 255, 255, 0.1);
+            /* 定义安全区域变量 */
+            --safe-bottom: env(safe-area-inset-bottom);
         }
         
         html, body {
             margin: 0; padding: 0;
             background-color: #000000 !important;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
-            height: 100vh; width: 100vw;
+            /* 关键修复：使用 dvh 适应 iOS 动态地址栏 */
+            height: 100vh; 
+            height: 100dvh; 
+            width: 100vw;
             display: flex; justify-content: center; align-items: center;
             overflow: hidden; color: white;
             user-select: none;
         }
 
         .mobile-wrapper {
-            width: 100%; max-width: 430px; height: 100%;
+            width: 100%; max-width: 430px; 
+            /* 关键修复：高度跟随父容器 */
+            height: 100%;
             position: relative; background: #000;
             display: flex; flex-direction: column;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
@@ -63,9 +70,7 @@
         }
         .page-view.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 20; }
 
-        /* ====================
-           UI 组件: 登录/注册
-           ==================== */
+        /* ==================== UI 组件: 登录/注册 ==================== */
         .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
         .brand-section { margin-bottom: 60px; text-align: left; }
         .logo-text {
@@ -104,9 +109,7 @@
         .text-link:hover { color: #fff; }
         .divider { color: rgba(255,255,255,0.1); }
 
-        /* ====================
-           首页: 资产列表 (中)
-           ==================== */
+        /* ==================== 首页: 资产列表 (中) ==================== */
         .home-header {
             padding: 50px 24px 10px;
             background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
@@ -122,7 +125,11 @@
         }
         .search-box:focus { border-color: var(--accent-cyan); background: rgba(0, 242, 255, 0.05); }
 
-        .asset-list { flex: 1; overflow-y: auto; padding: 10px 20px 100px; }
+        /* 关键修复：增加底部 padding，防止列表被导航栏遮挡 */
+        .asset-list { 
+            flex: 1; overflow-y: auto; 
+            padding: 10px 20px calc(100px + var(--safe-bottom)); 
+        }
         .asset-item {
             display: flex; align-items: center; justify-content: space-between;
             background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05);
@@ -141,9 +148,7 @@
         .store-tag { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
         .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate", sans-serif; }
 
-        /* ====================
-           首页: 扫码探测 (左) - 已修改为支持真实相机
-           ==================== */
+        /* ==================== 首页: 扫码探测 (左) ==================== */
         .scanner-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 25; display: none; flex-direction: column;
@@ -151,27 +156,18 @@
         .scanner-layer.active { display: flex; }
         .scan-viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
-        /* 真实摄像头容器 */
-        #reader {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: 1;
-        }
-        /* 修复html5-qrcode生成的video样式 */
-        #reader video { 
-            object-fit: cover; width: 100% !important; height: 100% !important; 
-        }
+        #reader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; }
 
         .camera-bg {
             position: absolute; width: 100%; height: 100%;
             background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px);
-            background-size: 40px 40px; opacity: 0.3; /* 降低透明度以便看到相机 */
-            pointer-events: none; z-index: 2;
+            background-size: 40px 40px; opacity: 0.3; pointer-events: none; z-index: 2;
         }
         .scan-frame { 
             width: 260px; height: 260px; position: relative;
-            border: 1px solid rgba(255,255,255,0.1); 
-            z-index: 3;
-            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5); /* 遮罩效果 */
+            border: 1px solid rgba(255,255,255,0.1); z-index: 3;
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5);
         }
         .laser {
             position: absolute; width: 100%; height: 2px; background: var(--accent-cyan);
@@ -180,9 +176,7 @@
         }
         @keyframes scanAnim { 0% {top:0; opacity:0;} 10% {opacity:1;} 90% {opacity:1;} 100% {top:100%; opacity:0;} }
 
-        /* ====================
-           首页: 交易记录 (右)
-           ==================== */
+        /* ==================== 首页: 交易记录 (右) ==================== */
         .records-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 25; display: none; flex-direction: column;
@@ -190,7 +184,12 @@
         }
         .records-layer.active { display: flex; }
         
-        .record-list { flex: 1; overflow-y: auto; padding: 10px 20px 100px; margin-top: 10px; }
+        /* 关键修复：列表底部 padding */
+        .record-list { 
+            flex: 1; overflow-y: auto; 
+            padding: 10px 20px calc(100px + var(--safe-bottom)); 
+            margin-top: 10px; 
+        }
         .record-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -202,15 +201,16 @@
         .val-plus { color: var(--accent-green); }
         .val-minus { color: var(--accent-red); }
 
-        /* ====================
-           底部导航 (3栏)
-           ==================== */
+        /* ==================== 底部导航 (3栏) ==================== */
         .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 80px;
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            /* 关键修复：高度增加，包含安全区域 */
+            height: calc(80px + var(--safe-bottom));
+            padding-bottom: calc(10px + var(--safe-bottom));
+            
             background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.1);
-            display: flex; z-index: 40;
-            padding-bottom: 10px; box-sizing: border-box;
+            display: flex; z-index: 40; box-sizing: border-box;
         }
         .nav-btn {
             flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -221,9 +221,7 @@
         .nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s; }
         .nav-label { font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; }
 
-        /* ====================
-           核销码弹窗 (QR Modal)
-           ==================== */
+        /* ==================== 核销码弹窗 (QR Modal) ==================== */
         .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
@@ -422,7 +420,6 @@
         function renderAssets(filter = "") {
             const container = document.getElementById('asset-list-dom');
             container.innerHTML = "";
-            // 不再计算总数
             
             assetsData.forEach(item => {
                 if(item.name.indexOf(filter) === -1) return;
