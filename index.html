@@ -22,7 +22,7 @@
         .logo-dot { display: inline-block; width: 12px; height: 12px; background: var(--accent-cyan); border-radius: 50%; box-shadow: 0 0 15px var(--accent-cyan); margin-left: 5px; }
         .slogan { font-size: 14px; color: rgba(255, 255, 255, 0.4); letter-spacing: 6px; margin-top: 15px; text-transform: uppercase; }
         
-        /* 输入框样式微调：禁用默认的高亮背景 */
+        /* 输入框样式：确保字体颜色可见 */
         .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; margin-top: 30px; border-radius: 0; -webkit-text-fill-color: #fff; opacity: 1; } 
         .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
         
@@ -60,8 +60,10 @@
                     <div class="slogan">万物消费 · 价值联盟</div>
                 </div>
                 <div style="flex:1"></div>
-                <input type="text" id="login-acc" class="clean-input" placeholder="账 号" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
-                <input type="password" id="login-pwd" class="clean-input" placeholder="密 码" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="text" id="login-acc" class="clean-input" placeholder="账 号" name="no-autofill-user" autocomplete="off" autocorrect="off" autocapitalize="off">
+                
+                <input type="text" id="login-pwd" class="clean-input" placeholder="密 码" name="no-autofill-pass" autocomplete="off" 
+                       onfocus="this.type='password';">
                 
                 <button class="btn-glow" onclick="Auth.login()">登 录</button>
                 <div style="text-align:center; margin-top:30px;">
@@ -74,8 +76,10 @@
         <div id="view-register" class="page-view">
             <div class="content-layer">
                 <div class="brand-section"><h1 class="logo-text" style="font-size:3rem">注册</h1></div>
-                <input type="text" id="reg-acc" class="clean-input" placeholder="设置账号" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');">
-                <input type="password" id="reg-pwd" class="clean-input" placeholder="设置密码" autocomplete="new-password" readonly onfocus="this.removeAttribute('readonly');">
+                <input type="text" id="reg-acc" class="clean-input" placeholder="设置账号" name="new-user-rnd" autocomplete="off">
+                <input type="text" id="reg-pwd" class="clean-input" placeholder="设置密码" name="new-pass-rnd" autocomplete="off" 
+                       onfocus="this.type='password';">
+                       
                 <button class="btn-glow" onclick="Auth.register()">注 册</button>
                 <div style="text-align:center; margin-top:30px;"><a href="javascript:void(0)" style="color:rgba(255,255,255,0.3); text-decoration:none;" onclick="Router.go('view-login')">返回登录</a></div>
             </div>
@@ -112,7 +116,7 @@
 
     <script>
         // ============================================
-        // 1. 配置真实云数据库 (Supabase)
+        // 1. 配置 Supabase (已更新为您提供的正确 Key)
         // ============================================
         const SUPABASE_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1ZGxhdXVmZG5yZGN6dGxlc3ZyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMzIxMTAsImV4cCI6MjA4NDcwODExMH0.LgCJydI31uesR18qsvNpIYc4a-5YqlMX_khg3It4Ch4';
@@ -129,6 +133,7 @@
                 
                 const btn = event.target; btn.innerText = "连接云端...";
                 
+                // 1. 真实写入云数据库
                 const { data, error } = await supabase.from('users').insert([{ account: acc, password: pwd }]).select();
                 
                 btn.innerText = "注 册";
@@ -148,6 +153,7 @@
                 
                 const btn = event.target; btn.innerText = "鉴权中...";
 
+                // 2. 真实查询云数据库
                 const { data, error } = await supabase.from('users').select('*').eq('account', acc).eq('password', pwd).single();
                 
                 btn.innerText = "登 录";
