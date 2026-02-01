@@ -9,7 +9,7 @@
 
     <style>
         /* =========================================
-           基础设置 (iOS 修复版)
+           基础设置
            ========================================= */
         :root {
             --bg-deep: #000000;
@@ -19,7 +19,6 @@
             --accent-green: #32d74b;
             --item-bg: rgba(255, 255, 255, 0.05);
             --border-light: rgba(255, 255, 255, 0.1);
-            /* 定义安全区域变量 */
             --safe-bottom: env(safe-area-inset-bottom);
         }
         
@@ -27,19 +26,14 @@
             margin: 0; padding: 0;
             background-color: #000000 !important;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
-            /* 关键修复：使用 dvh 适应 iOS 动态地址栏 */
-            height: 100vh; 
-            height: 100dvh; 
-            width: 100vw;
+            height: 100vh; height: 100dvh; width: 100vw;
             display: flex; justify-content: center; align-items: center;
             overflow: hidden; color: white;
             user-select: none;
         }
 
         .mobile-wrapper {
-            width: 100%; max-width: 430px; 
-            /* 关键修复：高度跟随父容器 */
-            height: 100%;
+            width: 100%; max-width: 430px; height: 100%;
             position: relative; background: #000;
             display: flex; flex-direction: column;
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
@@ -50,8 +44,7 @@
         .glow-spot-1 {
             position: absolute; top: -10%; left: -20%; width: 300px; height: 300px;
             background: radial-gradient(circle, rgba(0, 242, 255, 0.15), transparent 70%);
-            filter: blur(80px);
-            animation: breathe 8s infinite alternate; z-index: 0; pointer-events: none;
+            filter: blur(80px); animation: breathe 8s infinite alternate; z-index: 0; pointer-events: none;
         }
         .glow-spot-2 {
             position: absolute; bottom: -10%; right: -20%; width: 400px; height: 400px;
@@ -64,19 +57,18 @@
         .page-view {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s;
-            background: #000;
-            opacity: 0; pointer-events: none; transform: scale(0.95);
+            background: #000; opacity: 0; pointer-events: none; transform: scale(0.95);
             z-index: 10; display: flex; flex-direction: column;
         }
         .page-view.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 20; }
 
-        /* ==================== UI 组件: 登录/注册 ==================== */
+        /* UI 组件 */
         .content-layer { flex: 1; padding: 40px; display: flex; flex-direction: column; justify-content: center; }
         .brand-section { margin-bottom: 60px; text-align: left; }
         .logo-text {
             font-size: 4.5rem; font-weight: 800; margin: 0; line-height: 1; letter-spacing: -2px;
             background: linear-gradient(180deg, #fff 0%, #666 100%);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
         .logo-dot {
             display: inline-block; width: 12px; height: 12px;
@@ -88,8 +80,7 @@
         .form-section { display: flex; flex-direction: column; gap: 35px; }
         .clean-input {
             width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none;
-            transition: all 0.3s; border-radius: 0;
+            padding: 12px 0; color: #fff; font-size: 1.1rem; outline: none; transition: all 0.3s; border-radius: 0;
         }
         .clean-input:focus { border-bottom-color: var(--accent-cyan); box-shadow: 0 10px 20px -10px rgba(0, 242, 255, 0.1); }
         .code-row { display: flex; align-items: flex-end; gap: 10px; }
@@ -109,14 +100,13 @@
         .text-link:hover { color: #fff; }
         .divider { color: rgba(255,255,255,0.1); }
 
-        /* ==================== 首页: 资产列表 (中) ==================== */
+        /* 资产列表 */
         .home-header {
             padding: 50px 24px 10px;
             background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
             z-index: 30;
         }
         .header-title { font-size: 1.5rem; font-weight: 800; color: #fff; letter-spacing: 1px; margin-bottom: 20px;}
-        
         .search-container { padding: 0 20px 10px; }
         .search-box {
             width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1);
@@ -125,11 +115,7 @@
         }
         .search-box:focus { border-color: var(--accent-cyan); background: rgba(0, 242, 255, 0.05); }
 
-        /* 关键修复：增加底部 padding，防止列表被导航栏遮挡 */
-        .asset-list { 
-            flex: 1; overflow-y: auto; 
-            padding: 10px 20px calc(100px + var(--safe-bottom)); 
-        }
+        .asset-list { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); }
         .asset-item {
             display: flex; align-items: center; justify-content: space-between;
             background: var(--item-bg); border: 1px solid rgba(255,255,255,0.05);
@@ -137,7 +123,6 @@
             transition: transform 0.2s; cursor: pointer;
         }
         .asset-item:active { transform: scale(0.98); background: rgba(255,255,255,0.1); }
-        
         .store-icon {
             width: 40px; height: 40px; border-radius: 50%;
             background: linear-gradient(135deg, #333, #111);
@@ -148,26 +133,58 @@
         .store-tag { font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
         .asset-count { font-size: 1.2rem; font-weight: 700; color: var(--accent-gold); font-family: "DIN Alternate", sans-serif; }
 
-        /* ==================== 首页: 扫码探测 (左) ==================== */
+        /* ====================
+           [重点修复] 扫码探测 UI
+           ==================== */
         .scanner-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 25; display: none; flex-direction: column;
+            overflow: hidden; /* 防止溢出 */
         }
         .scanner-layer.active { display: flex; }
-        .scan-viewport { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
         
-        #reader { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-        #reader video { object-fit: cover; width: 100% !important; height: 100% !important; }
+        /* 1. 摄像头容器 */
+        .scan-viewport { 
+            flex: 1; position: relative; 
+            display: flex; justify-content: center; align-items: center; 
+            overflow: hidden;
+            background: #000;
+        }
+        
+        /* 2. 真实摄像头元素样式 (修复偏位核心) */
+        #reader { 
+            position: absolute; 
+            top: 0; left: 0; 
+            width: 100% !important; 
+            height: 100% !important;
+            overflow: hidden;
+            z-index: 1; 
+        }
+        
+        /* 强行纠正 video 尺寸和位置 */
+        #reader video { 
+            width: 100vw !important; 
+            height: 100vh !important;
+            object-fit: cover !important; /* 关键：撑满屏幕 */
+            position: absolute !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important; /* 关键：从中心放大 */
+        }
 
+        /* 3. 网格背景 */
         .camera-bg {
             position: absolute; width: 100%; height: 100%;
             background: linear-gradient(rgba(0,242,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,255,0.05) 1px, transparent 1px);
             background-size: 40px 40px; opacity: 0.3; pointer-events: none; z-index: 2;
         }
+        
+        /* 4. 扫描框 */
         .scan-frame { 
             width: 260px; height: 260px; position: relative;
             border: 1px solid rgba(255,255,255,0.1); z-index: 3;
-            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.5);
+            /* 使用超大阴影做遮罩，突显扫描区 */
+            box-shadow: 0 0 0 100vmax rgba(0,0,0,0.6);
         }
         .laser {
             position: absolute; width: 100%; height: 2px; background: var(--accent-cyan);
@@ -176,20 +193,13 @@
         }
         @keyframes scanAnim { 0% {top:0; opacity:0;} 10% {opacity:1;} 90% {opacity:1;} 100% {top:100%; opacity:0;} }
 
-        /* ==================== 首页: 交易记录 (右) ==================== */
+        /* 交易记录 */
         .records-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 25; display: none; flex-direction: column;
-            padding-top: 20px;
+            background: #000; z-index: 25; display: none; flex-direction: column; padding-top: 20px;
         }
         .records-layer.active { display: flex; }
-        
-        /* 关键修复：列表底部 padding */
-        .record-list { 
-            flex: 1; overflow-y: auto; 
-            padding: 10px 20px calc(100px + var(--safe-bottom)); 
-            margin-top: 10px; 
-        }
+        .record-list { flex: 1; overflow-y: auto; padding: 10px 20px calc(100px + var(--safe-bottom)); margin-top: 10px; }
         .record-item {
             display: flex; align-items: center; justify-content: space-between;
             padding: 15px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -201,13 +211,10 @@
         .val-plus { color: var(--accent-green); }
         .val-minus { color: var(--accent-red); }
 
-        /* ==================== 底部导航 (3栏) ==================== */
+        /* 底部导航 */
         .bottom-nav {
             position: absolute; bottom: 0; left: 0; width: 100%; 
-            /* 关键修复：高度增加，包含安全区域 */
-            height: calc(80px + var(--safe-bottom));
-            padding-bottom: calc(10px + var(--safe-bottom));
-            
+            height: calc(80px + var(--safe-bottom)); padding-bottom: calc(10px + var(--safe-bottom));
             background: rgba(10, 10, 10, 0.95); backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255,255,255,0.1);
             display: flex; z-index: 40; box-sizing: border-box;
@@ -221,7 +228,7 @@
         .nav-icon { font-size: 1.4rem; margin-bottom: 4px; transition: transform 0.2s; }
         .nav-label { font-size: 0.7rem; letter-spacing: 1px; font-weight: 500; }
 
-        /* ==================== 核销码弹窗 (QR Modal) ==================== */
+        /* 模态框 */
         .modal-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
@@ -229,7 +236,6 @@
             opacity: 0; transition: opacity 0.3s;
         }
         .modal-overlay.show { opacity: 1; }
-        
         .modal-card {
             width: 80%; background: #111; border: 1px solid rgba(255,255,255,0.1);
             border-radius: 20px; padding: 40px 20px; text-align: center;
@@ -237,32 +243,25 @@
             transform: scale(0.9); transition: transform 0.3s;
         }
         .modal-overlay.show .modal-card { transform: scale(1); }
-
         .qr-placeholder {
             width: 180px; height: 180px; background: #fff; margin: 0 auto 20px;
-            border-radius: 10px; padding: 10px;
-            display: flex; justify-content: center; align-items: center;
+            border-radius: 10px; padding: 10px; display: flex; justify-content: center; align-items: center;
         }
         .qr-pattern {
             width: 160px; height: 160px;
             background-image: linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), 
                               linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 10px;
-            opacity: 0.9;
+            background-size: 20px 20px; background-position: 0 0, 10px 10px; opacity: 0.9;
         }
-        
         .modal-store-name { font-size: 1.2rem; font-weight: bold; margin-bottom: 5px; color: #fff; }
         .modal-tip { font-size: 0.8rem; color: #666; margin-bottom: 30px; }
         .btn-close {
             background: transparent; border: 1px solid rgba(255,255,255,0.3); color: #fff;
             padding: 10px 30px; border-radius: 20px; cursor: pointer;
         }
-
     </style>
 </head>
 <body>
-
     <div class="mobile-wrapper">
         <div class="glow-spot-1"></div>
         <div class="glow-spot-2"></div>
@@ -311,13 +310,10 @@
         </div>
 
         <div id="view-home" class="page-view">
-            
             <div id="tab-scan" class="scanner-layer">
                 <div class="scan-viewport">
                     <div id="reader"></div>
-
                     <div class="camera-bg"></div>
-                    
                     <div class="scan-frame">
                         <div style="position:absolute; top:-2px; left:-2px; width:20px; height:20px; border-top:3px solid var(--accent-cyan); border-left:3px solid var(--accent-cyan);"></div>
                         <div style="position:absolute; top:-2px; right:-2px; width:20px; height:20px; border-top:3px solid var(--accent-cyan); border-right:3px solid var(--accent-cyan);"></div>
@@ -335,13 +331,10 @@
                 <div class="home-header">
                     <div class="header-title">我的数字凭证</div>
                 </div>
-
                 <div class="search-container">
                     <input type="text" class="search-box" placeholder="搜索商家..." oninput="filterAssets(this.value)">
                 </div>
-
-                <div class="asset-list" id="asset-list-dom">
-                </div>
+                <div class="asset-list" id="asset-list-dom"></div>
             </div>
 
             <div id="tab-records" class="records-layer">
@@ -397,20 +390,14 @@
                 <div class="modal-card">
                     <div class="modal-store-name" id="modal-title">商家名称</div>
                     <div class="modal-tip">请向商家出示此核销码</div>
-                    
-                    <div class="qr-placeholder">
-                        <div class="qr-pattern"></div>
-                    </div>
-                    
+                    <div class="qr-placeholder"><div class="qr-pattern"></div></div>
                     <button class="btn-close" onclick="closeModal()">关闭</button>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
-        /* --- 数据与初始化 --- */
         const assetsData = [
             { id: 1, name: 'PLUVO 官方', tag: '官方通证', count: 500, icon: 'P' },
             { id: 2, name: '老张牛肉面', tag: '中式面馆', count: 125, icon: '🍜' },
@@ -420,13 +407,11 @@
         function renderAssets(filter = "") {
             const container = document.getElementById('asset-list-dom');
             container.innerHTML = "";
-            
             assetsData.forEach(item => {
                 if(item.name.indexOf(filter) === -1) return;
-                
                 const div = document.createElement('div');
                 div.className = 'asset-item';
-                div.onclick = () => openQrModal(item.name); // 点击弹出二维码
+                div.onclick = () => openQrModal(item.name);
                 div.innerHTML = `
                     <div style="display:flex; align-items:center;">
                         <div class="store-icon">${item.icon}</div>
@@ -441,26 +426,28 @@
             });
         }
 
-        /* --- 摄像头逻辑 (html5-qrcode) --- */
+        /* --- 摄像头逻辑 (修复偏位版) --- */
         let html5QrCode = null;
 
         function startCamera() {
-            if(html5QrCode) return; // 已启动则跳过
+            if(html5QrCode) return;
+            // 确保 DOM 元素已准备好
+            const readerDiv = document.getElementById("reader");
+            if (!readerDiv) return;
 
             html5QrCode = new Html5Qrcode("reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
             
-            // 优先使用后置环境摄像头
+            // 使用更宽的扫描框配置
+            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+            
             html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-                // 扫码成功回调
                 alert(`扫码成功: ${decodedText}`);
                 stopCamera();
-                switchTab('assets'); // 扫码成功后跳回资产页
+                switchTab('assets');
             }).catch(err => {
                 console.error("相机启动失败:", err);
-                // 可以在这里处理错误，例如在非HTTPS环境提示用户
                 if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                    alert("警告：相机功能需要 HTTPS 环境支持。");
+                    alert("相机需要 HTTPS 环境");
                 }
             });
         }
@@ -474,16 +461,14 @@
             }
         }
 
-        /* --- 导航逻辑 --- */
+        /* --- 导航与状态机 --- */
         function switchTab(tab) {
-            // 隐藏所有
             ['scan', 'assets', 'records'].forEach(t => {
                 document.getElementById('tab-'+t).style.display = 'none';
                 if(t === 'scan' || t === 'records') document.getElementById('tab-'+t).classList.remove('active');
                 document.getElementById('nav-'+t).classList.remove('active');
             });
             
-            // 显示选中
             const target = document.getElementById('tab-'+tab);
             if(tab === 'assets') {
                 target.style.display = 'flex';
@@ -493,15 +478,11 @@
             }
             document.getElementById('nav-'+tab).classList.add('active');
 
-            // --- 摄像头控制逻辑 ---
-            if (tab === 'scan') {
-                startCamera(); // 进入扫码页，开启相机
-            } else {
-                stopCamera(); // 离开扫码页，关闭相机
-            }
+            // 切换到扫码页时启动相机，离开时关闭
+            if (tab === 'scan') startCamera();
+            else stopCamera();
         }
 
-        /* --- 模态框逻辑 --- */
         const modal = document.getElementById('qr-modal');
         function openQrModal(name) {
             document.getElementById('modal-title').innerText = name;
@@ -513,7 +494,6 @@
             setTimeout(() => modal.style.display = "none", 300);
         }
 
-        /* --- 登录注册流程 --- */
         const viewLogin = document.getElementById('view-login');
         const viewRegister = document.getElementById('view-register');
         const viewHome = document.getElementById('view-home');
@@ -539,7 +519,7 @@
             setTimeout(() => {
                 viewLogin.classList.remove('active');
                 viewHome.classList.add('active');
-                renderAssets(); // 初始化列表
+                renderAssets();
             }, 800);
         }
     </script>
