@@ -4,144 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PLUVO | 价值联盟</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
-        /* ================= 视觉系统 (纯净商业版) ================= */
+        /* ================= 视觉系统 (纯净演示版) ================= */
         :root {
-            --bg-deep: #050505;
-            --card-bg: #111;
-            --text-main: #fff;
-            --text-sub: #888;
-            --accent: #00f2ff; /* PLUVO 赛博青 */
-            --danger: #ff453a;
-            --success: #32d74b;
-            --gold: #FFD700;
+            --bg-deep: #050505; --card-bg: #111; --text-main: #fff; --text-sub: #888;
+            --accent: #00f2ff; --danger: #ff453a; --success: #32d74b; --gold: #FFD700;
         }
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        body {
-            margin: 0; background-color: var(--bg-deep); color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-            height: 100vh; display: flex; justify-content: center; overflow: hidden;
-        }
+        body { margin: 0; background: var(--bg-deep); color: var(--text-main); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; height: 100vh; display: flex; justify-content: center; overflow: hidden; }
+        .app-container { width: 100%; max-width: 430px; height: 100%; position: relative; background: var(--bg-deep); display: flex; flex-direction: column; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 
-        .app-container {
-            width: 100%; max-width: 430px; height: 100%;
-            position: relative; background: var(--bg-deep);
-            display: flex; flex-direction: column;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-        }
-
-        /* --- 登录页样式 --- */
-        .auth-view {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-deep); z-index: 100;
-            display: flex; flex-direction: column; justify-content: center; padding: 40px;
-            transition: opacity 0.3s;
-        }
+        /* --- 登录页 --- */
+        .auth-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-deep); z-index: 100; display: flex; flex-direction: column; justify-content: center; padding: 40px; transition: opacity 0.3s; }
         .auth-view.hidden { opacity: 0; pointer-events: none; z-index: -1; }
-
-        .logo-area { margin-bottom: 60px; text-align: left; }
         .logo-title { font-size: 3rem; font-weight: 800; letter-spacing: -1px; margin: 0; }
         .logo-sub { color: var(--accent); font-size: 14px; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; }
+        .clean-input { width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.2); padding: 15px 0; color: #fff; font-size: 1.1rem; margin-bottom: 20px; outline: none; }
+        .btn-primary { width: 100%; padding: 16px; background: #fff; border: none; border-radius: 4px; color: #000; font-weight: bold; font-size: 1rem; margin-top: 20px; cursor: pointer; }
 
-        .clean-input {
-            width: 100%; background: transparent; border: none;
-            border-bottom: 1px solid rgba(255,255,255,0.2);
-            padding: 15px 0; color: #fff; font-size: 1.1rem; margin-bottom: 20px; outline: none;
-        }
-        .clean-input:focus { border-bottom-color: var(--accent); }
-
-        .btn-primary {
-            width: 100%; padding: 16px; background: #fff; border: none; border-radius: 4px;
-            color: #000; font-weight: bold; font-size: 1rem; margin-top: 20px; cursor: pointer;
-        }
-        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-        
-        .auth-links { margin-top: 20px; display: flex; justify-content: space-between; font-size: 0.9rem; color: #666; }
-
-        /* --- 主界面样式 --- */
-        .main-view {
-            flex: 1; display: none; flex-direction: column; position: relative;
-        }
+        /* --- 主界面 --- */
+        .main-view { flex: 1; display: none; flex-direction: column; position: relative; }
         .main-view.active { display: flex; }
-
-        /* 顶部栏 */
         .top-bar { padding: 50px 20px 20px; font-size: 1.5rem; font-weight: bold; background: linear-gradient(180deg, #000 0%, transparent 100%); }
-
-        /* 标签页容器 */
         .tab-content { flex: 1; position: relative; overflow: hidden; }
-        .tab-pane { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            display: none; flex-direction: column; overflow-y: auto; padding: 20px; 
-            padding-bottom: 100px; /* 避开底部导航 */
-        }
+        .tab-pane { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; overflow-y: auto; padding: 20px; padding-bottom: 100px; }
         .tab-pane.active { display: flex; }
 
-        /* TAB 1: 扫码挖矿 */
-        .scanner-box {
-            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .scan-trigger {
-            width: 200px; height: 200px; border-radius: 20px;
-            border: 2px dashed var(--accent);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: rgba(0, 242, 255, 0.05); color: var(--accent);
-            cursor: pointer; transition: all 0.3s;
-        }
-        .scan-trigger:active { background: rgba(0, 242, 255, 0.2); transform: scale(0.95); }
+        /* TAB 1: 扫码 */
+        .scanner-box { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .scan-trigger { width: 200px; height: 200px; border-radius: 20px; border: 2px dashed var(--accent); display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(0, 242, 255, 0.05); color: var(--accent); cursor: pointer; }
         .scan-anim { width: 100%; height: 2px; background: var(--accent); position: absolute; top: 0; animation: scan 2s infinite; }
         @keyframes scan { 0% {top:10%; opacity:0;} 50% {opacity:1;} 100% {top:90%; opacity:0;} }
 
-        /* TAB 2: 资产持有 */
-        .asset-card {
-            background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 30px;
-            text-align: center; margin-bottom: 20px;
-        }
-        .balance-label { color: #888; font-size: 0.9rem; margin-bottom: 10px; }
+        /* TAB 2: 资产 */
+        .asset-card { background: var(--card-bg); border: 1px solid #222; border-radius: 16px; padding: 30px; text-align: center; margin-bottom: 20px; }
         .balance-num { font-size: 3rem; font-weight: 800; color: var(--gold); font-family: "DIN Alternate", sans-serif; }
-        .balance-unit { font-size: 1rem; color: #666; }
-
         .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .action-btn {
-            background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 12px;
-            color: #fff; text-align: center; cursor: pointer;
-        }
-        .action-btn:active { background: #333; }
+        .action-btn { background: #1a1a1a; border: 1px solid #333; padding: 20px; border-radius: 12px; color: #fff; text-align: center; cursor: pointer; }
 
-        /* TAB 3: 交易记录 */
-        .record-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 0; border-bottom: 1px solid #222;
-        }
-        .rec-meta { display: flex; flex-direction: column; }
-        .rec-name { font-size: 1rem; margin-bottom: 4px; }
-        .rec-date { font-size: 0.8rem; color: #666; }
+        /* TAB 3: 记录 */
+        .record-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #222; }
         .rec-amount { font-weight: bold; font-family: "DIN Alternate"; }
-        .rec-mint { color: var(--success); }
-        .rec-burn { color: var(--danger); }
+        .rec-mint { color: var(--success); } .rec-burn { color: var(--danger); }
 
         /* 底部导航 */
-        .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 80px;
-            background: rgba(10,10,10,0.95); border-top: 1px solid #222;
-            display: flex; justify-content: space-around; align-items: center;
-            backdrop-filter: blur(10px); z-index: 50;
-        }
+        .bottom-nav { position: absolute; bottom: 0; left: 0; width: 100%; height: 80px; background: rgba(10,10,10,0.95); border-top: 1px solid #222; display: flex; justify-content: space-around; align-items: center; backdrop-filter: blur(10px); z-index: 50; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #555; font-size: 10px; gap: 4px; }
         .nav-item.active { color: var(--accent); }
         .nav-icon { font-size: 24px; }
 
-        /* 核销弹窗 */
-        .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 200; display: none;
-            justify-content: center; align-items: center; flex-direction: column;
-        }
+        /* 弹窗 */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 200; display: none; justify-content: center; align-items: center; flex-direction: column; }
         #qrcode { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
     </style>
 </head>
@@ -150,20 +66,13 @@
 <div class="app-container">
     
     <div id="auth-view" class="auth-view">
-        <div class="logo-area">
+        <div style="margin-bottom:60px;">
             <h1 class="logo-title">PLUVO</h1>
             <div class="logo-sub">数字权益 · 价值网络</div>
         </div>
-        
-        <input type="email" id="email" class="clean-input" placeholder="账号 (Email)">
-        <input type="password" id="password" class="clean-input" placeholder="密码">
-        
-        <button class="btn-primary" onclick="handleLogin()">登 录</button>
-        
-        <div class="auth-links">
-            <span onclick="handleRegister()">注册新账号</span>
-            <span>忘记密码?</span>
-        </div>
+        <input type="text" id="email" class="clean-input" placeholder="账号 (任意输入)" value="demo@pluvo.com">
+        <input type="password" id="password" class="clean-input" placeholder="密码 (任意输入)" value="123456">
+        <button class="btn-primary" onclick="handleLogin()">登 录 (演示版)</button>
     </div>
 
     <div id="main-view" class="main-view">
@@ -173,268 +82,178 @@
             <div class="scanner-box">
                 <div class="scan-trigger" onclick="simulateScan()">
                     <div style="font-size:3rem; margin-bottom:10px;">📷</div>
-                    <div style="font-size:0.9rem;">点击扫描商家码</div>
+                    <div style="font-size:0.9rem;">点击模拟扫码</div>
                     <div class="scan-anim"></div>
                 </div>
-                <div style="margin-top:30px; text-align:center; color:#666; font-size:0.8rem; line-height:1.6;">
-                    对准 PLUVO 联盟商户收款码<br>消费即挖矿 · 自动计算贡献值
+                <div style="margin-top:30px; text-align:center; color:#666; font-size:0.8rem;">
+                    演示模式：点击上方区域<br>模拟扫描商家收款码
                 </div>
             </div>
         </div>
 
         <div id="tab-assets" class="tab-pane">
             <div class="top-bar">我的资产</div>
-            
             <div class="asset-card">
-                <div class="balance-label">当前持有凭证 (CP)</div>
+                <div style="color:#888; font-size:0.9rem; margin-bottom:10px;">当前持有凭证 (CP)</div>
                 <div class="balance-num" id="balance-display">0.00</div>
-                <div class="balance-unit">PLUVO Genesis Token</div>
+                <div style="font-size:1rem; color:#666;">PLUVO Genesis Token</div>
             </div>
-
             <div class="action-grid">
                 <div class="action-btn" onclick="openBurnModal()">
                     <div style="font-size:1.5rem; margin-bottom:5px;">⚡</div>
                     <div>出示核销码</div>
                 </div>
-                <div class="action-btn" onclick="loadRecords()">
-                    <div style="font-size:1.5rem; margin-bottom:5px;">🔄</div>
-                    <div>刷新余额</div>
+                <div class="action-btn" onclick="resetDemo()">
+                    <div style="font-size:1.5rem; margin-bottom:5px;">🗑️</div>
+                    <div>重置数据</div>
                 </div>
             </div>
-
-            <div style="margin-top:30px; padding:20px; background:#111; border-radius:12px;">
-                <div style="font-size:0.9rem; font-weight:bold; margin-bottom:10px;">当前权益汇率</div>
-                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888; margin-bottom:8px;">
-                    <span>10.0 CP</span>
-                    <span>= 免单一份牛肉面</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#888;">
-                    <span>0.5 CP</span>
-                    <span>= 兑换卤蛋一枚</span>
-                </div>
-            </div>
-            
-            <button onclick="logout()" style="margin-top:30px; background:none; border:none; color:#444; width:100%;">安全退出</button>
         </div>
 
         <div id="tab-records" class="tab-pane">
             <div class="top-bar">账本记录</div>
-            <div id="record-list">
-                <div style="text-align:center; color:#666; margin-top:50px;">加载中...</div>
-            </div>
+            <div id="record-list"></div>
         </div>
 
         <div class="bottom-nav">
             <div class="nav-item active" onclick="switchTab('scan', this)">
-                <div class="nav-icon">👁️</div>
-                <div>扫码</div>
+                <div class="nav-icon">👁️</div><div>扫码</div>
             </div>
             <div class="nav-item" onclick="switchTab('assets', this)">
-                <div class="nav-icon">💼</div>
-                <div>持有</div>
+                <div class="nav-icon">💼</div><div>持有</div>
             </div>
             <div class="nav-item" onclick="switchTab('records', this)">
-                <div class="nav-icon">📝</div>
-                <div>记录</div>
+                <div class="nav-icon">📝</div><div>记录</div>
             </div>
         </div>
     </div>
 
     <div id="burn-modal" class="modal" onclick="this.style.display='none'">
         <div id="qrcode"></div>
-        <div style="margin-top:20px; color:#fff; font-size:1.2rem; font-weight:bold;">向商家出示此码</div>
-        <div style="color:#888; font-size:0.9rem; margin-top:10px;">点击任意处关闭</div>
+        <div style="margin-top:20px; color:#fff; font-size:1.2rem; font-weight:bold;">商家扫码核销</div>
+        <div style="color:#888; font-size:0.9rem; margin-top:10px;">3秒后自动完成演示</div>
     </div>
 
 </div>
 
 <script>
-    // ================= 配置区 =================
-    // ⚠️ 请替换为你自己的 Supabase URL 和 Key
-    const DB_URL = 'https://uudlauufdnrdcztlesvr.supabase.co';
-    const DB_KEY = 'sb_publishable_KtfqCfLqUd_AtLj0Nb2WKQ_aPbsHjus';
+    // ================= 纯前端逻辑 (LocalStorage) =================
     
-    const client = window.supabase.createClient(DB_URL, DB_KEY);
-    let currentUser = null;
-
-    // ================= 认证逻辑 =================
-    async function handleLogin() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if(!email || !password) return Swal.fire({text:'请输入账号密码', icon:'warning', background:'#000', color:'#fff'});
-
-        Swal.showLoading();
-        const { data, error } = await client.auth.signInWithPassword({ email, password });
-        if(error) return Swal.fire({text: error.message, icon:'error', background:'#000', color:'#fff'});
-
-        currentUser = data.user;
-        enterApp();
+    // 初始化数据
+    let transactions = JSON.parse(localStorage.getItem('pluvo_txs')) || [];
+    
+    function saveAndRefresh() {
+        localStorage.setItem('pluvo_txs', JSON.stringify(transactions));
+        loadBalance();
+        loadRecords();
     }
 
-    async function handleRegister() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
-        if(!email || password.length < 6) return Swal.fire({text:'密码需大于6位', icon:'warning', background:'#000', color:'#fff'});
-
-        Swal.showLoading();
-        const { data, error } = await client.auth.signUp({ email, password });
-        if(error) return Swal.fire({text: error.message, icon:'error', background:'#000', color:'#fff'});
-        
-        Swal.fire({title:'注册成功', text:'请登录', icon:'success', background:'#000', color:'#fff'});
-    }
-
-    async function logout() {
-        await client.auth.signOut();
-        location.reload();
-    }
-
-    function enterApp() {
+    // 1. 登录 (假登录，只做界面切换)
+    function handleLogin() {
         document.getElementById('auth-view').classList.add('hidden');
         document.getElementById('main-view').classList.add('active');
         loadBalance();
         loadRecords();
     }
 
-    // ================= 业务逻辑：扫码挖矿 (Mint) =================
-    // 对应文档：第一阶段“傻瓜模式”
-    // 逻辑：输入消费金额 -> 按系数 0.4 计算贡献 -> 1:1 铸造凭证 (简化版公式)
+    // 2. 模拟扫码挖矿
     async function simulateScan() {
         const { value: amount } = await Swal.fire({
-            title: '模拟扫码成功',
-            text: '请输入本次消费金额 (CNY)',
+            title: '模拟支付成功',
+            text: '请输入消费金额 (CNY)',
             input: 'number',
+            inputValue: 100,
             background: '#000', color: '#fff',
-            confirmButtonColor: '#00f2ff',
-            showCancelButton: true
+            confirmButtonColor: '#00f2ff'
         });
 
         if (amount) {
-            // 核心算法：傻瓜模式系数 0.4 
-            const contribution = (amount * 0.4).toFixed(2); 
-            // 简化模型：贡献值 1:1 转化为凭证 (复杂模型需调用后端)
-            const tokenAmount = contribution; 
-
-            // 写入数据库 (Mint)
-            const { error } = await client.from('transactions').insert({
-                user_id: currentUser.id,
+            const tokenAmount = (amount * 0.4).toFixed(2); // 系数 0.4
+            const newTx = {
                 type: 'mint',
-                amount: tokenAmount,
-                cash_value: amount,
-                merchant_name: '模拟商家-' + Math.floor(Math.random()*100)
+                amount: parseFloat(tokenAmount),
+                merchant: '演示商家',
+                date: new Date().toISOString()
+            };
+            transactions.unshift(newTx);
+            saveAndRefresh();
+            
+            Swal.fire({
+                title: '挖矿成功!',
+                html: `消费: ¥${amount}<br><b style="color:#00f2ff; font-size:1.5rem;">+${tokenAmount} CP</b>`,
+                icon: 'success', background: '#000', color: '#fff'
             });
-
-            if(error) {
-                Swal.fire({text: '上链失败: '+error.message, icon:'error', background:'#000', color:'#fff'});
-            } else {
-                Swal.fire({
-                    title: '挖矿成功!',
-                    html: `消费: ¥${amount}<br>贡献: ¥${contribution}<br><b style="color:#00f2ff; font-size:1.5rem;">+${tokenAmount} CP</b>`,
-                    icon: 'success',
-                    background: '#000', color: '#fff'
-                });
-                loadBalance();
-                loadRecords();
-            }
         }
     }
 
-    // ================= 业务逻辑：资产核销 (Burn) =================
+    // 3. 模拟核销
     function openBurnModal() {
         document.getElementById('burn-modal').style.display = 'flex';
         document.getElementById('qrcode').innerHTML = "";
+        new QRCode(document.getElementById("qrcode"), { text: "DEMO_BURN", width: 200, height: 200 });
         
-        // 生成二维码 (包含用户ID和时间戳)
-        new QRCode(document.getElementById("qrcode"), {
-            text: JSON.stringify({uid: currentUser.id, ts: Date.now()}),
-            width: 200, height: 200
-        });
-
-        // 模拟商家扫码扣款 (仅演示用，3秒后自动扣除)
+        // 3秒后自动扣款演示
         setTimeout(() => {
-            simulateMerchantScan();
-        }, 3000);
-    }
-
-    async function simulateMerchantScan() {
-        // 模拟商家在 POS 机上扣除了 5 个币换茶叶蛋 
-        const burnAmount = 5.00; 
-
-        document.getElementById('burn-modal').style.display = 'none';
-        
-        const { error } = await client.from('transactions').insert({
-            user_id: currentUser.id,
-            type: 'burn',
-            amount: -burnAmount, // 负数代表扣除
-            merchant_name: 'PLUVO 核销中心',
-            cash_value: 0
-        });
-
-        if(!error) {
+            const burnAmount = 5.00;
+            const newTx = {
+                type: 'burn',
+                amount: -burnAmount,
+                merchant: 'PLUVO核销',
+                date: new Date().toISOString()
+            };
+            transactions.unshift(newTx);
+            saveAndRefresh();
+            document.getElementById('burn-modal').style.display = 'none';
             Swal.fire({
                 title: '核销成功',
                 text: `已扣除 ${burnAmount} CP`,
                 icon: 'success', background: '#000', color: '#fff', timer: 1500, showConfirmButton: false
             });
-            loadBalance();
-            loadRecords();
-        }
+        }, 3000);
     }
 
-    // ================= 数据加载 =================
-    async function loadBalance() {
-        const { data } = await client.from('transactions').select('amount').eq('user_id', currentUser.id);
-        if(data) {
-            // 计算总和
-            const total = data.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
-            document.getElementById('balance-display').innerText = total.toFixed(2);
-        }
+    // 4. 计算余额
+    function loadBalance() {
+        const total = transactions.reduce((acc, curr) => acc + curr.amount, 0);
+        document.getElementById('balance-display').innerText = total.toFixed(2);
     }
 
-    async function loadRecords() {
-        const { data } = await client.from('transactions')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-            
+    // 5. 渲染记录
+    function loadRecords() {
         const container = document.getElementById('record-list');
         container.innerHTML = "";
-
-        if(data && data.length > 0) {
-            data.forEach(tx => {
-                const isMint = tx.type === 'mint';
-                const sign = isMint ? '+' : '';
-                const colorClass = isMint ? 'rec-mint' : 'rec-burn';
-                const date = new Date(tx.created_at).toLocaleString();
-                
-                const html = `
-                    <div class="record-item">
-                        <div class="rec-meta">
-                            <div class="rec-name">${tx.merchant_name || '系统'}</div>
-                            <div class="rec-date">${date}</div>
-                        </div>
-                        <div class="rec-amount ${colorClass}">${sign}${tx.amount}</div>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
-        } else {
+        if(transactions.length === 0) {
             container.innerHTML = '<div style="text-align:center; color:#444; margin-top:50px;">暂无记录</div>';
+            return;
+        }
+        transactions.forEach(tx => {
+            const isMint = tx.type === 'mint';
+            const html = `
+                <div class="record-item">
+                    <div>
+                        <div style="font-size:1rem;">${tx.merchant}</div>
+                        <div style="font-size:0.8rem; color:#666;">${new Date(tx.date).toLocaleString()}</div>
+                    </div>
+                    <div class="rec-amount ${isMint?'rec-mint':'rec-burn'}">${isMint?'+':''}${tx.amount}</div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    function resetDemo() {
+        if(confirm('确定清空演示数据吗？')) {
+            transactions = [];
+            saveAndRefresh();
         }
     }
 
-    // ================= UI 切换 =================
+    // Tab 切换
     function switchTab(tabId, btn) {
-        // 隐藏所有 Tab
         document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        
-        // 显示当前 Tab
         document.getElementById('tab-' + tabId).classList.add('active');
         btn.classList.add('active');
-        
-        // 刷新数据
-        if(tabId === 'assets') loadBalance();
-        if(tabId === 'records') loadRecords();
     }
 </script>
 </body>
