@@ -2,31 +2,36 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <!-- 核心修复：viewport-fit=cover 解决刘海屏和底部黑条适配问题 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PLUVO Wallet</title>
+    <title>PLUVO 资产管理</title>
     <style>
-        /* ================= 基础配置 ================= */
+        /* ================= 基础配置 (纯净黑金风格) ================= */
         :root {
-            --bg-color: #0d0d0d;
-            --card-bg: #1c1c1e;
-            --card-highlight: #2c2c2e;
-            --primary-gold: #F0B90B;
-            --text-main: #ffffff;
-            --text-sub: #8e8e93;
-            --accent-red: #ff453a;
-            --safe-area-bottom: env(safe-area-inset-bottom);
+            --bg-color: #050505;
+            --card-bg: #141414;
+            --card-border: #222;
+            --primary-gold: #D4AF37; /* 香槟金 */
+            --text-main: #f0f0f0;
+            --text-sub: #666;
+            --text-code: #555;
+            --accent-red: #cc3333;
+            /* 自动获取安全区域高度 */
+            --safe-bottom: env(safe-area-inset-bottom);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         
+        /* 修复 iOS Safari 滚动回弹和高度问题 */
         body {
-            background-color: #333;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            height: 100vh;
+            background-color: #222;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+            position: fixed; /* 强制固定，防止浏览器UI挤压 */
+            top: 0; left: 0; right: 0; bottom: 0;
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden;
+            color: var(--text-main);
         }
 
         /* 手机模拟容器 */
@@ -34,12 +39,10 @@
             width: 100%;
             height: 100%;
             background-color: var(--bg-color);
-            color: var(--text-main);
             position: relative;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            overflow: hidden; /* 内部滚动，外部禁止 */
         }
 
         @media (min-width: 450px) {
@@ -47,7 +50,8 @@
                 width: 414px; height: 896px;
                 border-radius: 40px;
                 max-height: 95vh;
-                border: 8px solid #000;
+                border: 8px solid #111;
+                box-shadow: 0 0 50px rgba(0,0,0,0.8);
             }
         }
 
@@ -60,164 +64,192 @@
             flex-direction: column;
             justify-content: center;
             padding: 40px;
-            background: linear-gradient(160deg, #000 0%, #1a1a1a 100%);
+            background: linear-gradient(180deg, #000 0%, #111 100%);
             z-index: 100;
-            transition: opacity 0.3s;
         }
         .brand-logo { 
-            font-size: 42px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; 
-            background: linear-gradient(to right, #F0B90B, #ffeaa7);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-size: 36px; font-weight: 300; letter-spacing: 4px; margin-bottom: 15px; 
+            color: var(--primary-gold); text-align: center;
         }
-        .brand-sub { font-size: 14px; color: var(--text-sub); margin-bottom: 60px; line-height: 1.5; }
+        .brand-sub { 
+            font-size: 14px; color: var(--text-sub); margin-bottom: 80px; 
+            text-align: center; letter-spacing: 2px;
+        }
         .btn-main {
-            background: var(--primary-gold); color: #000; border: none; height: 56px; border-radius: 28px;
-            font-size: 18px; font-weight: 700; width: 100%; cursor: pointer;
-            box-shadow: 0 8px 20px rgba(240, 185, 11, 0.25);
+            background: transparent; color: var(--primary-gold); 
+            border: 1px solid var(--primary-gold);
+            height: 50px; border-radius: 4px;
+            font-size: 16px; font-weight: 500; letter-spacing: 2px;
+            width: 100%; cursor: pointer; transition: 0.2s;
         }
-        .btn-main:active { transform: scale(0.96); }
+        .btn-main:active { background: rgba(212, 175, 55, 0.1); }
 
-        /* ================= 2. 主页 (钱包) ================= */
+        /* ================= 2. 主页 ================= */
         #page-home {
             flex: 1; display: flex; flex-direction: column;
-            padding-bottom: calc(80px + var(--safe-area-bottom));
+            width: 100%; height: 100%;
         }
 
-        /* 顶部导航 */
+        /* 顶部栏 */
         .header-bar {
-            padding: 20px 20px 10px 20px;
+            /* 顶部适配刘海屏 */
+            padding-top: max(20px, env(safe-area-inset-top)); 
+            padding-bottom: 10px;
+            padding-left: 20px; padding-right: 20px;
             display: flex; align-items: center; justify-content: space-between;
-            background: rgba(13, 13, 13, 0.95); backdrop-filter: blur(10px); z-index: 10;
+            background: rgba(5, 5, 5, 0.95); z-index: 10;
+            height: calc(50px + env(safe-area-inset-top)); /* 固定高度防止塌陷 */
         }
-        .search-wrapper {
-            flex: 1; background: var(--card-bg); height: 40px; border-radius: 20px;
-            display: flex; align-items: center; padding: 0 15px; margin-right: 15px;
-        }
-        .search-input { background: transparent; border: none; color: #fff; width: 100%; font-size: 14px; outline: none; }
-        .btn-history {
-            width: 40px; height: 40px; border-radius: 50%; background: var(--card-bg);
-            display: flex; justify-content: center; align-items: center; font-size: 18px;
+        .app-title { font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+        .user-badge { 
+            font-size: 10px; padding: 4px 8px; border: 1px solid #333; 
+            border-radius: 20px; color: var(--text-sub); 
         }
 
-        /* 资产列表 */
-        .scroll-content { flex: 1; overflow-y: auto; padding: 10px 20px; }
-        .section-header { font-size: 13px; font-weight: 600; text-transform: uppercase; color: var(--text-sub); margin: 20px 0 10px 0; }
+        /* 搜索条 */
+        .search-row { padding: 0 20px 10px 20px; }
+        .search-box {
+            background: var(--card-bg); height: 40px; border-radius: 4px;
+            display: flex; align-items: center; padding: 0 10px;
+            border: 1px solid var(--card-border);
+        }
+        .search-input { 
+            background: transparent; border: none; color: #fff; width: 100%; 
+            font-size: 14px; outline: none; margin-left: 10px;
+        }
 
-        .asset-item {
-            background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 12px;
+        /* 列表容器 */
+        .scroll-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 10px 20px;
+            /* 关键修复：底部留出足够空间，防止最后一条被底部导航栏遮挡 */
+            padding-bottom: calc(80px + var(--safe-bottom)); 
+            -webkit-overflow-scrolling: touch; /* iOS 流畅滚动 */
+        }
+        
+        .list-label { 
+            font-size: 12px; color: var(--text-sub); 
+            margin: 15px 0 10px 0; letter-spacing: 1px;
+        }
+
+        /* 资产卡片 */
+        .asset-card {
+            background: var(--card-bg); 
+            border-bottom: 1px solid var(--card-border);
+            padding: 24px 0;
             display: flex; justify-content: space-between; align-items: center;
-            border: 1px solid rgba(255,255,255,0.05);
         }
-        .asset-icon { 
-            width: 44px; height: 44px; border-radius: 12px; background: #333; margin-right: 12px;
-            display: flex; align-items: center; justify-content: center; font-size: 20px;
-        }
-        .asset-name { font-size: 16px; font-weight: 600; color: #fff; display: block; }
-        .asset-desc { font-size: 12px; color: var(--text-sub); margin-top: 4px; display: block; }
-        .asset-amount { font-size: 18px; font-weight: 700; color: var(--primary-gold); font-family: monospace; }
-        .asset-fiat { font-size: 12px; color: var(--text-sub); margin-top: 4px; text-align: right; }
+        .asset-card:first-child { border-top: 1px solid var(--card-border); }
 
-        /* ================= 3. 底部导航 (3个按钮) ================= */
+        .ac-left { display: flex; flex-direction: column; }
+        .ac-name { font-size: 16px; font-weight: 500; color: var(--text-main); margin-bottom: 6px; }
+        .ac-code { font-size: 12px; color: var(--text-code); font-family: monospace; letter-spacing: 0.5px; }
+
+        .ac-right { text-align: right; }
+        .ac-amount { 
+            font-size: 20px; font-weight: 400; color: var(--primary-gold); 
+            font-family: 'Courier New', monospace; letter-spacing: -0.5px;
+        }
+        .ac-unit { font-size: 10px; color: var(--text-sub); margin-left: 2px; }
+
+        /* ================= 3. 底部导航 (修复遮挡问题) ================= */
         .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: calc(80px + var(--safe-area-bottom)); padding-bottom: var(--safe-area-bottom);
-            background: rgba(18, 18, 18, 0.95); backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255,255,255,0.05);
-            display: grid; grid-template-columns: 1fr 1fr 1fr; /* 三等分 */
+            position: absolute; 
+            bottom: 0; left: 0; width: 100%;
+            background: #080808; 
+            border-top: 1px solid #222;
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
             z-index: 50;
+            /* 关键修复：高度包含安全区域 */
+            height: calc(60px + var(--safe-bottom)); 
+            padding-bottom: var(--safe-bottom);
         }
 
         .nav-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0.5; transition: 0.2s;
+            opacity: 0.4; transition: 0.2s; cursor: pointer;
+            height: 60px; /* 按钮主体高度 */
         }
-        .nav-btn.active { opacity: 1; }
-        .nav-btn.active .nav-icon { color: var(--primary-gold); }
-        .nav-btn:active { transform: scale(0.95); }
-        
-        .nav-icon { font-size: 24px; margin-bottom: 4px; color: #fff; }
-        .nav-label { font-size: 10px; font-weight: 500; }
+        .nav-btn.active { opacity: 1; color: var(--primary-gold); }
+        .nav-icon { font-size: 22px; margin-bottom: 4px; }
+        .nav-label { font-size: 11px; letter-spacing: 1px; }
 
-        /* 特殊处理扫码图标 */
-        .nav-icon-scan {
-            width: 44px; height: 44px; border-radius: 14px; background: var(--card-highlight);
-            display: flex; align-items: center; justify-content: center;
-            border: 1px solid #444; margin-bottom: 4px;
+        /* 扫码按钮特殊样式 */
+        .nav-scan-btn .nav-icon {
+            border: 1px solid var(--text-main); width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center; border-radius: 4px;
         }
+        .nav-btn.active.nav-scan-btn .nav-icon { border-color: var(--primary-gold); }
 
-        /* ================= 4. 弹窗 (Sheet - 我的) ================= */
+        /* ================= 4. 侧滑/上滑 弹窗 ================= */
         .sheet-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); z-index: 200;
+            background: rgba(0,0,0,0.8); z-index: 200;
             opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         .sheet-overlay.active { opacity: 1; pointer-events: auto; }
 
         .sheet-modal {
             position: absolute; bottom: 0; left: 0; width: 100%;
-            max-height: 85%; /* 允许拉得比较高 */
-            background: #1c1c1e;
-            border-top-left-radius: 24px; border-top-right-radius: 24px;
-            padding: 24px; padding-bottom: calc(40px + var(--safe-area-bottom));
+            background: #111; border-top: 1px solid #333;
+            padding: 30px; 
+            /* 适配底部黑条，避免内容贴底 */
+            padding-bottom: calc(40px + var(--safe-bottom));
             transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-            overflow-y: auto; /* 允许内部滚动 */
         }
         .sheet-overlay.active .sheet-modal { transform: translateY(0); }
 
-        /* Sheet Handle */
-        .sheet-handle { width: 40px; height: 4px; background: #444; border-radius: 2px; margin: 0 auto 20px auto; }
-
-        /* 个人信息卡片 */
-        .profile-card { display: flex; align-items: center; margin-bottom: 25px; }
-        .avatar { width: 64px; height: 64px; border-radius: 50%; background: #333; margin-right: 16px; font-size: 28px; display: flex; align-items: center; justify-content: center;}
-        .user-info h2 { font-size: 20px; font-weight: 700; color: #fff; }
-        .user-id { font-size: 13px; color: var(--text-sub); margin-top: 4px; font-family: monospace; background: #000; padding: 4px 8px; border-radius: 4px; display: inline-block;}
-
-        /* 二维码盒子 */
-        .qr-box {
-            background: #fff; padding: 20px; border-radius: 16px; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 30px;
+        /* 个人信息 */
+        .profile-row { display: flex; align-items: center; margin-bottom: 30px; }
+        .p-avatar { 
+            width: 50px; height: 50px; background: #222; border: 1px solid #333; 
+            display: flex; align-items: center; justify-content: center; font-size: 20px; margin-right: 15px;
+            color: #888;
         }
-        .qr-img { width: 160px; height: 160px; margin: 0 auto; background-image: url('https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PLUVO_ID_888888'); background-size: cover; }
-        .qr-caption { color: #000; font-size: 14px; font-weight: 700; margin-top: 15px; }
+        .p-info h2 { font-size: 16px; font-weight: 500; }
+        .p-id { font-size: 12px; color: var(--text-sub); font-family: monospace; margin-top: 5px; }
 
-        /* 菜单列表 (设置/退出) */
-        .menu-list { border-top: 1px solid #333; padding-top: 10px; }
-        .menu-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 18px 0; border-bottom: 1px solid #2c2c2e; font-size: 16px; color: #fff;
-            cursor: pointer;
+        /* ID 二维码 */
+        .id-card {
+            background: #fff; padding: 20px; text-align: center; margin-bottom: 30px; border-radius: 8px;
         }
-        .menu-item:active { opacity: 0.6; }
-        .menu-item.logout { color: var(--accent-red); border-bottom: none; justify-content: center; margin-top: 20px; font-weight: 600; }
-        .arrow { color: #555; font-size: 14px; }
+        .id-qr { 
+            width: 150px; height: 150px; margin: 0 auto; 
+            background-image: url('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=PLUVO_ID_888888'); 
+            background-size: cover; 
+        }
+        .id-tip { color: #000; font-size: 12px; margin-top: 15px; font-family: monospace; font-weight: bold;}
 
-        /* ================= 5. 全屏相机 ================= */
+        /* 菜单 */
+        .menu-row {
+            padding: 18px 0; border-top: 1px solid #222; 
+            display: flex; justify-content: space-between; 
+            font-size: 14px; color: #aaa;
+        }
+        .menu-row.logout { color: var(--accent-red); border-bottom: 1px solid #222; margin-top: 10px; }
+
+        /* ================= 5. 相机 ================= */
         .camera-full {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 300; display: flex; flex-direction: column;
             transform: translateY(100%); transition: transform 0.3s;
         }
         .camera-full.active { transform: translateY(0); }
-        .cam-view {
-            flex: 1; position: relative;
-            background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><rect width="100%" height="100%" fill="%23222"/></svg>');
+        .cam-view { 
+            flex: 1; position: relative; border: 1px solid #333; 
+            margin: 20px; margin-top: 60px; 
+            background: #080808; 
         }
-        .scan-frame {
-            width: 260px; height: 260px; border: 2px solid rgba(255,255,255,0.3);
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
-            border-radius: 20px; overflow: hidden;
+        .scan-line {
+            width: 100%; height: 1px; background: var(--primary-gold); position: absolute; top: 0;
+            animation: scan 2s infinite; box-shadow: 0 0 10px var(--primary-gold);
         }
-        .scan-laser {
-            position: absolute; width: 100%; height: 2px; background: var(--primary-gold);
-            top: 10%; box-shadow: 0 0 15px var(--primary-gold);
-            animation: scanning 2s infinite ease-in-out;
-        }
-        @keyframes scanning { 0% { top: 10%; opacity: 0; } 50% { opacity: 1; } 100% { top: 90%; opacity: 0; } }
-        .btn-close-cam {
-            position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
-            width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.2);
-            display: flex; justify-content: center; align-items: center; font-size: 24px; color: #fff;
+        @keyframes scan { 0% {top:0} 100% {top:100%} }
+        
+        .cam-close {
+            text-align: center; padding: 40px; color: #fff; font-size: 14px; 
+            letter-spacing: 2px; padding-bottom: calc(40px + var(--safe-bottom));
         }
 
     </style>
@@ -226,172 +258,153 @@
 
     <div id="app-container">
         
-        <!-- 页面1: 登录 -->
+        <!-- 登录 -->
         <div id="page-login">
             <div class="brand-logo">PLUVO</div>
-            <div class="brand-sub">CONSUMPTION AS MINING<br>算法定义实体价值</div>
-            <button class="btn-main" onclick="appLogin()">连接钱包 (Connect)</button>
+            <div class="brand-sub">数字凭证资产管理系统</div>
+            <button class="btn-main" onclick="navTo('home')">连接身份 ID</button>
         </div>
 
-        <!-- 页面2: 主页 (钱包) -->
+        <!-- 主界面 -->
         <div id="page-home" class="hidden">
             <!-- 头部 -->
             <div class="header-bar">
-                <div class="search-wrapper">
-                    <span style="opacity:0.5; margin-right:8px">🔍</span>
-                    <input type="text" class="search-input" placeholder="搜索凭证...">
+                <div class="app-title">资产总览</div>
+                <div class="user-badge">在线</div>
+            </div>
+            
+            <!-- 搜索 -->
+            <div class="search-row">
+                <div class="search-box">
+                    <span style="font-size:12px; color:#555">🔍</span>
+                    <input type="text" class="search-input" placeholder="搜索商家或凭证代码...">
                 </div>
-                <div class="btn-history">🕒</div>
             </div>
 
-            <!-- 资产列表 -->
+            <!-- 列表 (可滚动区域) -->
             <div class="scroll-content">
-                <div class="section-header">我的资产 (Assets)</div>
+                <div class="list-label">持仓明细</div>
                 
-                <div class="asset-item">
-                    <div style="display:flex; align-items:center">
-                        <div class="asset-icon">🍜</div>
-                        <div><span class="asset-name">旗舰店 (VIP)</span><span class="asset-desc">权益: 优先回购</span></div>
+                <!-- 资产条目 1 -->
+                <div class="asset-card">
+                    <div class="ac-left">
+                        <div class="ac-name">PLUVO 旗舰店</div>
+                        <div class="ac-code">代码: GENESIS-01</div>
                     </div>
-                    <div><div class="asset-amount">50,000</div><div class="asset-fiat">≈ ¥ 150.00</div></div>
+                    <div class="ac-right">
+                        <div class="ac-amount">50,000.00</div>
+                        <div class="ac-unit">份</div>
+                    </div>
                 </div>
 
-                <div class="asset-item">
-                    <div style="display:flex; align-items:center">
-                        <div class="asset-icon">🥚</div>
-                        <div><span class="asset-name">老张牛肉面</span><span class="asset-desc">权益: 卤蛋/汤底</span></div>
+                <!-- 资产条目 2 -->
+                <div class="asset-card">
+                    <div class="ac-left">
+                        <div class="ac-name">老张牛肉面</div>
+                        <div class="ac-code">代码: LZ-NOODLE-A</div>
                     </div>
-                    <div><div class="asset-amount">1,200</div><div class="asset-fiat">≈ ¥ 12.00</div></div>
+                    <div class="ac-right">
+                        <div class="ac-amount">1,200.00</div>
+                        <div class="ac-unit">份</div>
+                    </div>
                 </div>
 
-                <div class="asset-item">
-                    <div style="display:flex; align-items:center">
-                        <div class="asset-icon">☕</div>
-                        <div><span class="asset-name">星巴克 (合作)</span><span class="asset-desc">权益: 升杯券</span></div>
+                <!-- 资产条目 3 -->
+                <div class="asset-card">
+                    <div class="ac-left">
+                        <div class="ac-name">城市咖啡实验室</div>
+                        <div class="ac-code">代码: COFFEE-V2</div>
                     </div>
-                    <div><div class="asset-amount">300</div><div class="asset-fiat">≈ ¥ 3.00</div></div>
+                    <div class="ac-right">
+                        <div class="ac-amount">350.00</div>
+                        <div class="ac-unit">份</div>
+                    </div>
                 </div>
                 
-                <!-- 底部留白，防止被导航栏遮挡 -->
-                <div style="height: 50px;"></div>
+                <!-- 资产条目 4 -->
+                <div class="asset-card">
+                    <div class="ac-left">
+                        <div class="ac-name">社区治理池</div>
+                        <div class="ac-code">代码: DAO-GOV</div>
+                    </div>
+                    <div class="ac-right">
+                        <div class="ac-amount">15.00</div>
+                        <div class="ac-unit">票</div>
+                    </div>
+                </div>
+
+                 <!-- 资产条目 5 (占位演示滚动) -->
+                 <div class="asset-card">
+                    <div class="ac-left">
+                        <div class="ac-name">7-Eleven (合作)</div>
+                        <div class="ac-code">代码: 711-POINT</div>
+                    </div>
+                    <div class="ac-right">
+                        <div class="ac-amount">50.00</div>
+                        <div class="ac-unit">份</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- 3. 底部导航栏 -->
+            <!-- 底部导航 -->
             <div class="bottom-nav">
                 <!-- 左：扫码 -->
-                <div class="nav-btn" onclick="toggleCamera(true)">
-                    <div class="nav-icon">📷</div>
-                    <span class="nav-label">扫码核销</span>
+                <div class="nav-btn nav-scan-btn" onclick="toggleCamera(true)">
+                    <div class="nav-icon">⛶</div>
+                    <div class="nav-label">扫一扫</div>
                 </div>
-
-                <!-- 中：资产 (默认高亮) -->
+                <!-- 中：资产 -->
                 <div class="nav-btn active">
-                    <div class="nav-icon">💰</div>
-                    <span class="nav-label">持有资产</span>
+                    <div class="nav-icon">≡</div>
+                    <div class="nav-label">资产账本</div>
                 </div>
-
                 <!-- 右：我的 -->
-                <div class="nav-btn" onclick="toggleSheet('me', true)">
-                    <div class="nav-icon">👤</div>
-                    <span class="nav-label">我的账户</span>
+                <div class="nav-btn" onclick="toggleSheet(true)">
+                    <div class="nav-icon">●</div>
+                    <div class="nav-label">我的身份</div>
                 </div>
             </div>
         </div>
 
-        <!-- 4. 弹窗 (我的) -->
-        <div id="sheet-me" class="sheet-overlay" onclick="toggleSheet('me', false)">
+        <!-- 弹窗：身份ID -->
+        <div id="sheet-me" class="sheet-overlay" onclick="toggleSheet(false)">
             <div class="sheet-modal" onclick="event.stopPropagation()">
-                <div class="sheet-handle"></div>
                 
-                <!-- 头部信息 -->
-                <div class="profile-card">
-                    <div class="avatar">😎</div>
-                    <div class="user-info">
-                        <h2>James Bond</h2>
-                        <div class="user-id">ID: 0x8A...3F91</div>
+                <div class="profile-row">
+                    <div class="p-avatar">ID</div>
+                    <div class="p-info">
+                        <h2>个人数字身份</h2>
+                        <div class="p-id">哈希: 0x8a7...f9b2</div>
                     </div>
-                </div>
-                
-                <!-- 二维码 -->
-                <div class="qr-box">
-                    <div class="qr-img"></div>
-                    <div class="qr-caption">让商家扫我 (收款/挖矿)</div>
                 </div>
 
-                <!-- 往下拉看到的菜单 -->
-                <div class="menu-list">
-                    <div class="menu-item">
-                        <span>系统设置 (Settings)</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="menu-item">
-                        <span>安全中心 (Security)</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="menu-item">
-                        <span>关于 PLUVO</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    
-                    <!-- 退出按钮 -->
-                    <div class="menu-item logout" onclick="appLogout()">
-                        退出登录 (Log out)
-                    </div>
+                <div class="id-card">
+                    <div class="id-qr"></div>
+                    <div class="id-tip">账户识别码</div>
                 </div>
+
+                <div class="menu-row">
+                    <span>账本设置</span>
+                    <span>></span>
+                </div>
+                <div class="menu-row">
+                    <span>导出私钥/凭证</span>
+                    <span>></span>
+                </div>
+                <div class="menu-row logout" onclick="logout()">
+                    <span>断开连接</span>
+                    <span>×</span>
+                </div>
+
             </div>
         </div>
 
-        <!-- 5. 全屏相机 -->
+        <!-- 相机 -->
         <div id="camera-page" class="camera-full">
-            <div class="cam-view">
-                <div class="scan-frame"><div class="scan-laser"></div></div>
-                <div style="position:absolute; bottom:20%; width:100%; text-align:center; color:#fff;">扫描商家二维码</div>
+            <div style="padding: 60px 20px 0 20px; font-size: 14px; color: #888; text-align: center;">
+                正在扫描商家ID或凭证代码...
             </div>
-            <div class="btn-close-cam" onclick="toggleCamera(false)">✕</div>
-        </div>
-
-    </div>
-
-    <script>
-        // 登录
-        function appLogin() {
-            document.getElementById('page-login').classList.add('hidden');
-            document.getElementById('page-home').classList.remove('hidden');
-        }
-
-        // 退出登录
-        function appLogout() {
-            if(confirm('确定要退出当前账户吗？')) {
-                toggleSheet('me', false); // 关弹窗
-                setTimeout(() => {
-                    document.getElementById('page-home').classList.add('hidden');
-                    document.getElementById('page-login').classList.remove('hidden');
-                }, 300);
-            }
-        }
-
-        // 弹窗控制
-        function toggleSheet(name, show) {
-            const el = document.getElementById('sheet-' + name);
-            if (show) el.classList.add('active');
-            else el.classList.remove('active');
-        }
-
-        // 相机控制
-        function toggleCamera(show) {
-            const el = document.getElementById('camera-page');
-            if (show) {
-                el.classList.add('active');
-                setTimeout(() => {
-                    if(el.classList.contains('active')) {
-                        alert("✅ 模拟扫描成功");
-                        toggleCamera(false);
-                    }
-                }, 3000);
-            } else {
-                el.classList.remove('active');
-            }
-        }
-    </script>
-</body>
-</html>
+            <div class="cam-view">
+                <div class="scan-line"></div>
+            </div>
+            <d
